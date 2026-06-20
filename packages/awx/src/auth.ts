@@ -17,8 +17,9 @@
  * ## Token Validation
  *
  * Validation happens at plugin init time (NOT on first tool call) to provide
- * immediate, clear feedback. A failed validation blocks plugin initialization
- * so the user never gets a mysterious 401 on a later tool invocation.
+ * immediate, clear feedback. Failed init-time validation logs an actionable
+ * error, but plugin initialization continues so the user can re-authenticate
+ * or fix configuration.
  *
  * ## Error Messages
  *

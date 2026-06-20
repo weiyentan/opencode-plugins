@@ -1,4 +1,4 @@
-﻿# OpenCode Plugins
+# OpenCode Plugins
 
 A monorepo of [OpenCode](https://opencode.ai) server plugins that extend the OpenCode agent with first-class tool integrations.
 
