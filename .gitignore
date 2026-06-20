@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Develop-loop scratch / status files
+.status/
+
+# Git worktrees (managed by scripts/worktree-manager.sh)
+.worktrees/
+
+# OS files
+.DS_Store
+Thumbs.db
