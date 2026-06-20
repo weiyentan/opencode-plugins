@@ -41,6 +41,10 @@ export function normalizeScmUrl(url: string): string {
 
   const [, host, path] = sshMatch;
 
+  if (!host || !path) {
+    return url;
+  }
+
   // Strip trailing .git if present
   const cleanPath = path.endsWith(".git") ? path.slice(0, -4) : path;
 

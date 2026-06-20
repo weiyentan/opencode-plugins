@@ -178,9 +178,7 @@ export function createAwxAuthHook() {
           const token = inputs.token;
           if (!token || token.trim().length === 0) {
             return {
-              type: "failure" as const,
-              error:
-                "AWX auth not configured. Set your Personal Access Token in the plugin settings.",
+              type: "failed" as const,
             };
           }
 
