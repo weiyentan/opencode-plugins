@@ -56,26 +56,6 @@ async function server(
   /* ── Auth hook ────────────────────────────────────────────── */
   const authHook = createAwxAuthHook();
 
-  /* ── AWX HTTP client — lazy resolver, created on first tool call ── */
-  let cachedClient: AwxClient | undefined;
-  let cachedToken: string | undefined;
-
-  async function getAwxClient(): Promise<AwxClient | undefined> {
-    if (!baseUrl) return undefined;
-
-    const token = await input.client.getSecret?.("awx");
-    if (!token) return undefined;
-
-    const tokenString = String(token);
-
-    if (!cachedClient || cachedToken !== tokenString) {
-      cachedToken = tokenString;
-      cachedClient = createClient(baseUrl, tokenString, { metricsStore });
-    }
-
-    return cachedClient;
-  }
-
   /* ── Metrics lifecycle ────────────────────────────────────── */
   // Create the shared MetricsStore early, before the AWX client,
   // so the middleware pipeline can record metrics through it.
@@ -105,6 +85,26 @@ async function server(
       },
     });
   });
+
+  /* ── AWX HTTP client — lazy resolver, created on first tool call ── */
+  let cachedClient: AwxClient | undefined;
+  let cachedToken: string | undefined;
+
+  async function getAwxClient(): Promise<AwxClient | undefined> {
+    if (!baseUrl) return undefined;
+
+    const token = await input.client.getSecret?.("awx");
+    if (!token) return undefined;
+
+    const tokenString = String(token);
+
+    if (!cachedClient || cachedToken !== tokenString) {
+      cachedToken = tokenString;
+      cachedClient = createClient(baseUrl, tokenString, { metricsStore });
+    }
+
+    return cachedClient;
+  }
 
   /* ── Init-time validation ─────────────────────────────────── */
   // If a baseUrl is configured, attempt to validate the connection.
