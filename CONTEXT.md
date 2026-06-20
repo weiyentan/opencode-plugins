@@ -21,6 +21,9 @@
 | **Auth hook (API type)** | Auth method with `type: "api"` and `authorize()` returning `{ type: "success", key }`. Used for bearer token / PAT storage. |
 | **Phase 0** | Pre-implementation spike phase: auth verification, contract alignment, plugin API discovery, tool-action mapping table. |
 | **Tool-action mapping table** | A complete accounting of all 22 `awx-helper.ps1` actions and their plugin tool replacement (or documented gap). |
+| **Middleware pipeline** | The request-processing chain in `client.ts`: abort signal → timeout → circuit breaker gate → `fetch` → retry/backoff. No third-party HTTP dependencies; uses native `fetch` and `AbortSignal`. |
+| **Circuit breaker** | Per-tool resilience pattern in `client.ts`. States: CLOSED (normal), OPEN (reject fast after N consecutive failures), HALF-OPEN (probe after cooldown). Default trip: 5 consecutive errors, cooldown: 30s. |
+| **Metrics store** | File-backed per-tool counters in `metrics.ts` (call count, error count, latency, token expiry, PowerShell fallback). Survives plugin reloads via atomic JSON writes. |
 
 ## Infrastructure
 

@@ -1,0 +1,47 @@
+{
+  "name": "@opencode-ai/plugin-awx",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenCode plugin for AWX / Ansible Automation Platform — native tool access to job templates, projects, and job lifecycle operations.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.17.8",
+    "zod": "4.1.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "typescript": "^5.8.2",
+    "vitest": "^3.1.1"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.17.8"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "awx",
+    "ansible",
+    "aap",
+    "automation-platform"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/weiyentan/opencode-plugins",
+    "directory": "packages/awx"
+  }
+}

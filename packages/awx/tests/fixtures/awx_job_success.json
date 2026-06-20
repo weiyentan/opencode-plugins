@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "job": {
+    "id": 142,
+    "name": "Deploy Web Stack — Production",
+    "status": "successful",
+    "failed": false,
+    "job_type": "run",
+    "playbook": "deploy-web-stack.yml",
+    "created": "2025-06-15T14:32:00Z",
+    "started": "2025-06-15T14:32:05Z",
+    "finished": "2025-06-15T14:34:12Z",
+    "elapsed": 127.0,
+    "execution_node": "awx-exec-01.tanscloud-internal.com",
+    "controller_node": "awx-controller-01.tanscloud-internal.com",
+    "scm_branch": "main",
+    "verbosity": 0,
+    "forks": 5,
+    "limit": ""
+  },
+  "related": {
+    "inventory_name": "Production",
+    "project_name": "Web Stack Deploy",
+    "job_template_name": "Deploy Web Stack",
+    "instance_group_name": "default",
+    "created_by": "svc_admin_ansible",
+    "credential_names": [
+      "SSH Key — Production",
+      "Vault Password"
+    ],
+    "label_names": [
+      "production",
+      "web"
+    ]
+  },
+  "host_status_counts": {
+    "ok": 12,
+    "failed": 0,
+    "skipped": 0,
+    "changed": 7,
+    "unreachable": 0
+  },
+  "derived": {
+    "is_successful": true,
+    "is_failed": false,
+    "has_unreachable_hosts": false
+  },
+  "warnings": [
+    "[DEPRECATION WARNING]: The 'include' module is deprecated, use 'include_tasks' instead."
+  ],
+  "errors": [],
+  "stdout": "PLAY [Deploy Web Stack] ***********************************************************\n\nTASK [Gathering Facts] *********************************************************\nok: [web-01]\nok: [web-02]\n\nTASK [Deploy application] ******************************************************\nchanged: [web-01]\nchanged: [web-02]\n\nPLAY RECAP *********************************************************************\nweb-01                     : ok=5    changed=3    unreachable=0    failed=0    skipped=0\nweb-02                     : ok=5    changed=4    unreachable=0    failed=0    skipped=0\n"
+}

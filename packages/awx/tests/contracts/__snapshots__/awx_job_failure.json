@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "job": {
+    "id": 44,
+    "name": "Deploy to Staging - Failed",
+    "status": "failed",
+    "failed": true,
+    "job_type": "run",
+    "playbook": "deploy.yml",
+    "created": "2026-06-19T15:00:00.000000Z",
+    "started": "2026-06-19T15:00:03.000000Z",
+    "finished": "2026-06-19T15:02:15.000000Z",
+    "elapsed": 132.0,
+    "execution_node": "node3.tanscloud-internal.com",
+    "controller_node": "controller.tanscloud-internal.com",
+    "scm_branch": "develop",
+    "verbosity": 2,
+    "forks": 5,
+    "limit": "staging"
+  },
+  "related": {
+    "inventory_name": "Staging Inventory",
+    "project_name": "Web App Deploy",
+    "job_template_name": "Deploy to Staging",
+    "instance_group_name": "staging-group",
+    "created_by": "dev-ops",
+    "credential_names": [
+      "Staging SSH Key",
+      "Vault Password"
+    ],
+    "label_names": [
+      "staging",
+      "deploy"
+    ]
+  },
+  "host_status_counts": {
+    "ok": 5,
+    "failed": 2,
+    "skipped": 1,
+    "changed": 0,
+    "unreachable": 1
+  },
+  "derived": {
+    "is_successful": false,
+    "is_failed": true,
+    "has_unreachable_hosts": true
+  },
+  "warnings": [
+    "Task 'Deploy application' failed on host staging-app-02"
+  ],
+  "errors": []
+}
