@@ -96,7 +96,15 @@ async function server(
     });
   }
 
-  const persistence = setupMetricsPersistence(metricsStore, 30_000);
+  const persistence = setupMetricsPersistence(metricsStore, 30_000, (err) => {
+    void input.client.app.log({
+      body: {
+        service: "plugin-awx",
+        level: "error",
+        message: `Metrics persistence failed: ${err instanceof Error ? err.message : String(err)}`,
+      },
+    });
+  });
 
   /* ── Init-time validation ─────────────────────────────────── */
   // If a baseUrl is configured, attempt to validate the connection.
