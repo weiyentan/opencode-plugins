@@ -1,0 +1,60 @@
+{
+  "id": 42,
+  "type": "job",
+  "url": "/api/v2/jobs/42/",
+  "name": "Deploy Web App - Production",
+  "status": "successful",
+  "failed": false,
+  "job_type": "run",
+  "playbook": "deploy.yml",
+  "created": "2026-06-19T10:00:00.000000Z",
+  "started": "2026-06-19T10:00:05.000000Z",
+  "finished": "2026-06-19T10:05:30.000000Z",
+  "elapsed": 325.0,
+  "execution_node": "node1.tanscloud-internal.com",
+  "controller_node": "controller.tanscloud-internal.com",
+  "scm_branch": "main",
+  "verbosity": 1,
+  "forks": 5,
+  "limit": "",
+  "summary_fields": {
+    "inventory": {
+      "id": 10,
+      "name": "Production Inventory"
+    },
+    "project": {
+      "id": 5,
+      "name": "Web App Deploy"
+    },
+    "job_template": {
+      "id": 3,
+      "name": "Deploy Web App"
+    },
+    "instance_group": {
+      "id": 1,
+      "name": "default"
+    },
+    "created_by": {
+      "id": 7,
+      "username": "ansible-bot"
+    },
+    "credentials": [
+      { "id": 20, "name": "Production SSH Key" },
+      { "id": 21, "name": "Vault Password" }
+    ],
+    "labels": {
+      "results": [
+        { "id": 1, "name": "production" },
+        { "id": 2, "name": "deploy" }
+      ]
+    }
+  },
+  "host_status_counts": {
+    "ok": 12,
+    "failed": 0,
+    "skipped": 3,
+    "changed": 8,
+    "unreachable": 0
+  },
+  "job_explanation": ""
+}
