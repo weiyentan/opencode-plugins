@@ -1,21 +1,32 @@
 /**
  * AWX Job Detail Output Contract — v1.0
  *
- * Defines the TypeScript interface and zod validation schema for the
- * structured response returned by AWX job detail tools.
+ * Canonical TypeScript representation of the `awx_job_detail.py` v1.0 output schema.
+ * Every job-related tool MUST return output matching this contract.
  *
- * This contract mirrors the Python `awx_job_detail.py` v1.0 output schema.
+ * This file provides **both**:
+ * - Zod schemas for runtime validation (e.g., API response parsing)
+ * - Inferred TypeScript types for static type checking
+ *
+ * The contract has been verified against fixture snapshots in `tests/contracts/__snapshots__/`.
  *
  * ## Schema Fields
  *
  * - **schema_version**: Always "1.0"
  * - **job**: Core job metadata (id, name, status, timestamps, etc.)
  * - **related**: Resolved names (not URLs) for related AWX resources
- * - **host_status_counts**: Count of hosts in each Ansible state
- * - **derived**: Boolean flags computed from raw data (not AWX API fields)
+ * - **host_status_counts**: Count of hosts in each Ansible state — NOT `host_summary`
+ * - **derived**: Boolean flags computed from raw data — NOT `extra_vars_summary`
  * - **warnings / errors**: String arrays for user-facing messages
  * - **stdout** (optional): Full job stdout text
  * - **raw_events** (optional): Raw AWX job events array
+ *
+ * ## Field Naming Convention
+ *
+ * - Use `host_status_counts` — NOT `host_summary`
+ * - Use `derived` — NOT `extra_vars_summary`
+ * - `related` fields are resolved names, not raw URLs
+ * - `job.limit` is the AWX job limit (host pattern), not a pagination value
  *
  * ## Snapshot Testing
  *
@@ -23,6 +34,13 @@
  * When the Python `awx_job_detail.py` v1.0 output contract changes,
  * regenerate the fixtures (see README.md for instructions) and re-run
  * tests to verify schema compatibility.
+ *
+ * ## Regeneration
+ *
+ * To regenerate the contract snapshots after fixture changes:
+ * ```bash
+ * python3 scripts/generate-snapshots.py
+ * ```
  */
 
 import { z } from "zod";

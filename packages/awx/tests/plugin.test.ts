@@ -54,6 +54,17 @@ describe("AWX Plugin Scaffolding", () => {
     expect(typeof mod.server).toBe("function");
   });
 
+  it("server() returns a Hooks object with auth hook", async () => {
+    const hooks: Hooks = await awxPluginModule.server(mockPluginInput());
+
+    expect(hooks).toBeDefined();
+    expect(hooks.auth).toBeDefined();
+    expect(hooks.auth!.provider).toBe("awx");
+    expect(hooks.auth!.methods).toHaveLength(1);
+    expect(hooks.auth!.methods[0]!.type).toBe("api");
+  });
+
+
   it("server() returns a Hooks object with a hello-world tool", async () => {
     const hooks: Hooks = await awxPluginModule.server(mockPluginInput());
 
