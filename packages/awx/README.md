@@ -4,9 +4,19 @@ OpenCode server plugin for [AWX](https://github.com/ansible/awx) / Ansible Autom
 
 ## Status
 
-🚧 **Phase 0 — Repository Scaffolding** (in progress)
+✅ **Phase 0 — Repository Scaffolding** (complete)
 
-The hello-world tool validates the plugin load, tool registration, and hot-reload contracts. Full tool implementation begins in Phase 1.
+Phase 0 delivered the foundational modules for the AWX plugin:
+
+| Module | File | Purpose |
+|--------|------|---------|
+| **Plugin entry** | `src/index.ts` | Registers the hello-world tool; validates plugin load, tool registration, and hot-reload |
+| **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
+| **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
+| **Transforms** | `src/transforms.ts` | Pure functions: SSH→HTTPS URL conversion, git branch inference, required-var validation |
+| **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
+
+Full tool implementation (Phase 1) begins next — see the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for available issues.
 
 ## Prerequisites
 
@@ -114,12 +124,12 @@ A single `tsconfig.json` at `packages/awx/tsconfig.json` is used instead of Type
 
 See the [Architecture Decision Records](../../docs/adr/) in the monorepo for design rationale:
 
-- **ADR 0001**: Auth strategy (bearer token / PAT)
-- **ADR 0002**: Output contract schema
-- **ADR 0003**: Resilience patterns (retry, timeout, circuit breaker)
-- **ADR 0004**: Agent-side polling (job lifecycle)
-- **ADR 0005**: Extra-variable transforms (SSH→HTTPS, branch inference)
-- **ADR 0006**: Error taxonomy and structured error reporting
+- **ADR 0001**: Bearer token auth strategy (PAT)
+- **ADR 0002**: Output contract alignment with `awx_job_detail.py` v1.0
+- **ADR 0003**: Plugin API surface discovery (`@opencode-ai/plugin` types)
+- **ADR 0004**: Non-blocking `awx-wait-job` agent-side polling pattern
+- **ADR 0005**: Extra-var transformations in `transforms.ts`
+- **ADR 0006**: Connection resilience parameters (timeout, retry, circuit breaker)
 
 ## License
 

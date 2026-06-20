@@ -8,9 +8,9 @@ A monorepo of [OpenCode](https://opencode.ai) server plugins that extend the Ope
 
 An OpenCode plugin for [AWX](https://github.com/ansible/awx) / Ansible Automation Platform (AAP). Provides native tool access to job templates, projects, and job lifecycle operations — replacing brittle PowerShell scripts with a portable, testable TypeScript plugin.
 
-**Status:** 🚧 In design / pre-implementation. 23 issues broken down and ready for implementation.
+**Status:** ✅ Phase 0 complete — scaffolding, auth hook, output contract, and transforms modules are implemented. Ready for Phase 1 tool implementation.
 
-**Coverage:** 7 of 22 AWX operations in v1 (30%), covering the 80% use case. Full tool-action mapping table documented in the PRD.
+**Coverage:** 7 of 22 AWX operations planned for v1 (30%), covering the 80% use case. Full tool-action mapping table documented in the PRD.
 
 **Key docs:**
 - [Refined PRD](docs/prd/plugin-awx-refined.md) — full product requirements
@@ -32,7 +32,7 @@ docs/
 │   └── plugin-awx-refined.md  # Refined PRD
 └── client-middleware-design.md  # Middleware pipeline design
 packages/
-└── awx/                    # AWX plugin package (to be scaffolded)
+└── awx/                    # AWX plugin package (auth, contracts, transforms, hello-world tool)
 ```
 
 ## Development
@@ -45,7 +45,17 @@ packages/
 
 ### Getting Started
 
-This repo is in a greenfield state — start with [Issue #1](https://github.com/weiyentan/opencode-plugins/issues/1) (Phase 0: Repository Scaffolding) to set up the package structure, build toolchain, and test infrastructure.
+The AWX plugin package (`packages/awx/`) is already scaffolded with these modules:
+
+| Module | File | Purpose |
+|--------|------|---------|
+| **Plugin entry** | `src/index.ts` | Registers the hello-world tool; verifies plugin load, tool registration, and hot-reload |
+| **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook |
+| **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types matching `awx_job_detail.py` v1.0 |
+| **Transforms** | `src/transforms.ts` | SSH→HTTPS URL conversion, git branch inference, required-var validation |
+| **Snapshot generator** | `scripts/generate-snapshots.py` | Regenerates contract snapshots from fixture data |
+
+See `packages/awx/README.md` for detailed documentation. To start implementing tools, pick an unblocked `afk` issue from the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues).
 
 ### Running Integration Tests
 
