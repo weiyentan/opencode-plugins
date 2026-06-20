@@ -75,21 +75,24 @@ describe("AWX Plugin — Lazy Client/Auth Lifecycle", () => {
       createPluginInput(getSecretMock),
       { baseUrl: "https://aap.tanscloud-internal.com" },
     );
+    try {
+      const listTemplates = hooks.tool!.listTemplates!;
 
-    const listTemplates = hooks.tool!.listTemplates!;
+      // ── Step 2: Without a token, listTemplates reports "not available" ──
+      const resultNoToken = await listTemplates.execute({}, mockToolContext());
+      expect(resultNoToken).toContain("not available");
+      expect(resultNoToken).toContain("AWX client");
 
-    // ── Step 2: Without a token, listTemplates reports "not available" ──
-    const resultNoToken = await listTemplates.execute({}, mockToolContext());
-    expect(resultNoToken).toContain("not available");
-    expect(resultNoToken).toContain("AWX client");
+      // ── Step 3: Token becomes available (no plugin reload) ──────────
+      getSecretMock.mockResolvedValue("my-pat-token");
 
-    // ── Step 3: Token becomes available (no plugin reload) ──────────
-    getSecretMock.mockResolvedValue("my-pat-token");
-
-    // ── Step 4: Same plugin instance now creates the client ───────────
-    const resultWithToken = await listTemplates.execute({}, mockToolContext());
-    expect(resultWithToken).toContain("AWX integration not yet implemented");
-    // Must NOT still report "not available"
-    expect(resultWithToken).not.toContain("not available");
+      // ── Step 4: Same plugin instance now creates the client ───────────
+      const resultWithToken = await listTemplates.execute({}, mockToolContext());
+      expect(resultWithToken).toContain("AWX integration not yet implemented");
+      // Must NOT still report "not available"
+      expect(resultWithToken).not.toContain("not available");
+    } finally {
+      await hooks.dispose?.();
+    }
   });
 });

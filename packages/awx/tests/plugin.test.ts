@@ -56,68 +56,86 @@ describe("AWX Plugin Scaffolding", () => {
 
   it("server() returns a Hooks object with auth hook", async () => {
     const hooks: Hooks = await awxPluginModule.server(mockPluginInput());
-
-    expect(hooks).toBeDefined();
-    expect(hooks.auth).toBeDefined();
-    expect(hooks.auth!.provider).toBe("awx");
-    expect(hooks.auth!.methods).toHaveLength(1);
-    expect(hooks.auth!.methods[0]!.type).toBe("api");
+    try {
+      expect(hooks).toBeDefined();
+      expect(hooks.auth).toBeDefined();
+      expect(hooks.auth!.provider).toBe("awx");
+      expect(hooks.auth!.methods).toHaveLength(1);
+      expect(hooks.auth!.methods[0]!.type).toBe("api");
+    } finally {
+      await hooks.dispose?.();
+    }
   });
 
 
   it("server() returns a Hooks object with a hello-world tool", async () => {
     const hooks: Hooks = await awxPluginModule.server(mockPluginInput());
+    try {
+      // The hooks must contain a `tool` map
+      expect(hooks).toBeDefined();
+      expect(hooks.tool).toBeDefined();
+      expect(typeof hooks.tool).toBe("object");
 
-    // The hooks must contain a `tool` map
-    expect(hooks).toBeDefined();
-    expect(hooks.tool).toBeDefined();
-    expect(typeof hooks.tool).toBe("object");
-
-    // The hello-world tool must be registered
-    const hello = hooks.tool?.hello;
-    expect(hello).toBeDefined();
-    expect(hello!.description).toBeDefined();
-    expect(typeof hello!.description).toBe("string");
+      // The hello-world tool must be registered
+      const hello = hooks.tool?.hello;
+      expect(hello).toBeDefined();
+      expect(hello!.description).toBeDefined();
+      expect(typeof hello!.description).toBe("string");
+    } finally {
+      await hooks.dispose?.();
+    }
   });
 
   it("hello-world tool execute returns a greeting with default name", async () => {
     const hooks = await awxPluginModule.server(mockPluginInput());
-    const tool = hooks.tool!.hello!;
+    try {
+      const tool = hooks.tool!.hello!;
 
-    const result: ToolResult = await tool.execute(
-      {},
-      mockToolContext(),
-    );
+      const result: ToolResult = await tool.execute(
+        {},
+        mockToolContext(),
+      );
 
-    expect(result).toBeDefined();
-    expect(typeof result).toBe("string");
-    expect(result).toContain("world");
+      expect(result).toBeDefined();
+      expect(typeof result).toBe("string");
+      expect(result).toContain("world");
+    } finally {
+      await hooks.dispose?.();
+    }
   });
 
   it("hello-world tool accepts a custom name", async () => {
     const hooks = await awxPluginModule.server(mockPluginInput());
-    const tool = hooks.tool!.hello!;
+    try {
+      const tool = hooks.tool!.hello!;
 
-    const result = await tool.execute(
-      { name: "OpenCode" },
-      mockToolContext(),
-    );
+      const result = await tool.execute(
+        { name: "OpenCode" },
+        mockToolContext(),
+      );
 
-    expect(result).toContain("OpenCode");
+      expect(result).toContain("OpenCode");
+    } finally {
+      await hooks.dispose?.();
+    }
   });
 
   it("hello-world tool returns abort message when signal is aborted", async () => {
     const hooks = await awxPluginModule.server(mockPluginInput());
-    const tool = hooks.tool!.hello!;
+    try {
+      const tool = hooks.tool!.hello!;
 
-    const aborted = new AbortController();
-    aborted.abort(); // immediately abort
+      const aborted = new AbortController();
+      aborted.abort(); // immediately abort
 
-    const result = await tool.execute(
-      {},
-      mockToolContext({ abort: aborted.signal }),
-    );
+      const result = await tool.execute(
+        {},
+        mockToolContext({ abort: aborted.signal }),
+      );
 
-    expect(result).toContain("aborted");
+      expect(result).toContain("aborted");
+    } finally {
+      await hooks.dispose?.();
+    }
   });
 });

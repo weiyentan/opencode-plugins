@@ -122,12 +122,15 @@ describe("init-time timeout cleanup", () => {
       mockPluginInputWithToken(),
       { baseUrl: "https://aap.example.com" },
     );
+    try {
+      // createTimeoutSignal must have been called during init validation
+      expect(mockCreateTimeoutSignal).toHaveBeenCalledWith(10_000);
 
-    // createTimeoutSignal must have been called during init validation
-    expect(mockCreateTimeoutSignal).toHaveBeenCalledWith(10_000);
-
-    // clear() must have been called in the finally block
-    expect(mockClear).toHaveBeenCalledTimes(1);
+      // clear() must have been called in the finally block
+      expect(mockClear).toHaveBeenCalledTimes(1);
+    } finally {
+      await hooks.dispose?.();
+    }
   });
 
   it("calls clear() even when token validation fails", async () => {
@@ -142,10 +145,13 @@ describe("init-time timeout cleanup", () => {
       mockPluginInputWithToken(),
       { baseUrl: "https://aap.example.com" },
     );
-
-    // clear() must still be called in the finally block (cleanup
-    // happens regardless of validation outcome)
-    expect(mockClear).toHaveBeenCalledTimes(1);
+    try {
+      // clear() must still be called in the finally block (cleanup
+      // happens regardless of validation outcome)
+      expect(mockClear).toHaveBeenCalledTimes(1);
+    } finally {
+      await hooks.dispose?.();
+    }
   });
 
   it("does not call createTimeoutSignal when no token is stored", async () => {
@@ -153,10 +159,13 @@ describe("init-time timeout cleanup", () => {
       mockPluginInputWithoutToken(),
       { baseUrl: "https://aap.example.com" },
     );
-
-    // No token → no validation → no timeout signal created
-    expect(mockCreateTimeoutSignal).not.toHaveBeenCalled();
-    expect(mockClear).not.toHaveBeenCalled();
+    try {
+      // No token → no validation → no timeout signal created
+      expect(mockCreateTimeoutSignal).not.toHaveBeenCalled();
+      expect(mockClear).not.toHaveBeenCalled();
+    } finally {
+      await hooks.dispose?.();
+    }
   });
 
   it("does not call createTimeoutSignal when baseUrl is not configured", async () => {
@@ -164,8 +173,11 @@ describe("init-time timeout cleanup", () => {
       mockPluginInputWithToken(),
       // No baseUrl → init validation skipped entirely
     );
-
-    expect(mockCreateTimeoutSignal).not.toHaveBeenCalled();
-    expect(mockClear).not.toHaveBeenCalled();
+    try {
+      expect(mockCreateTimeoutSignal).not.toHaveBeenCalled();
+      expect(mockClear).not.toHaveBeenCalled();
+    } finally {
+      await hooks.dispose?.();
+    }
   });
 });
