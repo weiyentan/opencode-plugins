@@ -106,30 +106,34 @@ async function server(
     try {
       const storedKey = await input.client.getSecret?.("awx");
       if (storedKey) {
-        const { signal } = createTimeoutSignal(10_000);
+        const { signal, clear } = createTimeoutSignal(10_000);
 
-        const result = await validateToken(
-          baseUrl,
-          String(storedKey),
-          signal,
-        );
+        try {
+          const result = await validateToken(
+            baseUrl,
+            String(storedKey),
+            signal,
+          );
 
-        if (!result.valid) {
-          input.client.app.log({
-            body: {
-              service: "plugin-awx",
-              level: "error",
-              message: `Init-time token validation failed: ${result.error}`,
-            },
-          });
-        } else {
-          input.client.app.log({
-            body: {
-              service: "plugin-awx",
-              level: "info",
-              message: `Token validated successfully against ${baseUrl}`,
-            },
-          });
+          if (!result.valid) {
+            input.client.app.log({
+              body: {
+                service: "plugin-awx",
+                level: "error",
+                message: `Init-time token validation failed: ${result.error}`,
+              },
+            });
+          } else {
+            input.client.app.log({
+              body: {
+                service: "plugin-awx",
+                level: "info",
+                message: `Token validated successfully against ${baseUrl}`,
+              },
+            });
+          }
+        } finally {
+          clear();
         }
       }
     } catch {
