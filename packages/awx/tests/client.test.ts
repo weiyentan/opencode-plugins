@@ -380,3 +380,220 @@ describe("abort signal", () => {
     vi.useRealTimers();
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   Timeout Scenario — AbortSignal.timeout fires and aborts
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("timeout scenario", () => {
+  it("aborts when timeout elapses before fetch completes", async () => {
+    vi.useFakeTimers();
+
+    // Mock fetch that hangs forever (never settles) but rejects when the
+    // abort signal fires.  We return the abort promise directly rather than
+    // Promise.race to avoid unhandled-rejection warnings with vitest fake
+    // timers (the race's internal .then() may be attached too late when the
+    // abort fires during fake-timer advancement).
+    mockFetch.mockImplementationOnce((_url: string, init?: RequestInit) => {
+      const signal = init?.signal;
+      return new Promise<Response>((_resolve, reject) => {
+        if (signal?.aborted) {
+          reject(new DOMException("Aborted", "AbortError"));
+          return;
+        }
+        signal?.addEventListener("abort", () => {
+          reject(new DOMException("Aborted", "AbortError"));
+        }, { once: true });
+      });
+    });
+
+    const client = createClient("https://aap.example.com", "token", {
+      timeoutMs: 10_000,
+    });
+
+    const requestPromise = client.request("timeout-tool", "/api/v2/data/");
+
+    // Attach a no-op rejection handler BEFORE advancing time so that
+    // Node.js does not see an unhandled rejection when the timeout fires
+    // and the async function's return promise rejects during fake timer
+    // advancement (before we can reach expect().rejects).
+    requestPromise.catch(() => {});
+
+    // Advance fake timers past the timeout
+    await vi.advanceTimersByTimeAsync(10_001);
+
+    await expect(requestPromise).rejects.toThrow(DOMException);
+    await expect(requestPromise).rejects.toMatchObject({ name: "AbortError" });
+
+    vi.useRealTimers();
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   Circuit Breaker — Half-open probe failure re-opens
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("circuit breaker half-open probe failure", () => {
+  it("re-opens breaker when half-open probe fails", async () => {
+    vi.useFakeTimers();
+
+    const client = createClient("https://aap.example.com", "token", {
+      maxRetries: 0,
+      circuitBreakerCooldownMs: 30_000,
+    });
+
+    // Trip the breaker with 5 consecutive 503s
+    for (let i = 0; i < 5; i++) {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+      } as Response);
+      await client.request("halfopen-tool", "/api/v2/data/");
+    }
+
+    // Breaker should be OPEN
+    mockFetch.mockClear();
+    let resp = await client.request("halfopen-tool", "/api/v2/data/");
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(resp.status).toBe(503);
+
+    // Advance past cooldown (30s) — breaker goes HALF-OPEN
+    await vi.advanceTimersByTimeAsync(30_001);
+
+    // Half-open probe request — this one fails
+    mockFetch.mockClear();
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+    } as Response);
+
+    resp = await client.request("halfopen-tool", "/api/v2/data/");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(resp.ok).toBe(false);
+    expect(resp.status).toBe(503);
+
+    // Breaker should be OPEN again — next request should fast-fail
+    mockFetch.mockClear();
+    resp = await client.request("halfopen-tool", "/api/v2/data/");
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(resp.status).toBe(503);
+
+    vi.useRealTimers();
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   Caller-Supplied Headers Merge Override
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("caller-supplied headers", () => {
+  it("merges caller headers with default headers (caller wins on conflict)", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200 } as Response);
+
+    const client = createClient("https://aap.example.com", "token");
+
+    await client.request("header-tool", "/api/v2/data/", {
+      headers: {
+        "X-Custom": "custom-value",
+        Accept: "text/plain", // should override default Accept
+      },
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const fetchArgs = mockFetch.mock.calls[0]?.[1] as RequestInit;
+    const headers = fetchArgs.headers as Record<string, string>;
+
+    expect(headers["Authorization"]).toBe("Bearer token");
+    expect(headers["Accept"]).toBe("text/plain"); // caller wins
+    expect(headers["X-Custom"]).toBe("custom-value");
+  });
+
+  it("merges Headers instance with default headers", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200 } as Response);
+
+    const client = createClient("https://aap.example.com", "token");
+
+    const customHeaders = new Headers({
+      "X-Custom": "custom-value",
+    });
+
+    await client.request("header-tool", "/api/v2/data/", {
+      headers: customHeaders,
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const fetchArgs = mockFetch.mock.calls[0]?.[1] as RequestInit;
+    const headers = fetchArgs.headers as Record<string, string>;
+
+    expect(headers["Authorization"]).toBe("Bearer token");
+    // Headers.normalize keys to lowercase via Object.fromEntries(entries())
+    expect(headers["x-custom"]).toBe("custom-value");
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   Circuit-Open Response — JSON body fields
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("circuit-open response", () => {
+  it("returns code and message fields in json body", async () => {
+    vi.useFakeTimers();
+
+    // Trip the breaker
+    const client = createClient("https://aap.example.com", "token", {
+      maxRetries: 0,
+    });
+
+    for (let i = 0; i < 5; i++) {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+      } as Response);
+      await client.request("json-tool", "/api/v2/data/");
+    }
+
+    // Now circuit is open
+    mockFetch.mockClear();
+    const response = await client.request("json-tool", "/api/v2/data/");
+
+    expect(response.status).toBe(503);
+    expect(response.ok).toBe(false);
+
+    // Parse JSON body
+    const body = await response.json();
+    expect(body).toHaveProperty("code", "CIRCUIT_OPEN");
+    expect(body).toHaveProperty("message");
+    expect(typeof body.message).toBe("string");
+
+    vi.useRealTimers();
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   sleepWithAbort — Listener cleanup (memory leak)
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("sleepWithAbort", () => {
+  it("cleans up abort listener after successful sleep", async () => {
+    vi.useFakeTimers();
+
+    const { sleepWithAbort } = await import("../src/client.js");
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    // Spy on removeEventListener
+    const removeSpy = vi.spyOn(signal, "removeEventListener");
+
+    const sleepPromise = sleepWithAbort(1000, signal);
+
+    // Advance time to complete the sleep
+    await vi.advanceTimersByTimeAsync(1001);
+    await sleepPromise;
+
+    // The abort listener should have been removed
+    expect(removeSpy).toHaveBeenCalledWith("abort", expect.any(Function));
+
+    removeSpy.mockRestore();
+    vi.useRealTimers();
+  });
+});

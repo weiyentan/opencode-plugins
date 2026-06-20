@@ -6,7 +6,7 @@
  *
  * ## Pipeline
  *
- *  1. Combine ToolContext.abort signal + AbortSignal.timeout(30s)
+ *  1. Combine ToolContext.abort signal + timeout signal
  *  2. Circuit breaker gate (per-tool)
  *  3. Native fetch with Authorization header
  *  4. Response handling: 2xx pass, 4xx no retry, 5xx exponential backoff
@@ -16,6 +16,7 @@
  *  - ADR 0006: Connection Resilience Parameters
  *  - docs/client-middleware-design.md
  */
+import { MetricsStore } from "./metrics.js";
 
 /* ── Retry / Backoff parameters ─────────────────────────────────── */
 
@@ -69,17 +70,65 @@ export async function sleepWithAbort(
   }
 
   return new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(resolve, ms);
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(signal!.reason ?? new DOMException("Aborted", "AbortError"));
+    };
+
+    const timer = setTimeout(() => {
+      resolve();
+      signal?.removeEventListener("abort", onAbort);
+    }, ms);
 
     if (!signal) return;
 
-    const onAbort = (): void => {
-      clearTimeout(timer);
-      reject(signal.reason ?? new DOMException("Aborted", "AbortError"));
-    };
-
     signal.addEventListener("abort", onAbort, { once: true });
   });
+}
+
+/* ── Node 18 Compatibility Helpers ─────────────────────────────── */
+
+/**
+ * Create an AbortSignal that triggers after the specified timeout.
+ *
+ * Uses `setTimeout` + `AbortController` rather than `AbortSignal.timeout()`
+ * for Node 18 compatibility and to ensure compatibility with vitest fake
+ * timers (the native `AbortSignal.timeout()` uses internal Node.js timers
+ * that cannot be mocked by vitest).
+ */
+function createTimeoutSignal(ms: number): { signal: AbortSignal; clear: () => void } {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new DOMException("The operation timed out.", "TimeoutError")),
+    ms,
+  );
+  return {
+    signal: controller.signal,
+    clear: () => clearTimeout(timer),
+  };
+}
+
+/**
+ * Combine multiple AbortSignals into one — aborts if ANY source signal aborts.
+ *
+ * Uses `AbortSignal.any()` on Node 20+ (where it is natively available),
+ * and falls back to manual event wiring on Node 18.
+ */
+function anyAbortSignal(signals: AbortSignal[]): AbortSignal {
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any(signals);
+  }
+  const controller = new AbortController();
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort(signal.reason ?? new DOMException("Aborted", "AbortError"));
+      return controller.signal;
+    }
+    signal.addEventListener("abort", () => {
+      controller.abort(signal.reason ?? new DOMException("Aborted", "AbortError"));
+    }, { once: true });
+  }
+  return controller.signal;
 }
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -154,13 +203,16 @@ export class CircuitBreaker {
   }
 
   /**
-   * Check whether a request is allowed through the breaker.
+   * Try to acquire permission to make a request through the breaker.
+   *
+   * Has a side effect: if OPEN and cooldown has elapsed, transitions to
+   * HALF-OPEN to allow a probe request.
    *
    * - OPEN: Returns false if still in cooldown. If cooldown elapsed, transitions
-   *   to HALF-OPEN and allows the probe.
+   *   to HALF-OPEN and returns true (probe allowed).
    * - HALF-OPEN or CLOSED: Returns true.
    */
-  allowRequest(): boolean {
+  tryAcquire(): boolean {
     if (this.state === "open") {
       const now = Date.now();
       if (this.cooldownUntil !== null && now >= this.cooldownUntil) {
@@ -243,33 +295,22 @@ export function createClient(
     return breaker;
   }
 
-  /** Create a synthetic 503 response for when the circuit breaker is open */
+  // Shared metrics store instance
+  const metrics = new MetricsStore();
+
+  /** Create a spec-compliant 503 Response for when the circuit breaker is open */
   function circuitOpenResponse(): Response {
-    return {
-      ok: false,
+    const body = JSON.stringify({
+      code: "CIRCUIT_OPEN",
+      message:
+        "AWX circuit breaker is open — AAP may be unreachable. Try again in 30s.",
+      retryable: true,
+    });
+    return new Response(body, {
       status: 503,
       statusText: "Circuit breaker open",
-      headers: new Headers({ "Content-Type": "application/json" }),
-      json: () =>
-        Promise.resolve({
-          code: "CIRCUIT_OPEN",
-          message:
-            "AWX circuit breaker is open — AAP may be unreachable. Try again in 30s.",
-          retryable: true,
-        }),
-      text: () =>
-        Promise.resolve(
-          "AWX circuit breaker is open — AAP may be unreachable. Try again in 30s.",
-        ),
-      blob: () => Promise.resolve(new Blob([])),
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      body: null,
-      bodyUsed: false,
-      redirected: false,
-      type: "basic" as Response["type"],
-      url: "",
-      clone: (): Response => circuitOpenResponse(),
-    } as Response;
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   return {
@@ -279,13 +320,15 @@ export function createClient(
       init?: RequestInit,
       abortSignal?: AbortSignal,
     ): Promise<Response> {
+      const start = Date.now();
+
       // Build full URL
       const url = `${normalizedBase}${path.startsWith("/") ? path.slice(1) : path}`;
 
       // Combine abort signals: ToolContext.abort + timeout
-      const timeoutSignal = AbortSignal.timeout(timeoutMs);
+      const { signal: timeoutSignal, clear: clearTimeout_ } = createTimeoutSignal(timeoutMs);
       const combinedSignal = abortSignal
-        ? AbortSignal.any([abortSignal, timeoutSignal])
+        ? anyAbortSignal([abortSignal, timeoutSignal])
         : timeoutSignal;
 
       // Build headers (plain object for testability — fetch accepts both)
@@ -317,8 +360,9 @@ export function createClient(
       // ── Retry loop with exponential backoff + circuit breaker ──
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         // ── Circuit breaker gate (checked before every attempt) ──
-        if (!breaker.allowRequest()) {
+        if (!breaker.tryAcquire()) {
           // Breaker is open — fail fast, no fetch
+          clearTimeout_();
           return circuitOpenResponse();
         }
 
@@ -328,17 +372,25 @@ export function createClient(
           // 2xx — success, reset breaker, return immediately
           if (response.ok) {
             breaker.recordSuccess();
+            metrics.recordCall(toolName, Date.now() - start);
+            clearTimeout_();
             return response;
           }
 
           // 4xx — client error, do NOT retry, count as failure
           if (response.status >= 400 && response.status < 500) {
             breaker.recordFailure();
+            metrics.recordError(toolName);
+            if (response.status === 401) {
+              metrics.recordTokenExpiry(toolName);
+            }
+            clearTimeout_();
             return response;
           }
 
           // 5xx — server error, record failure, retry if attempts remain
           breaker.recordFailure();
+          metrics.recordError(toolName);
 
           if (attempt < maxRetries) {
             const delay = calcBackoff(attempt);
@@ -347,15 +399,18 @@ export function createClient(
           }
 
           // Max retries exhausted — return the last response
+          clearTimeout_();
           return response;
         } catch (err: unknown) {
           // AbortError — propagate immediately, do NOT retry
           if (err instanceof DOMException && err.name === "AbortError") {
+            clearTimeout_();
             throw err;
           }
 
           // Network or other error — count as failure, retry if attempts remain
           breaker.recordFailure();
+          metrics.recordError(toolName);
 
           if (attempt < maxRetries) {
             const delay = calcBackoff(attempt);
@@ -364,11 +419,13 @@ export function createClient(
           }
 
           // Max retries exhausted — throw the error
+          clearTimeout_();
           throw err;
         }
       }
 
       // Unreachable — all paths above either return or throw
+      clearTimeout_();
       throw new Error("Unreachable: retry loop exhausted");
     },
   };
