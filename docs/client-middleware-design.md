@@ -1,8 +1,8 @@
 ﻿# Client Middleware Pipeline Design
 
-**Status:** Approved  
+**Status:** Implemented (issue #5) — see `packages/awx/src/client.ts`  
 **Date:** 2026-06-20  
-**Issue:** [#4](https://github.com/weiyentan/opencode-plugins/issues/4)
+**Issue:** [#4](https://github.com/weiyentan/opencode-plugins/issues/4), [#5](https://github.com/weiyentan/opencode-plugins/issues/5)
 
 ## Overview
 
@@ -43,8 +43,8 @@ fetch(AAP_URL, { signal, headers })
 
 | Parameter | Default | Notes |
 |-----------|---------|-------|
-| Trip threshold | 5 consecutive errors within 60s window | Errors include 5xx, network failures, timeouts. 4xx counts too (but these should be rare). |
-| Cooldown duration | 30s | Time before transitioning from OPEN → HALF-OPEN |
+| Trip threshold | 5 consecutive errors | Errors include 5xx, network failures, timeouts. 4xx counts too (but these should be rare). Counter resets on success — no sliding time window. |
+| Cooldown duration | 30s (30,000ms) | Time before transitioning from OPEN → HALF-OPEN |
 | Half-open probe count | 1 success to close, 1 failure to re-open | Single probe is sufficient |
 
 ### Granularity
@@ -58,7 +58,6 @@ fetch(AAP_URL, { signal, headers })
 interface BreakerState {
   state: "closed" | "open" | "half-open";
   failureCount: number;
-  lastFailureTime: number | null;   // Date.now() timestamp
   cooldownUntil: number | null;     // Date.now() timestamp when half-open is permitted
 }
 ```
@@ -76,7 +75,7 @@ interface BreakerState {
 | Retry condition | 5xx only (Server Error) |
 | Max retries | 3 |
 | Backoff strategy | Exponential: 1s, 2s, 4s |
-| Jitter | ±25% random jitter applied to each delay |
+| Jitter | 0–50% additive jitter applied to each delay (`Math.random() * base * 0.5`) |
 | Retry counter scope | Per-request (resets on each new tool call) |
 | Abort during retry | Cancel immediately via `AbortSignal.any()` |
 | 4xx behavior | Zero retries — pass through immediately |
@@ -91,20 +90,19 @@ interface BreakerState {
 
 ## Error Handling
 
-Errors are normalized into a standard shape before being returned to the caller:
+The `client.ts` `request()` method returns a raw `Response` object to the caller.
+Callers (tools) are responsible for normalizing errors as needed.
 
-```typescript
-interface ClientError {
-  status: number | null;         // HTTP status, or null for network errors
-  code: string;                  // "TIMEOUT" | "ABORTED" | "CIRCUIT_OPEN" | "NETWORK_ERROR" | "HTTP_ERROR"
-  message: string;               // Human-readable error description
-  retryable: boolean;            // true if retry might help (5xx, network), false for 4xx
-}
-```
+When the circuit breaker is open, a synthetic 503 `Response` is returned with a
+JSON body containing `code: "CIRCUIT_OPEN"` and a human-readable message.
+
+For network errors and timeouts, the native `fetch` error (`TypeError` or
+`DOMException` `"AbortError"`) is thrown directly — the caller must catch it.
 
 ## Implementation Notes
 
 - No third-party HTTP dependencies — uses Node.js 18+ native `fetch`, `AbortSignal`, and `AbortSignal.any()`
 - `AbortSignal.any()` requires Node.js 20+ — if targeting Node 18, use a polyfill or manual `Promise.race()` for the signal combination
-- Per-tool breaker state stored in a simple in-memory `Map<string, BreakerState>` — does not persist across plugin restarts
-- Metrics counters (call count, error count, latency) hook into the client at the pipeline boundaries, not inside individual middleware
+- Per-tool breaker state stored in a simple in-memory `Map<string, CircuitBreaker>` — does not persist across plugin restarts
+- Metrics counters (`metrics.ts`) exist as a separate module but are not yet wired into the `client.ts` pipeline; integration is planned for a follow-up issue
+- When the circuit breaker is OPEN, the pipeline returns immediately without applying the 30s timeout (fail-fast per the design)

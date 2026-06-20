@@ -4,9 +4,10 @@ OpenCode server plugin for [AWX](https://github.com/ansible/awx) / Ansible Autom
 
 ## Status
 
-✅ **Phase 0 — Repository Scaffolding** (complete)
+✅ **Phase 0 — Repository Scaffolding** (complete)  
+✅ **Phase 1 — Client Infrastructure** (complete)
 
-Phase 0 delivered the foundational modules for the AWX plugin:
+The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
@@ -14,9 +15,12 @@ Phase 0 delivered the foundational modules for the AWX plugin:
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | Pure functions: SSH→HTTPS URL conversion, git branch inference, required-var validation |
+| **Client middleware** | `src/client.ts` | HTTP middleware pipeline: circuit breaker, retry/backoff, timeout via native `fetch` |
+| **Metrics** | `src/metrics.ts` | Per-tool counters with file-backed durability for operational visibility |
+| **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Full tool implementation (Phase 1) begins next — see the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for available issues.
+Tool implementation (Phase 2) begins next — see the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for available issues. The client middleware pipeline (issue #5) and metrics module (issue #5) provide the HTTP infrastructure that tools will use.
 
 ## Prerequisites
 
@@ -156,10 +160,15 @@ packages/awx/
 ├── src/
 │   ├── index.ts              # Plugin entry point — Hooks (auth + tools)
 │   ├── auth.ts               # Bearer token auth hook (type: "api")
+│   ├── client.ts             # HTTP middleware pipeline (circuit breaker, retry, timeout)
+│   ├── metrics.ts            # Per-tool counters with file-backed durability
+│   ├── node-shim.d.ts        # Minimal Node.js declarations (fs/promises, path)
 │   └── contracts/
 │       └── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
 ├── tests/
 │   ├── plugin.test.ts        # Plugin scaffolding tests (hello-world)
+│   ├── client.test.ts        # Client middleware pipeline tests
+│   ├── metrics.test.ts       # MetricsStore persistence & counter tests
 │   ├── contracts/
 │   │   ├── contract.test.ts  # Contract compatibility tests
 │   │   └── __snapshots__/    # Canonical contract output (ground truth)

@@ -53,6 +53,9 @@ The AWX plugin package (`packages/awx/`) is already scaffolded with these module
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook |
 | **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | SSH→HTTPS URL conversion, git branch inference, required-var validation |
+| **Client middleware** | `src/client.ts` | HTTP middleware pipeline: circuit breaker, retry/backoff, timeout via native `fetch` |
+| **Metrics** | `src/metrics.ts` | Per-tool counters with file-backed durability for operational visibility |
+| **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Regenerates contract snapshots from fixture data |
 
 See `packages/awx/README.md` for detailed documentation. To start implementing tools, pick an unblocked `afk` issue from the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues).
