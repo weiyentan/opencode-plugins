@@ -14,7 +14,7 @@ The `client.ts` HTTP client composes five middleware concerns into a single pipe
 ToolContext.abort signal
   │
   ▼
-AbortSignal.timeout(30000)
+createTimeoutSignal(30000)
   │
   ▼
 Circuit breaker gate
@@ -86,7 +86,7 @@ interface BreakerState {
 |-----------|-------|
 | Default timeout | 30s |
 | Health-check timeout | 10s (used during init-time `GET /api/v2/me/`) |
-| Mechanism | `AbortSignal.timeout(ms)` combined with `ToolContext.abort` via `AbortSignal.any()` |
+| Mechanism | `createTimeoutSignal(ms)` (Node 18-compatible `setTimeout` + `AbortController`) combined with `ToolContext.abort` via `anyAbortSignal()` |
 
 ## Error Handling
 
@@ -101,8 +101,8 @@ For network errors and timeouts, the native `fetch` error (`TypeError` or
 
 ## Implementation Notes
 
-- No third-party HTTP dependencies — uses Node.js 18+ native `fetch`, `AbortSignal`, and `AbortSignal.any()`
-- `AbortSignal.any()` requires Node.js 20+ — if targeting Node 18, use a polyfill or manual `Promise.race()` for the signal combination
+- No third-party HTTP dependencies — uses Node.js 18+ native `fetch`, `AbortSignal`, `AbortController`
+- Node 18 compatibility is handled transparently: `createTimeoutSignal()` replaces `AbortSignal.timeout()`, and `anyAbortSignal()` provides a manual fallback when `AbortSignal.any()` is unavailable
 - Per-tool breaker state stored in a simple in-memory `Map<string, CircuitBreaker>` — does not persist across plugin restarts
-- Metrics counters (`metrics.ts`) exist as a separate module but are not yet wired into the `client.ts` pipeline; integration is planned for a follow-up issue
+- Metrics counters (`metrics.ts`) are wired into the `client.ts` pipeline: every call records success/error counts, latency, and token expiry events via `MetricsStore`
 - When the circuit breaker is OPEN, the pipeline returns immediately without applying the 30s timeout (fail-fast per the design)

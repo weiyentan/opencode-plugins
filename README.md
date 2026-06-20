@@ -8,7 +8,7 @@ A monorepo of [OpenCode](https://opencode.ai) server plugins that extend the Ope
 
 An OpenCode plugin for [AWX](https://github.com/ansible/awx) / Ansible Automation Platform (AAP). Provides native tool access to job templates, projects, and job lifecycle operations — replacing brittle PowerShell scripts with a portable, testable TypeScript plugin.
 
-**Status:** ✅ Phase 0 complete — scaffolding, auth hook, output contract, and transforms modules are implemented. Ready for Phase 1 tool implementation.
+**Status:** ✅ Phase 0 (scaffolding) and Phase 1 (client infrastructure) complete — scaffolding, auth hook, output contract, transforms, client middleware pipeline, and metrics module are implemented. Ready for Phase 2 tool implementation.
 
 **Coverage:** 7 of 22 AWX operations planned for v1 (30%), covering the 80% use case. Full tool-action mapping table documented in the PRD.
 
@@ -39,7 +39,7 @@ packages/
 
 ### Prerequisites
 
-- Node.js 18+ (Node.js 20+ recommended for `AbortSignal.any()`)
+- Node.js 18+ (Node 18 compatibility is handled transparently via `anyAbortSignal()` and `createTimeoutSignal()` in the client middleware)
 - `@opencode-ai/plugin` (peer dependency)
 - Access to an AAP instance for integration testing
 

@@ -24,7 +24,7 @@ Tool implementation (Phase 2) begins next — see the [issue tracker](https://gi
 
 ## Prerequisites
 
-- **Node.js** >= 18.0.0 (Node.js 20+ recommended for `AbortSignal.any()` support)
+- **Node.js** >= 18.0.0 (Node 18 compatibility is handled transparently — the client middleware includes `anyAbortSignal()` and `createTimeoutSignal()` fallbacks)
 - **npm** >= 9.0.0 (ships with Node.js 18)
 - TypeScript knowledge for plugin development
 - Access to an AAP instance for integration testing (optional — unit tests run offline)
