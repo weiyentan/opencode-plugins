@@ -92,6 +92,7 @@ async function server(
        * Verifies that tools can be registered, invoked, and hot-reloaded
        * by the OpenCode plugin server. This tool exercises the full plugin
        * lifecycle: import, register, execute, return.
+       */
       hello: tool({
         description: [
           "Returns a hello world greeting. Phase 0 scaffolding tool — verifies",
