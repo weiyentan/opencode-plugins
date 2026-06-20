@@ -1,60 +1,53 @@
 {
-  "id": 42,
-  "type": "job",
-  "url": "/api/v2/jobs/42/",
-  "name": "Deploy Web App - Production",
-  "status": "successful",
-  "failed": false,
-  "job_type": "run",
-  "playbook": "deploy.yml",
-  "created": "2026-06-19T10:00:00.000000Z",
-  "started": "2026-06-19T10:00:05.000000Z",
-  "finished": "2026-06-19T10:05:30.000000Z",
-  "elapsed": 325.0,
-  "execution_node": "node1.tanscloud-internal.com",
-  "controller_node": "controller.tanscloud-internal.com",
-  "scm_branch": "main",
-  "verbosity": 1,
-  "forks": 5,
-  "limit": "",
-  "summary_fields": {
-    "inventory": {
-      "id": 10,
-      "name": "Production Inventory"
-    },
-    "project": {
-      "id": 5,
-      "name": "Web App Deploy"
-    },
-    "job_template": {
-      "id": 3,
-      "name": "Deploy Web App"
-    },
-    "instance_group": {
-      "id": 1,
-      "name": "default"
-    },
-    "created_by": {
-      "id": 7,
-      "username": "ansible-bot"
-    },
-    "credentials": [
-      { "id": 20, "name": "Production SSH Key" },
-      { "id": 21, "name": "Vault Password" }
+  "schema_version": "1.0",
+  "job": {
+    "id": 142,
+    "name": "Deploy Web Stack — Production",
+    "status": "successful",
+    "failed": false,
+    "job_type": "run",
+    "playbook": "deploy-web-stack.yml",
+    "created": "2025-06-15T14:32:00Z",
+    "started": "2025-06-15T14:32:05Z",
+    "finished": "2025-06-15T14:34:12Z",
+    "elapsed": 127.0,
+    "execution_node": "awx-exec-01.tanscloud-internal.com",
+    "controller_node": "awx-controller-01.tanscloud-internal.com",
+    "scm_branch": "main",
+    "verbosity": 0,
+    "forks": 5,
+    "limit": ""
+  },
+  "related": {
+    "inventory_name": "Production",
+    "project_name": "Web Stack Deploy",
+    "job_template_name": "Deploy Web Stack",
+    "instance_group_name": "default",
+    "created_by": "svc_admin_ansible",
+    "credential_names": [
+      "SSH Key — Production",
+      "Vault Password"
     ],
-    "labels": {
-      "results": [
-        { "id": 1, "name": "production" },
-        { "id": 2, "name": "deploy" }
-      ]
-    }
+    "label_names": [
+      "production",
+      "web"
+    ]
   },
   "host_status_counts": {
     "ok": 12,
     "failed": 0,
-    "skipped": 3,
-    "changed": 8,
+    "skipped": 0,
+    "changed": 7,
     "unreachable": 0
   },
-  "job_explanation": ""
+  "derived": {
+    "is_successful": true,
+    "is_failed": false,
+    "has_unreachable_hosts": false
+  },
+  "warnings": [
+    "[DEPRECATION WARNING]: The 'include' module is deprecated, use 'include_tasks' instead."
+  ],
+  "errors": [],
+  "stdout": "PLAY [Deploy Web Stack] ***********************************************************\n\nTASK [Gathering Facts] *********************************************************\nok: [web-01]\nok: [web-02]\n\nTASK [Deploy application] ******************************************************\nchanged: [web-01]\nchanged: [web-02]\n\nPLAY RECAP *********************************************************************\nweb-01                     : ok=5    changed=3    unreachable=0    failed=0    skipped=0\nweb-02                     : ok=5    changed=4    unreachable=0    failed=0    skipped=0\n"
 }

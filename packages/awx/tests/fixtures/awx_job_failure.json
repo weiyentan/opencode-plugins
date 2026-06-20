@@ -1,60 +1,56 @@
 {
-  "id": 44,
-  "type": "job",
-  "url": "/api/v2/jobs/44/",
-  "name": "Deploy to Staging - Failed",
-  "status": "failed",
-  "failed": true,
-  "job_type": "run",
-  "playbook": "deploy.yml",
-  "created": "2026-06-19T15:00:00.000000Z",
-  "started": "2026-06-19T15:00:03.000000Z",
-  "finished": "2026-06-19T15:02:15.000000Z",
-  "elapsed": 132.0,
-  "execution_node": "node3.tanscloud-internal.com",
-  "controller_node": "controller.tanscloud-internal.com",
-  "scm_branch": "develop",
-  "verbosity": 2,
-  "forks": 5,
-  "limit": "staging",
-  "summary_fields": {
-    "inventory": {
-      "id": 12,
-      "name": "Staging Inventory"
-    },
-    "project": {
-      "id": 5,
-      "name": "Web App Deploy"
-    },
-    "job_template": {
-      "id": 5,
-      "name": "Deploy to Staging"
-    },
-    "instance_group": {
-      "id": 2,
-      "name": "staging-group"
-    },
-    "created_by": {
-      "id": 8,
-      "username": "dev-ops"
-    },
-    "credentials": [
-      { "id": 23, "name": "Staging SSH Key" },
-      { "id": 21, "name": "Vault Password" }
+  "schema_version": "1.0",
+  "job": {
+    "id": 318,
+    "name": "Deploy Database Migration — QA",
+    "status": "failed",
+    "failed": true,
+    "job_type": "run",
+    "playbook": "db-migration.yml",
+    "created": "2025-06-17T09:15:00Z",
+    "started": "2025-06-17T09:15:02Z",
+    "finished": "2025-06-17T09:16:33Z",
+    "elapsed": 91.0,
+    "execution_node": "awx-exec-01.tanscloud-internal.com",
+    "controller_node": "awx-controller-01.tanscloud-internal.com",
+    "scm_branch": "feature/db-migration-v2",
+    "verbosity": 2,
+    "forks": 5,
+    "limit": "qa-db"
+  },
+  "related": {
+    "inventory_name": "QA",
+    "project_name": "Database Operations",
+    "job_template_name": "Run DB Migration",
+    "instance_group_name": "default",
+    "created_by": "db_admin",
+    "credential_names": [
+      "SSH Key — QA",
+      "DB Admin Credentials"
     ],
-    "labels": {
-      "results": [
-        { "id": 5, "name": "staging" },
-        { "id": 2, "name": "deploy" }
-      ]
-    }
+    "label_names": [
+      "qa",
+      "database",
+      "high-risk"
+    ]
   },
   "host_status_counts": {
-    "ok": 5,
-    "failed": 2,
-    "skipped": 1,
+    "ok": 1,
+    "failed": 1,
+    "skipped": 0,
     "changed": 0,
-    "unreachable": 1
+    "unreachable": 0
   },
-  "job_explanation": "Task 'Deploy application' failed on host staging-app-02"
+  "derived": {
+    "is_successful": false,
+    "is_failed": true,
+    "has_unreachable_hosts": false
+  },
+  "warnings": [
+    "[DEPRECATION WARNING]: The 'mysql_db' module has been deprecated in favor of 'community.mysql.mysql_db'."
+  ],
+  "errors": [
+    "Task 'Run migration script' failed on host qa-db-01: Migration 042_add_indexes.sql failed with exit code 1 — Duplicate key name 'idx_customer_email'."
+  ],
+  "stdout": "PLAY [Run DB Migration] *********************************************************\n\nTASK [Gathering Facts] *********************************************************\nok: [qa-db-01]\n\nTASK [Run migration script] ****************************************************\nfatal: [qa-db-01]: FAILED! => {\"changed\": false, \"msg\": \"Migration 042_add_indexes.sql failed with exit code 1\", \"stderr\": \"ERROR 1061 (42000) at line 15: Duplicate key name 'idx_customer_email'\"}\n\nPLAY RECAP *********************************************************************\nqa-db-01                   : ok=1    changed=0    unreachable=0    failed=1    skipped=0\n"
 }

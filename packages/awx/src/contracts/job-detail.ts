@@ -1,138 +1,104 @@
 /**
- * AWX Job Detail Output Contract (v1.0)
+ * AWX Job Detail Output Contract — v1.0
  *
- * Canonical TypeScript representation of the awx_job_detail.py v1.0 output schema.
- * Every job-related tool MUST return output matching this interface.
+ * Defines the TypeScript interface and zod validation schema for the
+ * structured response returned by AWX job detail tools.
  *
- * This contract has been verified against the actual awx_job_detail.py Python script
- * output — the fixture snapshots in tests/contracts/__snapshots__/ are the ground truth.
+ * This contract mirrors the Python `awx_job_detail.py` v1.0 output schema.
  *
- * ## Schema Version
+ * ## Schema Fields
  *
- * The `schema_version` field is always "1.0" for this contract. Any future schema
- * changes MUST bump this version and be coordinated with the Python script.
+ * - **schema_version**: Always "1.0"
+ * - **job**: Core job metadata (id, name, status, timestamps, etc.)
+ * - **related**: Resolved names (not URLs) for related AWX resources
+ * - **host_status_counts**: Count of hosts in each Ansible state
+ * - **derived**: Boolean flags computed from raw data (not AWX API fields)
+ * - **warnings / errors**: String arrays for user-facing messages
+ * - **stdout** (optional): Full job stdout text
+ * - **raw_events** (optional): Raw AWX job events array
  *
- * ## Field Naming Convention
+ * ## Snapshot Testing
  *
- * - The top-level field is `host_status_counts` — NOT `host_summary`
- * - The computed-booleans field is `derived` — NOT `extra_vars_summary`
- * - The `job.limit` field IS the AWX job limit (host pattern), not a pagination value
- *
- * ## Regeneration
- *
- * To regenerate the contract snapshots after fixture changes:
- *   python3 scripts/generate-snapshots.py
+ * Fixture JSON files in `tests/fixtures/` serve as contract snapshots.
+ * When the Python `awx_job_detail.py` v1.0 output contract changes,
+ * regenerate the fixtures (see README.md for instructions) and re-run
+ * tests to verify schema compatibility.
  */
 
-/** Core job metadata fields from the AWX API */
-export interface JobCore {
-  /** AWX job unique identifier */
-  id: number;
-  /** Human-readable job name from the job template */
-  name: string;
-  /** AWX job status: "new" | "pending" | "waiting" | "running" | "successful" | "failed" | "error" | "canceled" */
-  status: string;
-  /** Whether the job has failed (AWX sets this explicitly on failure/cancel/error) */
-  failed: boolean;
-  /** Type of job: "run" (job template) or "check" (dry-run) */
-  job_type: string;
-  /** Playbook filename executed by this job */
-  playbook: string;
-  /** ISO 8601 timestamp of job creation */
-  created: string;
-  /** ISO 8601 timestamp of job start, or null if not yet started */
-  started: string | null;
-  /** ISO 8601 timestamp of job completion, or null if still running */
-  finished: string | null;
-  /** Elapsed execution time in seconds, or null if job is still running */
-  elapsed: number | null;
-  /** Hostname of the execution node that ran the job */
-  execution_node: string;
-  /** Hostname of the AWX controller node */
-  controller_node: string;
-  /** SCM branch used for this job run */
-  scm_branch: string;
-  /** AWX verbosity level (0-4) */
-  verbosity: number;
-  /** Number of forks used, or null if default */
-  forks: number | null;
-  /** Host limit pattern applied to the job ("" if unlimited) */
-  limit: string;
-}
+import { z } from "zod";
 
-/** Resolved related-object names (not raw URLs) */
-export interface JobRelated {
-  /** Inventory display name from summary_fields */
-  inventory_name: string;
-  /** Project display name from summary_fields */
-  project_name: string;
-  /** Job template display name from summary_fields */
-  job_template_name: string;
-  /** Instance group display name from summary_fields */
-  instance_group_name: string;
-  /** Username of the user who launched the job */
-  created_by: string;
-  /** List of credential names used by this job */
-  credential_names: string[];
-  /** List of label names applied to this job */
-  label_names: string[];
-}
+// ─── Sub-schemas ───────────────────────────────────────────
 
-/** Per-host status counts from the AWX host summary */
-export interface HostStatusCounts {
-  /** Number of hosts with status "ok" */
-  ok: number;
-  /** Number of hosts with status "failed" */
-  failed: number;
-  /** Number of hosts with status "skipped" */
-  skipped: number;
-  /** Number of hosts with status "changed" */
-  changed: number;
-  /** Number of hosts with status "unreachable" */
-  unreachable: number;
-}
+export const JobCoreSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string(),
+  status: z.string(),
+  failed: z.boolean(),
+  job_type: z.string(),
+  playbook: z.string(),
+  created: z.string(),
+  started: z.string().nullable(),
+  finished: z.string().nullable(),
+  elapsed: z.number().nullable(),
+  execution_node: z.string(),
+  controller_node: z.string(),
+  scm_branch: z.string(),
+  verbosity: z.number().int().min(0),
+  forks: z.number().int().min(0).nullable(),
+  limit: z.string(),
+});
 
-/** Derived/computed boolean flags (not raw API fields) */
-export interface Derived {
-  /** Job completed with status "successful" */
-  is_successful: boolean;
-  /** Job completed with status "failed", "canceled", or "error" */
-  is_failed: boolean;
-  /** At least one host was unreachable during execution */
-  has_unreachable_hosts: boolean;
-}
+export const RelatedSchema = z.object({
+  inventory_name: z.string(),
+  project_name: z.string(),
+  job_template_name: z.string(),
+  instance_group_name: z.string(),
+  created_by: z.string(),
+  credential_names: z.array(z.string()),
+  label_names: z.array(z.string()),
+});
 
-/**
- * Canonical job detail output matching awx_job_detail.py v1.0 schema.
- *
- * This is the return type for awx-job-status and awx-launch-job tools.
- * All field names and shapes are locked to the Python script's output.
- */
-export interface JobDetailOutput {
-  /** Schema version — always "1.0" for this contract */
-  schema_version: "1.0";
+export const HostStatusCountsSchema = z.object({
+  ok: z.number().int().min(0),
+  failed: z.number().int().min(0),
+  skipped: z.number().int().min(0),
+  changed: z.number().int().min(0),
+  unreachable: z.number().int().min(0),
+});
 
-  /** Core job metadata */
-  job: JobCore;
+export const DerivedSchema = z.object({
+  is_successful: z.boolean(),
+  is_failed: z.boolean(),
+  has_unreachable_hosts: z.boolean(),
+});
 
-  /** Resolved related-object names (not raw URLs) */
-  related: JobRelated;
+// ─── Top-level schema ──────────────────────────────────────
 
-  /** Per-host status counts — NOT host_summary */
-  host_status_counts: HostStatusCounts;
+export const JobDetailOutputSchema = z.object({
+  schema_version: z.literal("1.0"),
+  job: JobCoreSchema,
+  related: RelatedSchema,
+  host_status_counts: HostStatusCountsSchema,
+  derived: DerivedSchema,
+  warnings: z.array(z.string()),
+  errors: z.array(z.string()),
+  stdout: z.string().optional(),
+  raw_events: z.array(z.unknown()).optional(),
+});
 
-  /** Derived boolean flags — NOT extra_vars_summary */
-  derived: Derived;
+// ─── Inferred TypeScript types ─────────────────────────────
 
-  /** Human-readable warnings (e.g., from job_explanation) */
-  warnings: string[];
+/** Core job metadata fields */
+export type JobCore = z.infer<typeof JobCoreSchema>;
 
-  /** Error messages or tracebacks */
-  errors: string[];
+/** Resolved names for related AWX resources */
+export type Related = z.infer<typeof RelatedSchema>;
 
-  /** Optional job stdout content (only with --include-stdout flag) */
-  stdout?: string;
+/** Count of hosts in each Ansible state */
+export type HostStatusCounts = z.infer<typeof HostStatusCountsSchema>;
 
-  /** Optional raw job events array (only with --include-events flag) */
-  raw_events?: unknown[];
-}
+/** Computed boolean flags */
+export type Derived = z.infer<typeof DerivedSchema>;
+
+/** Top-level JobDetailOutput contract (v1.0) */
+export type JobDetailOutput = z.infer<typeof JobDetailOutputSchema>;
