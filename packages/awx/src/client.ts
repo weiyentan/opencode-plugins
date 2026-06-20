@@ -364,75 +364,82 @@ export function createClient(
 
       const breaker = breakerFor(toolName);
 
-      // ── Retry loop with exponential backoff + circuit breaker ──
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        // ── Circuit breaker gate (checked before every attempt) ──
-        if (!breaker.tryAcquire()) {
-          // Breaker is open — fail fast, no fetch
-          clearTimeout_();
-          return circuitOpenResponse();
-        }
+      // ── Track outcome for metrics ──
+      let recordedError = false;
 
-        try {
-          const response = await fetch(url, fetchInit);
-
-          // 2xx — success, reset breaker, return immediately
-          if (response.ok) {
-            breaker.recordSuccess();
-            metrics.recordCall(toolName, Date.now() - start);
-            clearTimeout_();
-            return response;
+      // ── Middleware pipeline ──
+      try {
+        // ── Retry loop with exponential backoff + circuit breaker ──
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          // ── Circuit breaker gate (checked before every attempt) ──
+          if (!breaker.tryAcquire()) {
+            // Breaker is open — fail fast, no fetch
+            recordedError = true;
+            return circuitOpenResponse();
           }
 
-          // 4xx — client error, do NOT retry, do NOT trip circuit breaker
-          if (response.status >= 400 && response.status < 500) {
-            metrics.recordError(toolName);
-            if (response.status === 401) {
-              metrics.recordTokenExpiry(toolName);
+          try {
+            const response = await fetch(url, fetchInit);
+
+            // 2xx — success, reset breaker, return immediately
+            if (response.ok) {
+              breaker.recordSuccess();
+              return response;
             }
-            clearTimeout_();
+
+            // Non-2xx outcome — will record error in finally block
+            recordedError = true;
+
+            // 4xx — client error, do NOT retry, do NOT trip circuit breaker
+            if (response.status >= 400 && response.status < 500) {
+              if (response.status === 401) {
+                metrics.recordTokenExpiry(toolName);
+              }
+              return response;
+            }
+
+            // 5xx — server error, record failure, retry if attempts remain
+            breaker.recordFailure();
+
+            if (attempt < maxRetries) {
+              const delay = calcBackoff(attempt);
+              await sleepWithAbort(delay, combinedSignal);
+              continue;
+            }
+
+            // Max retries exhausted — return the last response
             return response;
-          }
+          } catch (err: unknown) {
+            // AbortError — propagate immediately, do NOT retry
+            if (err instanceof DOMException && err.name === "AbortError") {
+              throw err;
+            }
 
-          // 5xx — server error, record failure, retry if attempts remain
-          breaker.recordFailure();
-          metrics.recordError(toolName);
+            // Network or other error — count as failure, retry if attempts remain
+            recordedError = true;
+            breaker.recordFailure();
 
-          if (attempt < maxRetries) {
-            const delay = calcBackoff(attempt);
-            await sleepWithAbort(delay, combinedSignal);
-            continue;
-          }
+            if (attempt < maxRetries) {
+              const delay = calcBackoff(attempt);
+              await sleepWithAbort(delay, combinedSignal);
+              continue;
+            }
 
-          // Max retries exhausted — return the last response
-          clearTimeout_();
-          return response;
-        } catch (err: unknown) {
-          // AbortError — propagate immediately, do NOT retry
-          if (err instanceof DOMException && err.name === "AbortError") {
-            clearTimeout_();
+            // Max retries exhausted — throw the error
             throw err;
           }
-
-          // Network or other error — count as failure, retry if attempts remain
-          breaker.recordFailure();
-          metrics.recordError(toolName);
-
-          if (attempt < maxRetries) {
-            const delay = calcBackoff(attempt);
-            await sleepWithAbort(delay, combinedSignal);
-            continue;
-          }
-
-          // Max retries exhausted — throw the error
-          clearTimeout_();
-          throw err;
         }
-      }
 
-      // Unreachable — all paths above either return or throw
-      clearTimeout_();
-      throw new Error("Unreachable: retry loop exhausted");
+        // Unreachable — all paths above either return or throw
+        throw new Error("Unreachable: retry loop exhausted");
+      } finally {
+        const duration = Date.now() - start;
+        metrics.recordCall(toolName, duration);
+        if (recordedError) {
+          metrics.recordError(toolName);
+        }
+        clearTimeout_();
+      }
     },
   };
 }
