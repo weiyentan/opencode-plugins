@@ -377,9 +377,8 @@ export function createClient(
             return response;
           }
 
-          // 4xx — client error, do NOT retry, count as failure
+          // 4xx — client error, do NOT retry, do NOT trip circuit breaker
           if (response.status >= 400 && response.status < 500) {
-            breaker.recordFailure();
             metrics.recordError(toolName);
             if (response.status === 401) {
               metrics.recordTokenExpiry(toolName);
