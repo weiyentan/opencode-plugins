@@ -22,6 +22,7 @@ import { tool } from "@opencode-ai/plugin";
 import type { PluginInput, Hooks, PluginModule } from "@opencode-ai/plugin";
 import { z } from "zod";
 import { createAwxAuthHook, validateToken } from "./auth.js";
+import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
 
 /** Plugin-specific configuration from opencode.jsonc */
 export interface AwxPluginOptions {
@@ -82,9 +83,27 @@ async function server(
     }
   }
 
+  /* ── Metrics lifecycle ────────────────────────────────────── */
+  // Create the shared MetricsStore, restore persisted counters from disk,
+  // and set up periodic persistence so that in-memory counters survive
+  // plugin reloads. The dispose hook (returned via Hooks.dispose) will
+  // stop the interval and flush remaining counters.
+  const metricsStore = new MetricsStore();
+  try {
+    await metricsStore.load();
+  } catch {
+    // load failures (e.g. corrupt file) are non-fatal — counters start fresh
+    console.error("[plugin-awx] Failed to load persisted metrics; starting fresh");
+  }
+
+  const persistence = setupMetricsPersistence(metricsStore, 30_000);
+
   /* ── Hooks ────────────────────────────────────────────────── */
   return {
     auth: authHook,
+    dispose: async () => {
+      await persistence.clear();
+    },
     tool: {
       /**
        * Hello-world tool — Phase 0 scaffolding tracer.

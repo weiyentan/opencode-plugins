@@ -143,6 +143,13 @@ export interface ClientOptions {
   circuitBreakerThreshold?: number;
   /** Circuit breaker cooldown in ms (default: 30_000) */
   circuitBreakerCooldownMs?: number;
+  /**
+   * Optional shared MetricsStore for plugin-level persistence lifecycle.
+   * If not provided, a new MetricsStore is created internally.
+   * Pass the plugin-level store here so that periodic persist and
+   * init-time load are effective across all tools.
+   */
+  metricsStore?: MetricsStore;
 }
 
 /** The AWX HTTP client returned by createClient */
@@ -295,8 +302,8 @@ export function createClient(
     return breaker;
   }
 
-  // Shared metrics store instance
-  const metrics = new MetricsStore();
+  // Shared metrics store instance (use injected store or create new one)
+  const metrics = opts?.metricsStore ?? new MetricsStore();
 
   /** Create a spec-compliant 503 Response for when the circuit breaker is open */
   function circuitOpenResponse(): Response {

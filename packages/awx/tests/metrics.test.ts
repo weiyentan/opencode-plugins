@@ -11,8 +11,12 @@
  * breaking these tests.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { MetricsStore, createDefaultMetrics } from "../src/metrics";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  MetricsStore,
+  createDefaultMetrics,
+  setupMetricsPersistence,
+} from "../src/metrics";
 import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
@@ -309,6 +313,95 @@ describe("MetricsStore", () => {
       const metrics = store.getMetrics("nonexistent");
       expect(metrics).toBeDefined();
       expect(metrics.callCount).toBe(0);
+    });
+  });
+
+  // ——— Lifecycle integration (periodic persist) ———
+
+  describe("lifecycle integration", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /**
+     * This test validates that `setupMetricsPersistence` wires `persist()` to
+     * a periodic timer — fulfilling the requirement that plugin-level metrics
+     * are flushed to disk on a recurring interval.
+     *
+     * Note: `setupMetricsPersistence` is a helper that the plugin's `server()`
+     * function calls during initialization, along with `store.load()`.
+     */
+    it("setupMetricsPersistence calls persist() periodically at the given interval", async () => {
+      vi.useFakeTimers();
+
+      const store = new MetricsStore();
+      const persistSpy = vi.spyOn(store, "persist");
+      persistSpy.mockResolvedValue(undefined);
+
+      const { clear } = setupMetricsPersistence(store, 1000);
+
+      // No persist should have been called before the interval fires
+      expect(persistSpy).not.toHaveBeenCalled();
+
+      // Advance past first interval
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(persistSpy).toHaveBeenCalledTimes(1);
+
+      // Advance past second interval
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(persistSpy).toHaveBeenCalledTimes(2);
+
+      // Clean up
+      await clear();
+      vi.useRealTimers();
+    });
+
+    it("clear() stops periodic persist and does a final persist", async () => {
+      vi.useFakeTimers();
+
+      const store = new MetricsStore();
+      const persistSpy = vi.spyOn(store, "persist");
+      persistSpy.mockResolvedValue(undefined);
+
+      const { clear } = setupMetricsPersistence(store, 1000);
+
+      // Advance past one interval
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(persistSpy).toHaveBeenCalledTimes(1);
+
+      // Clear should do a final persist and stop the interval
+      await clear();
+      // 1 from interval + 1 from final persist
+      expect(persistSpy).toHaveBeenCalledTimes(2);
+
+      // Advance more time — no more persists should happen
+      persistSpy.mockClear();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(persistSpy).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it("load() restores persisted counters on initialization (lifecycle pattern)", async () => {
+      const dir = await tempPersistDir();
+      const filePath = persistPath(dir);
+
+      // First session: record and persist
+      const store1 = new MetricsStore(filePath);
+      store1.recordCall("tool-a", 100);
+      store1.recordPsFallback("tool-b");
+      await store1.persist();
+
+      // Simulate plugin reload: new store pointing to same file
+      const store2 = new MetricsStore(filePath);
+      await store2.load(); // This is called during plugin initialization
+
+      // Verify counters restored
+      expect(store2.getMetrics("tool-a").callCount).toBe(1);
+      expect(store2.getMetrics("tool-a").totalLatencyMs).toBe(100);
+      expect(store2.getMetrics("tool-b").psFallbackCount).toBe(1);
+
+      await fs.rm(dir, { recursive: true, force: true });
     });
   });
 });
