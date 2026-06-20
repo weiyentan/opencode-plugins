@@ -24,7 +24,7 @@ Circuit breaker gate
   ▼
 fetch(AAP_URL, { signal, headers })
   │
-  ├── 4xx (401/403/404) ──→ pass through immediately, no retry, update breaker (failure)
+  ├── 4xx (401/403/404) ──→ pass through immediately, no retry, no breaker update
   ├── 5xx ──→ exponential backoff & retry (up to 3 attempts), update breaker on failure
   └── 2xx ──→ return response, reset breaker failure count
 ```
@@ -35,7 +35,7 @@ fetch(AAP_URL, { signal, headers })
 
 | State | Behavior |
 |-------|----------|
-| **CLOSED** | Normal operation. Requests flow through. Failure counter increments on 5xx/4xx/network errors. |
+| **CLOSED** | Normal operation. Requests flow through. Failure counter increments on 5xx and network errors only. 4xx client errors are passed through without incrementing the counter. |
 | **OPEN** | Requests are rejected immediately without calling `fetch`. Returns error: "AWX circuit breaker is open — AAP may be unreachable. Try again in 30s." |
 | **HALF-OPEN** | After cooldown, one probe request is allowed. Success → CLOSED. Failure → OPEN again. |
 
@@ -43,7 +43,7 @@ fetch(AAP_URL, { signal, headers })
 
 | Parameter | Default | Notes |
 |-----------|---------|-------|
-| Trip threshold | 5 consecutive errors | Errors include 5xx, network failures, timeouts. 4xx counts too (but these should be rare). Counter resets on success — no sliding time window. |
+| Trip threshold | 5 consecutive errors | Errors include 5xx, network failures, timeouts. 4xx does NOT count (client/auth errors aren't server availability issues). Counter resets on success — no sliding time window. |
 | Cooldown duration | 30s (30,000ms) | Time before transitioning from OPEN → HALF-OPEN |
 | Half-open probe count | 1 success to close, 1 failure to re-open | Single probe is sufficient |
 

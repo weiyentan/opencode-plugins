@@ -294,6 +294,46 @@ describe("circuit breaker", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════
+   Circuit Breaker — 4xx Exclusion
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("circuit breaker — 4xx exclusion", () => {
+  it("repeated 401s do not trip the circuit breaker", async () => {
+    vi.useFakeTimers();
+
+    const client = createClient("https://aap.example.com", "token", {
+      circuitBreakerThreshold: 2,
+      maxRetries: 0,
+    });
+
+    // 5 consecutive 401s — if the breaker counted 4xx failures,
+    // it would trip after 2 and return 503 for the 3rd+.
+    for (let i = 0; i < 5; i++) {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: "Unauthorized",
+        json: () => Promise.resolve({ detail: "Invalid token" }),
+      } as Response);
+
+      const response = await client.request(
+        "4xx-breaker-test",
+        "/api/v2/me/",
+      );
+
+      // Must be the original 401, not a 503 circuit-open
+      expect(response.ok).toBe(false);
+      expect(response.status).toBe(401);
+    }
+
+    // All requests went through to fetch — breaker never blocked
+    expect(mockFetch).toHaveBeenCalledTimes(5);
+
+    vi.useRealTimers();
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
    Abort Signal Handling
    ══════════════════════════════════════════════════════════════════ */
 
