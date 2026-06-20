@@ -430,6 +430,26 @@ describe("MetricsStore", () => {
       vi.useRealTimers();
     });
 
+    it("onError callback fires when persist fails", async () => {
+      vi.useFakeTimers();
+
+      const store = new MetricsStore();
+      const persistSpy = vi.spyOn(store, "persist");
+      persistSpy.mockRejectedValue(new Error("disk full"));
+
+      const onError = vi.fn();
+      const { clear } = setupMetricsPersistence(store, 1000, onError);
+
+      // Advance past first interval — the .catch() should fire onError
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith(expect.any(Error));
+
+      await clear();
+      vi.useRealTimers();
+    });
+
     it("load() restores persisted counters on initialization (lifecycle pattern)", async () => {
       const dir = await tempPersistDir();
       const filePath = persistPath(dir);

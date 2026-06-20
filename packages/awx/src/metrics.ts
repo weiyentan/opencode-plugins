@@ -137,7 +137,7 @@ export class MetricsStore {
   /**
    * Record an error for a tool.
    * Called by the client when a fetch request fails (any error: 4xx, 5xx,
-   * network error, timeout, abort, circuit breaker open).
+   * network error, timeout, abort).
    */
   recordError(toolName: string): void {
     const m = this.ensure(toolName);
@@ -297,19 +297,25 @@ export class MetricsStore {
  *
  * @param store      - The MetricsStore to persist periodically
  * @param intervalMs - Interval in milliseconds (default: 30_000 = 30s)
+ * @param onError    - Optional callback invoked when a persist attempt fails.
+ *                     Receives the error object so the caller can surface
+ *                     failures (e.g., via app logging) without crashing the
+ *                     interval.
  */
 export function setupMetricsPersistence(
   store: MetricsStore,
   intervalMs: number = 30_000,
+  onError?: (err: unknown) => void,
 ): { clear: () => Promise<void> } {
   let persistQueue = Promise.resolve();
 
   function enqueuePersist(): Promise<void> {
     persistQueue = persistQueue
       .then(() => store.persist())
-      .catch(() => {
+      .catch((err) => {
         // persist failures (e.g., permission denied) should not crash
-        // the interval; the error is silently caught.
+        // the interval; surface the error via the optional callback.
+        onError?.(err);
       });
     return persistQueue;
   }
