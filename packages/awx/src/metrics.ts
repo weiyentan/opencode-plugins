@@ -302,20 +302,26 @@ export function setupMetricsPersistence(
   store: MetricsStore,
   intervalMs: number = 30_000,
 ): { clear: () => Promise<void> } {
+  let persistQueue = Promise.resolve();
+
+  function enqueuePersist(): Promise<void> {
+    persistQueue = persistQueue
+      .then(() => store.persist())
+      .catch(() => {
+        // persist failures (e.g., permission denied) should not crash
+        // the interval; the error is silently caught.
+      });
+    return persistQueue;
+  }
+
   const intervalId = setInterval(() => {
-    // Fire-and-forget — failures are non-fatal
-    store.persist().catch(() => {
-      // persist failures (e.g., permission denied) should not crash the
-      // interval; the error is silently caught. The next interval tick
-      // will retry.
-    });
+    void enqueuePersist();
   }, intervalMs);
 
   return {
-    clear: async (): Promise<void> => {
+    async clear(): Promise<void> {
       clearInterval(intervalId);
-      // Final persist to flush any remaining in-memory counters
-      await store.persist();
+      await enqueuePersist();
     },
   };
 }

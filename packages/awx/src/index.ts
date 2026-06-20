@@ -23,7 +23,7 @@ import type { PluginInput, Hooks, PluginModule } from "@opencode-ai/plugin";
 import { z } from "zod";
 import { createAwxAuthHook, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
-import { createClient } from "./client.js";
+import { createClient, createTimeoutSignal } from "./client.js";
 import type { AwxClient } from "./client.js";
 
 /** Plugin-specific configuration from opencode.jsonc */
@@ -56,8 +56,25 @@ async function server(
   /* ── Auth hook ────────────────────────────────────────────── */
   const authHook = createAwxAuthHook();
 
-  /* ── AWX HTTP client — created when baseUrl + token are available ── */
-  let awxClient: AwxClient | undefined;
+  /* ── AWX HTTP client — lazy resolver, created on first tool call ── */
+  let cachedClient: AwxClient | undefined;
+  let cachedToken: string | undefined;
+
+  async function getAwxClient(): Promise<AwxClient | undefined> {
+    if (!baseUrl) return undefined;
+
+    const token = await input.client.getSecret?.("awx");
+    if (!token) return undefined;
+
+    const tokenString = String(token);
+
+    if (!cachedClient || cachedToken !== tokenString) {
+      cachedToken = tokenString;
+      cachedClient = createClient(baseUrl, tokenString, { metricsStore });
+    }
+
+    return cachedClient;
+  }
 
   /* ── Metrics lifecycle ────────────────────────────────────── */
   // Create the shared MetricsStore early, before the AWX client,
@@ -70,7 +87,13 @@ async function server(
     await metricsStore.load();
   } catch {
     // load failures (e.g. corrupt file) are non-fatal — counters start fresh
-    console.error("[plugin-awx] Failed to load persisted metrics; starting fresh");
+    input.client.app.log({
+      body: {
+        service: "plugin-awx",
+        level: "error",
+        message: "Failed to load persisted metrics; starting fresh",
+      },
+    });
   }
 
   const persistence = setupMetricsPersistence(metricsStore, 30_000);
@@ -83,26 +106,40 @@ async function server(
     try {
       const storedKey = await input.client.getSecret?.("awx");
       if (storedKey) {
-        awxClient = createClient(baseUrl, String(storedKey), { metricsStore });
+        const { signal } = createTimeoutSignal(10_000);
 
         const result = await validateToken(
           baseUrl,
           String(storedKey),
-          AbortSignal.timeout(10_000), // 10s health-check timeout
+          signal,
         );
 
         if (!result.valid) {
-          console.error(
-            `[plugin-awx] Init-time token validation failed: ${result.error}`,
-          );
+          input.client.app.log({
+            body: {
+              service: "plugin-awx",
+              level: "error",
+              message: `Init-time token validation failed: ${result.error}`,
+            },
+          });
         } else {
-          console.log(`[plugin-awx] Token validated successfully against ${baseUrl}`);
+          input.client.app.log({
+            body: {
+              service: "plugin-awx",
+              level: "info",
+              message: `Token validated successfully against ${baseUrl}`,
+            },
+          });
         }
       }
     } catch {
-      console.log(
-        `[plugin-awx] No stored token found. Auth will be configured on first use.`,
-      );
+      input.client.app.log({
+        body: {
+          service: "plugin-awx",
+          level: "info",
+          message: "No stored token found. Auth will be configured on first use.",
+        },
+      });
     }
   }
 
@@ -163,6 +200,7 @@ async function server(
             return "Request was aborted.";
           }
 
+          const awxClient = await getAwxClient();
           if (!awxClient) {
             return (
               "[stub] list-templates: AWX client not available. " +

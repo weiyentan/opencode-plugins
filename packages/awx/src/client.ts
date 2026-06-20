@@ -96,7 +96,7 @@ export async function sleepWithAbort(
  * timers (the native `AbortSignal.timeout()` uses internal Node.js timers
  * that cannot be mocked by vitest).
  */
-function createTimeoutSignal(ms: number): { signal: AbortSignal; clear: () => void } {
+export function createTimeoutSignal(ms: number): { signal: AbortSignal; clear: () => void } {
   const controller = new AbortController();
   const timer = setTimeout(
     () => controller.abort(new DOMException("The operation timed out.", "TimeoutError")),
