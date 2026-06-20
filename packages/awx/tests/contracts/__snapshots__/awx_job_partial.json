@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "job": {
+    "id": 43,
+    "name": "Backup Database - Nightly",
+    "status": "running",
+    "failed": false,
+    "job_type": "run",
+    "playbook": "backup.yml",
+    "created": "2026-06-19T23:00:00.000000Z",
+    "started": "2026-06-19T23:00:02.000000Z",
+    "finished": null,
+    "elapsed": null,
+    "execution_node": "node2.tanscloud-internal.com",
+    "controller_node": "controller.tanscloud-internal.com",
+    "scm_branch": "main",
+    "verbosity": 0,
+    "forks": null,
+    "limit": ""
+  },
+  "related": {
+    "inventory_name": "Database Servers",
+    "project_name": "Database Ops",
+    "job_template_name": "Backup Database",
+    "instance_group_name": "default",
+    "created_by": "ansible-bot",
+    "credential_names": [
+      "Database Admin"
+    ],
+    "label_names": [
+      "database",
+      "nightly"
+    ]
+  },
+  "host_status_counts": {
+    "ok": 2,
+    "failed": 0,
+    "skipped": 0,
+    "changed": 0,
+    "unreachable": 0
+  },
+  "derived": {
+    "is_successful": false,
+    "is_failed": false,
+    "has_unreachable_hosts": false
+  },
+  "warnings": [],
+  "errors": []
+}
