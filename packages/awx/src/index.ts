@@ -59,6 +59,22 @@ async function server(
   /* ── AWX HTTP client — created when baseUrl + token are available ── */
   let awxClient: AwxClient | undefined;
 
+  /* ── Metrics lifecycle ────────────────────────────────────── */
+  // Create the shared MetricsStore early, before the AWX client,
+  // so the middleware pipeline can record metrics through it.
+  // Restore persisted counters from disk and set up periodic persistence
+  // so that in-memory counters survive plugin reloads. The dispose hook
+  // (returned via Hooks.dispose) will stop the interval and flush counters.
+  const metricsStore = new MetricsStore();
+  try {
+    await metricsStore.load();
+  } catch {
+    // load failures (e.g. corrupt file) are non-fatal — counters start fresh
+    console.error("[plugin-awx] Failed to load persisted metrics; starting fresh");
+  }
+
+  const persistence = setupMetricsPersistence(metricsStore, 30_000);
+
   /* ── Init-time validation ─────────────────────────────────── */
   // If a baseUrl is configured, attempt to validate the connection.
   // Token validation depends on whether the user has already stored a PAT.
@@ -67,7 +83,7 @@ async function server(
     try {
       const storedKey = await input.client.getSecret?.("awx");
       if (storedKey) {
-        awxClient = createClient(baseUrl, String(storedKey));
+        awxClient = createClient(baseUrl, String(storedKey), { metricsStore });
 
         const result = await validateToken(
           baseUrl,
@@ -89,21 +105,6 @@ async function server(
       );
     }
   }
-
-  /* ── Metrics lifecycle ────────────────────────────────────── */
-  // Create the shared MetricsStore, restore persisted counters from disk,
-  // and set up periodic persistence so that in-memory counters survive
-  // plugin reloads. The dispose hook (returned via Hooks.dispose) will
-  // stop the interval and flush remaining counters.
-  const metricsStore = new MetricsStore();
-  try {
-    await metricsStore.load();
-  } catch {
-    // load failures (e.g. corrupt file) are non-fatal — counters start fresh
-    console.error("[plugin-awx] Failed to load persisted metrics; starting fresh");
-  }
-
-  const persistence = setupMetricsPersistence(metricsStore, 30_000);
 
   /* ── Hooks ────────────────────────────────────────────────── */
   return {

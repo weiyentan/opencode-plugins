@@ -32,7 +32,7 @@ docs/
 │   └── plugin-awx-refined.md  # Refined PRD
 └── client-middleware-design.md  # Middleware pipeline design
 packages/
-└── awx/                    # AWX plugin package (auth, contracts, transforms, hello-world tool)
+└── awx/                    # AWX plugin package (auth, contracts, transforms, hello-world + listTemplates tools)
 ```
 
 ## Development
@@ -49,7 +49,7 @@ The AWX plugin package (`packages/awx/`) is already scaffolded with these module
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers the hello-world tool; verifies plugin load, tool registration, and hot-reload |
+| **Plugin entry** | `src/index.ts` | Registers hello-world + listTemplates tools; wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook |
 | **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | SSH→HTTPS URL conversion, git branch inference, required-var validation |
