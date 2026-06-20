@@ -1,0 +1,188 @@
+decision: proceed
+confidence: 0.79
+clarified_problem: "The handoff validates that the AWX OpenCode plugin PRD is ready for implementation planning. The 3 critical unknowns from the prior Council (bearer token viability, output contract alignment, plugin API surface) are resolved with evidence. The architecture is documented in 6 ADRs. The scope is honestly bounded at 7/22 actions (30%) covering the 80% use case. The refined PRD at docs/prd/plugin-awx-refined.md is complete enough to proceed to /to-issues."
+
+cost_metadata:
+  estimated_model_cost: 0.15
+  total_tokens: 28000
+  wall_clock_minutes: 8
+  round1_invocations: 2
+  round2_invocations: 0
+
+main_assumptions:
+  - "AAP instance at aap.tanscloud-internal.com remains accessible with the same API surface during implementation"
+  - "@opencode-ai/plugin v1.14.29 API is stable and will not change during development"
+  - "The 6 ADRs capture all critical architecture decisions"
+  - "Bearer token (PAT) model is sufficient for MVP"
+  - "The tool-action mapping table accurately documents all gaps and fallback paths"
+  - "Greenfield repo setup cost is accurately estimated (±30%)"
+
+missing_information:
+  - "PAT TTL on target AAP instance (needs /api/v2/tokens/ check)"
+  - "Plugin hot-reload behavior (needs spike during Phase 0)"
+  - "Which output contract fields skill renderers actually consume (needs grep before Phase 2)"
+  - "get-template effort estimate (potential v1 scope addition)"
+  - "Current AWX-related agent failure rate baseline"
+
+risks:
+  - "Token TTL < session duration: if PAT expires mid-session, all subsequent tool calls return 401 with no recovery path — needs explicit acceptance for v1 or a token refresh mechanism"
+  - "Greenfield repo estimation variance: no existing packages/ workspace, tsconfig, or test infra — Phase 0 scaffolding could take 2x estimate if toolchain decisions (npm/pnpm, vitest/jest, project references) stall"
+  - "Skill renderer incompatibility: contract.test.ts may pass but Phase 2 could reveal that skill templates consume output contract fields in unexpected ways — requires a pre-Phase-2 spike"
+
+non_goals:
+  - "Replacing all 22 existing PowerShell actions — only 7 covered in v1, remaining 15 documented in tool-action mapping table"
+  - "OAuth2/JWT auth — PAT-only for MVP"
+  - "Full AWX API coverage — this is a scoped plugin, not a full AWX API client"
+  - "Deprecating PowerShell scripts — Phase 2→3 transition is metrics-gated and deferred"
+  - "Real-time WebSocket events — the non-blocking poll pattern is used instead"
+
+architecture_concerns:
+  - "Client middleware composition: timeout, backoff, circuit breaker, and abort signal must be composed as a pipeline, not independent concerns — each interaction (open-breaker+timeout, abort-mid-retry) needs an explicit design decision"
+  - "Pagination strategy underspecified: list-templates and list-projects consolidate paginated results but need a max-page cap and timeout budget — a large AAP (200+ items × 25/page) could exhaust the 30s tool timeout"
+  - "Metrics durability model undefined: 'simple counters' is vague — in-memory counters reset on plugin load and are useless for Phase 2→3 deprecation monitoring (requires 14 days of zero PowerShell calls)"
+
+delivery_concerns:
+  - "14 issues may be too granular for effective tracking — consider consolidation to 8-10 issues"
+  - "Issue #1 Phase 0 scaffolding is greenfield and heavier than a 'copy the pattern' task — needs sub-tasks or 2x estimate"
+  - "Python dependency for contract.test.ts is an unplanned CI infrastructure cost — snapshot approach recommended to eliminate it"
+  - "Orphaned-job risk in agent-side poll pattern — no documented max-poll-attempts bound or warning in skill specs"
+
+cost_concerns:
+  - "No user-facing success metrics: phase gates measure internal adoption (no PowerShell calls) but not user-perceptible improvement — could ship a plugin that's architecturally 'better' but not measurably faster or more reliable for users"
+  - "Performance budget undefined: acceptable latency per tool call is not specified — if extra-var transforms add 3+ seconds, user experience may not improve over PowerShell"
+
+must_answer_before_prd:
+  - "What is the PAT TTL on the target AAP instance? (curl /api/v2/tokens/ — flag if < 2 hours)"
+  - "Does @opencode-ai/plugin support hot-reload? (spike during Phase 0 scaffolding)"
+  - "What is the max page depth for paginated list endpoints? (200 items? 500? no limit?)"
+  - "Should get-template be added to v1 scope? (estimate effort — if ≤ 2h, include)"
+
+recommended_prd_shape:
+  - section: "Phase-Gate Criteria"
+    purpose: "Define measurable, user-facing success metrics for each phase gate (e.g., average tool call latency < Xs, AWX-related agent failure rate < Y%). Include performance budgets per tool."
+  - section: "Token Lifecycle"
+    purpose: "Document the PAT TTL assumption and its implications. Decide whether token refresh is a v2 feature or a v1 requirement. Define the error recovery path for 401 responses mid-session."
+  - section: "Pagination Design"
+    purpose: "Specify the pagination strategy for list tools: max-page cap, per-page size, timeout budget for multi-page fan-out, and behavior when cap is exceeded."
+  - section: "Client Middleware Pipeline"
+    purpose: "Document the composition order of timeout, backoff, circuit breaker, and abort signal. Cover edge cases: circuit-breaker-open behavior, abort during retry wait, retry counter reset policy."
+  - section: "Metrics Durability Model"
+    purpose: "Specify how metrics are stored (in-memory vs file-backed vs tool-exported) and how Phase 2→3 deprecation gates use them."
+  - section: "Orphaned Job Handling"
+    purpose: "Document the risk of jobs launched via agent-side poll continuing after session interruption. Define max-poll-attempts and recommended job timeout for skills."
+
+suggested_issue_breakdown:
+  - title: "Phase 0: Repository Scaffolding"
+    goal: "Create the plugin package directory, package.json, tsconfig.json, test infrastructure (vitest/jest), and verify plugin hot-reload behavior. Establish repo conventions."
+    estimated_size: "8-12 hours"
+    acceptance_criteria:
+      - "packages/plugin-awx/ directory exists with package.json pointing to @opencode-ai/plugin workspace"
+      - "tsconfig.json compiles without errors on `tsc --noEmit`"
+      - "A minimal 'hello world' tool tool loads and is invocable from OpenCode server"
+      - "Hot-reload behavior verified: tool description change is picked up without server restart (or documented deviation)"
+      - "CI config includes Node.js + Python (for contract tests) or snapshot approach is adopted"
+  - title: "Contract Types + Auth Hook"
+    goal: "Define and test the output contract types matching awx_job_detail.py v1.0. Implement credential lifecycle via @opencode-ai/plugin type: 'api' auth hook."
+    estimated_size: "2-3 hours"
+    acceptance_criteria:
+      - "contracts/job-detail.ts exports TypedDict matching all fields from awx_job_detail.py v1.0"
+      - "contract.test.ts passes against all 3 fixture files — diffing TypeScript output against fixture snapshots"
+      - "auth.ts implements type: 'api' with authorize() returning { type: 'success', key } on PAT validation"
+      - "contract.test.ts does NOT require Python subprocess (snapshot-based approach)"
+      - "README documents how to regenerate snapshots when output contract changes"
+  - title: "Client Module Design (Middleware Pipeline)"
+    goal: "Design the compose pipeline for HTTP resilience: timeout, exponential backoff, circuit breaker, and abort signal integration. Produce a design doc before implementing."
+    estimated_size: "1-2 hours"
+    acceptance_criteria:
+      - "Design doc covers: composition order (signal→timeout→fetch→4xx/no-retry→5xx/backoff→breaker gate)"
+      - "Edge cases documented: open-breaker-returns-immediately, abort-interrupts-backoff, retry-counter-reset policy"
+      - "Circuit breaker granularity decided: tool-level vs client-level"
+      - "Design approved by platform architect before implementation"
+  - title: "Client Module Implementation"
+    goal: "Implement the HTTP client with timeout, exponential backoff (5xx only), zero retry on 4xx, circuit breaker, and ToolContext.abort signal integration."
+    estimated_size: "2-3 hours"
+    acceptance_criteria:
+      - "client.ts exports createClient(baseUrl, token) returning configured fetch wrapper"
+      - "30s timeout enforced via AbortSignal.timeout()"
+      - "Exponential backoff on 5xx (retries with delay, capped at N attempts)"
+      - "Zero retry on 4xx (passes error through immediately)"
+      - "Circuit breaker trips after N consecutive 5xx, resets after cooldown period"
+      - "All interactions with circuit breaker + abort + retry are unit-tested"
+  - title: "Extra-Var Transformations"
+    goal: "Implement transforms.ts with SSH→HTTPS URL conversion, git branch inference, and required variable validation."
+    estimated_size: "1-2 hours"
+    acceptance_criteria:
+      - "transforms.ts exports normalizeScmUrl(url) converts SSH git URLs to HTTPS"
+      - "transforms.ts exports inferGitBranch(ref) extracts branch from ref string"
+      - "transforms.ts exports validateRequiredVars(vars, required) returns missing vars"
+      - "All transforms are pure functions with unit tests"
+      - "Edge cases handled: malformed URLs, null/undefined inputs, empty required lists"
+  - title: "Read-Only Tools: List Templates + List Projects"
+    goal: "Implement awx-list-templates and awx-list-projects tools with pagination consolidation."
+    estimated_size: "3-5 hours"
+    acceptance_criteria:
+      - "awx-list-templates returns paginated template list, consolidated into single array"
+      - "awx-list-projects returns paginated project list, consolidated into single array"
+      - "Pagination respects max-page cap (configurable, default 5 pages)"
+      - "Per-page size override supported (default 50 items/page)"
+      - "Timeout budget for multi-page fan-out: tool-level timeout / (pages+1) per page"
+      - "Both tools return output matching the job-detail contract schema"
+      - "Both tools surface clear errors on AAP connection failures"
+  - title: "Job Tools: Launch + Status"
+    goal: "Implement awx-launch-job with transforms integration and awx-job-status with contract transformation."
+    estimated_size: "3-4 hours"
+    acceptance_criteria:
+      - "awx-launch-job accepts template_id and extra_vars, applies transforms, and returns job ID"
+      - "awx-job-status accepts job_id and returns formatted output matching output contract v1.0"
+      - "Extra-var transforms executed in order: SSH→HTTPS, branch inference, var validation"
+      - "Job status output includes all top-level fields from job-detail schema"
+      - "Error handling: invalid template_id returns clear error, AAP 4xx passed through"
+  - title: "Job Tools: Wait + Get Events"
+    goal: "Implement awx-wait-job (non-blocking return) and awx-get-job-events (simple passthrough)."
+    estimated_size: "2-3 hours"
+    acceptance_criteria:
+      - "awx-wait-job accepts job_id, returns immediately with job_id (non-blocking — agent-side poll pattern)"
+      - "awx-get-job-events accepts job_id and optional event_filter, returns events array"
+      - "Both tools handle: job not found, job still running, empty events"
+      - "Output format matches output contract schema for relevant fields"
+  - title: "Sync Project Tool + Plugin Entry Wiring"
+    goal: "Implement awx-sync-project. Wire all tools into index.ts. Add metrics collection and init-time validation."
+    estimated_size: "3-5 hours"
+    acceptance_criteria:
+      - "awx-sync-project accepts project_id and returns sync status"
+      - "metrics.ts implements per-tool call count, error count, latency, token expiry events, PowerShell fallback count"
+      - "Metrics durability model implemented: counters persisted across plugin load (file-backed or tool-exported)"
+      - "Init-time validation: GET /api/v2/me/ (token check) + GET /api/v2/ (AAP version gate) on plugin load"
+      - "All 7 tools registered and exported from index.ts"
+  - title: "Integration Tests"
+    goal: "Write live AAP integration tests covering the full tool lifecycle (launch → status → poll → events)."
+    estimated_size: "2-4 hours"
+    acceptance_criteria:
+      - "Integration tests gated behind AWX_TOKEN environment variable (not run in public CI)"
+      - "Test: list templates against live AAP and validate response structure"
+      - "Test: launch job, poll with status, verify completion"
+      - "Test: retrieve job events for completed job"
+      - "Test: sync project (if non-destructive)"
+      - "Test: auth failure returns clear error (run with invalid token)"
+      - "Test: agent-side poll flow transition documented as behavioral contract"
+
+council_disagreements:
+  - topic: "Issue granularity"
+    positions:
+      - member: "product-owner"
+        view: "Consolidate from 14 to 8-10 issues to reduce management overhead"
+        resolution: "Resolved in synthesis: 10 issues produced balancing granularity and manageability"
+      - member: "senior-engineer"
+        view: "Issue #1 needs sub-tasks; new concerns (pagination, middleware design) need explicit issues"
+        resolution: "Resolved in synthesis: Phase 0 scaffold expanded with sub-tasks; pagination + middleware concerns folded into relevant issues"
+  - topic: "contract.test.ts Python dependency"
+    positions:
+      - member: "product-owner"
+        view: "Snapshot approach recommended — run Python once, check in snapshot; eliminates CI dependency"
+        resolution: "Adopted in synthesis: contract.test.ts uses snapshot-based approach, documented in issue #2"
+      - member: "senior-engineer"
+        view: "Python dependency is a CI concern but not a blocker — just needs to be surfaced early"
+        resolution: "Adopted in synthesis: snapshot approach chosen; Python dependency eliminated from CI"
+
+next_action: "Run /to-issues plugin-awx to break the refined PRD into vertical-slice implementation issues using the suggested 10-issue breakdown above, incorporating the pagination, middleware design, and token TTL concerns as explicit acceptance criteria."
+requires_human_review: false

@@ -1,0 +1,118 @@
+decision: refine
+confidence: 0.65
+clarified_problem: >-
+  The current AWX connectivity stack relies on brittle PowerShell 5.1 scripts
+  with a credential XML file on disk, hardcoded URLs, duplicated module discovery
+  logic, and SSL certificate bypass. This causes agent token waste from
+  infrastructure failures. The proposed Node.js plugin is the right direction,
+  but the PRD has three foundational unknowns that must be resolved before
+  implementation.
+cost_metadata:
+  estimated_model_cost: 0.00
+  total_tokens: 0
+  wall_clock_minutes: 0
+  round1_invocations: 4
+  round2_invocations: 4
+main_assumptions:
+  - Bearer token authentication works against the target AAP instance (SENIOR ENGINEER found the existing awx-windows skill explicitly documents PAT auth fails with 401)
+  - The PRD's TypeScript contract types (`host_summary`, `extra_vars_summary`) match the actual awx_job_detail.py Python output (SENIOR ENGINEER found they don't — actual output uses `host_status_counts` and `derived`)
+  - The six v1 tools cover 90%+ of AWX operations (PRODUCT OWNER and DELIVERY PLANNER independently verified 6 of 22 actions = 27%)
+  - The @opencode-ai/plugin TypeScript types and auth hook contract exist and are published (no one has verified this)
+  - Plugin runtime supports 600-second synchronous poll loops (SENIOR ENGINEER notes common runtimes have 30-300s timeouts)
+missing_information:
+  - Bearer token TTL on the target AAP instance (determines whether auth refresh is needed mid-session)
+  - Actual agent usage frequency for each of the 22 awx-helper.ps1 actions (determines which missing tools are v1-critical)
+  - OpenCode plugin runtime execution timeout (determines whether blocking polling is viable)
+  - @opencode-ai/plugin TypeScript types and auth hook interface documentation
+  - Plugin hot-reload capability (determines whether Phase 1→2 transitions are disruptive)
+  - Whether existing skill renderers check `schema_version` and which fields they consume
+  - AAP rate limits on the target instance (determines safe polling defaults)
+risks:
+  - BEARER TOKEN VIABILITY (HIGH): The existing awx-windows skill explicitly documents that PAT authentication returns 401 on this AAP instance. If true, the entire auth model collapses and needs redesign around OAuth2 login flow.
+  - CONTRACT MISMATCH (HIGH): The PRD's TypeScript types are structurally wrong — `host_summary`/`extra_vars_summary` don't match the actual Python output's `host_status_counts`/`derived`. Shipping with wrong types would cause silent data corruption in all skill renderers.
+  - PHASE 2 SKILL UPDATES (MEDIUM): The 4-phase plan's highest-risk phase is the least specified. 16 of 22 actions have no plugin replacement, meaning skills can't fully migrate. The action-to-tool mapping table must be produced before skill work begins.
+  - UNDEFINED PLUGIN API SURFACE (MEDIUM): @opencode-ai/plugin types are not available in the repository. Implementation cannot start until the auth hook and tool registration interfaces are published or documented.
+  - POLLING RUNTIME CONSTRAINT (MEDIUM): If the OpenCode plugin runtime timeout is < 600 seconds, synchronous `awx-wait-job` polling is impossible. The council recommends non-blocking design regardless.
+non_goals:
+  - CRUD operations on job templates, projects, inventories, or credentials (v1)
+  - User/team management
+  - Workflow job templates
+  - TUI plugin
+  - Multi-instance AAP support
+  - Auto-retry on tool failure
+  - Event-driven completion detection (webhooks) — deferred to v2
+architecture_concerns:
+  - Output contract is structurally wrong and must be corrected before any tool code is written
+  - Connection resilience (timeouts, retry, circuit breaker) is unspecified — Node.js fetch has no default timeout
+  - No AAP API version detection or graceful degradation on version drift
+  - Polling design incompatible with plugin runtime execution constraints
+  - No structured metrics for operations or phase-gating
+  - No health-check or init-time validation of token and AAP version
+delivery_concerns:
+  - Phase 2 (skill updates) is the highest-risk delivery item and is underspecified
+  - 6 of 22 actions covered — 27% not 90%+ as claimed — means scripts can't be retired
+  - Effort is underestimated: realistic total ~47 hours (27-88h range from SENIOR ENGINEER), not the 5-7h implied by simple issue count
+  - Phase-gate criteria are undefined — no measurable triggers for Phase 1→2→3→4 transitions
+  - Missing tools for debugging workflow (`get-job-events`, `get-job-stdout`) will degrade agent troubleshooting
+  - Extra-var transformations (SSH→HTTPS, branch inference, required-var validation) have no assigned owner
+cost_concerns:
+  - Replacing synchronous polling with non-blocking return pushes polling cost to N skill implementations (aggregate maintenance cost higher)
+  - Undefined plugin API surface could require upstream changes with uncertain timeline (highest cost uncertainty)
+  - Auth redesign (if bearer tokens don't work) cascades into credential storage, init flow, and security checklist changes — potentially 4-8 week delay
+must_answer_before_prd:
+  - Does `Authorization: Bearer <PAT>` work against https://aap.tanscloud-internal.com/api/v2/me/? (5-minute curl test)
+  - What is the actual OpenCode plugin runtime execution timeout?
+  - Do @opencode-ai/plugin TypeScript types exist and support `type: "api-key"` auth hook?
+recommended_prd_shape:
+  - section: "Problem Statement"
+    purpose: "Keep as-is — the council unanimously agrees the problem is real and well-articulated"
+  - section: "Solution"
+    purpose: "Update auth model section to reflect actual AAP auth mechanism (post-spike); correct the output contract type table to match awx_job_detail.py v1.0.0"
+  - section: "User Stories"
+    purpose: "Keep as-is — 9 stories are comprehensive and well-scoped"
+  - section: "Implementation Decisions"
+    purpose: "Major rewrite needed: (1) Replace synchronous `awx-wait-job` with non-blocking return + agent-side poll pattern. (2) Specify connection resilience parameters (30s timeout, exponential backoff retry, circuit breaker). (3) Document extra-var transformation ownership (recommendation: plugin-internal `transforms.ts` module). (4) Add init-time AAP version detection and token validation. (5) Add `awx-get-job-events` to v1 tool set. (6) Add structured metrics surface for phase-gating."
+  - section: "Testing Decisions"
+    purpose: "Add contract compatibility test as the zeroeth deliverable — run existing fixtures through both Python and TypeScript, diff output, make it a CI gate"
+  - section: "Out of Scope"
+    purpose: "Add explicit listing of the 16 uncovered `awx-helper.ps1` actions and document which are acceptable gaps vs. planned additions"
+  - section: "Further Notes"
+    purpose: "Add: tool-action mapping table (22 actions → plugin tool or gap), phase-gate criteria (metrics-based), known unknowns section (plugin runtime timeout, bearer TTL, hot-reload), and a Phase 0 deliverables list"
+  - section: "Migration / Rollout"
+    purpose: "Reslice into 5 phases instead of 4: Phase 0 (spikes), Phase 1A (read-only tools), Phase 1B (job tools), Phase 1C (sync), Phase 2 (per-skill updates), Phase 3 (deprecation), Phase 4 (retirement). Define concrete gate criteria for each transition."
+council_disagreements:
+  - topic: "Where should extra-var transformations live?"
+    positions:
+      - member: "Senior Engineer"
+        view: "In the plugin — skills shouldn't duplicate SSH→HTTPS conversion, branch inference, and required-var validation logic"
+      - member: "Platform Architect"
+        view: "Plugin with a separate `transforms.ts` module — clean separation of concerns, but keep the plugin self-contained"
+      - member: "Product Owner"
+        view: "Accept skill-side ownership for v1 as long as it's explicitly documented in the PRD who owns it"
+      - member: "Delivery Planner"
+        view: "Plugin — one implementation, one test, one maintenance point"
+    resolution: "Council converges on plugin-housed transformations (separate `transforms.ts` module). Required-var validation stays in skills (per-deployment configurable)."
+  - topic: "Should `awx-get-job-events` be added to v1 scope?"
+    positions:
+      - member: "Product Owner"
+        view: "Initially yes — after discussion defers to usage frequency data"
+      - member: "Senior Engineer"
+        view: "Yes — it's the highest-priority gap that degrades debugging"
+      - member: "Platform Architect"
+        view: "No — adding scope before resolving unknowns is architecturally risky"
+      - member: "Delivery Planner"
+        view: "Measure usage first, then decide"
+    resolution: "Add to v1 as a simple passthrough (low implementation cost ~1h). Usage data determines priority ordering within v1."
+  - topic: "Auth model resilience — single bearer token or two-tier with refresh?"
+    positions:
+      - member: "Platform Architect"
+        view: "Two-tier — bearer token primary + OAuth2 refresh fallback with refresh token"
+      - member: "Senior Engineer"
+        view: "Spike first (bearer may not work at all), then decide. Don't design two-tier for a broken primary"
+      - member: "Product Owner"
+        view: "Bearer token viability spike is the highest-priority item — defer design until resolved"
+      - member: "Delivery Planner"
+        view: "Phase 0 resolves the binary unknown — plan both paths but don't commit until spike is done"
+    resolution: "Phase 0 auth spike resolves whether bearer works. If yes, implement two-tier (bearer + OAuth2 refresh). If no, implement OAuth2 login flow exchanging credentials for a session token."
+next_action: "Run the Phase 0 spike: (1) Test bearer token auth with curl, (2) Read actual awx_job_detail.py output to correct contract types, (3) Discover @opencode-ai/plugin TypeScript types. Update the PRD with findings, then re-submit for another Council run or proceed to /to-issues."
+requires_human_review: true

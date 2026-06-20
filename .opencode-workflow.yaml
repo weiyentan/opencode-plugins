@@ -1,0 +1,66 @@
+# OpenCode Workflow Configuration
+# Controls how to-issues and develop-loop interact with your issue tracker.
+
+issue_tracker: gitlab
+
+# GitLab project in namespace/repo format
+# glab uses the current git repo's remote to determine this automatically
+# if not set, but you can specify it here for clarity.
+# gitlab_project: your-namespace/your-repo
+
+# ── Cost Tier → Model Mapping ──
+# Maps execution-authority tiers (T1–T4) to model identifiers.
+# Used by the task-router (#77) to write an optional `assigned_model`
+# field in task contracts, giving executor agents a model recommendation
+# for traceability. The agent's hardcoded `model:` field in frontmatter
+# is the effective model — this mapping is advisory (deprecated).
+# Tiers are policy profiles; models are swappable without redefining tiers.
+cost_tiers:
+  T1: opencode-go/deepseek-v4-flash    # Mechanical: typos, comments, config values
+  T2: opencode-go/deepseek-v4-flash    # Localized: single-file, well-understood pattern
+  T3: opencode-go/deepseek-v4-pro      # Complex: multi-file, cross-cutting, new logic
+  T4: opencode-go/deepseek-v4-flash    # Review-only: read/critique, no code changes
+
+# ── Tier → Executor Dispatch Table ──
+# Maps each execution tier to the executor agent variant that handles it.
+# The workflow-controller, autonomous-coordinator, and develop-loop all
+# use this table to select the correct executor subagent for a given tier.
+# Executor agents handle required skill loading (startup sequence).
+tier_executors:
+  T1: code-editor-junior   # Low-risk, small scope — flash model, max 2 files
+  T2: code-editor-mid      # Default localized implementation — flash model
+  T3: code-editor-senior   # Complex/risky changes — pro model, full authority
+  T4: diff-reviewer        # Review-only, no writes
+
+# ── Skill Hints ──
+# Each entry maps a skill name to file-path hints. The task-router
+# evaluates these hints to select a required_skill for each issue;
+# executor agents load the skill directly via skill(name="...") at
+# startup. Skills are the canonical reusable domain guidance units.
+# No lifecycle states — a skill is either referenced or not.
+skill_hints:
+  customize-opencode:
+    paths:
+      - ".opencode/"
+      - "opencode.json"
+      - "opencode.jsonc"
+      - "AGENTS.md"
+    description: "OpenCode self-configuration agent definitions, skills, and permissions"
+
+  write-a-skill:
+    paths:
+      - "skills/"
+    description: "Create or edit agent skill markdown files in skills/"
+
+  tdd:
+    paths:
+      - "tests/"
+    description: "Test-driven development workflow"
+
+labels:
+  # Used by to-issues when creating issues
+  afk: afk
+  hitl: hitl
+  todo: "status:todo"
+  in_progress: "status:in-progress"
+  done: "status:done"
