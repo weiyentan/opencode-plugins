@@ -166,12 +166,14 @@ packages/awx/
 │   └── contracts/
 │       └── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
 ├── tests/
-│   ├── plugin.test.ts        # Plugin scaffolding tests (hello-world)
-│   ├── client.test.ts        # Client middleware pipeline tests
-│   ├── metrics.test.ts       # MetricsStore persistence & counter tests
+│   ├── plugin.test.ts            # Plugin scaffolding tests (hello-world)
+│   ├── client.test.ts            # Client middleware pipeline tests
+│   ├── lifecycle.test.ts         # Lazy client/auth lifecycle tests (no-token → token → client-created)
+│   ├── metrics.test.ts           # MetricsStore persistence & counter tests incl. concurrent serialization
+│   ├── plugin-init-timeout.test.ts  # Init-time timeout cleanup tests (clear() called after validation)
 │   ├── contracts/
-│   │   ├── contract.test.ts  # Contract compatibility tests
-│   │   └── __snapshots__/    # Canonical contract output (ground truth)
+│   │   ├── contract.test.ts      # Contract compatibility tests
+│   │   └── __snapshots__/        # Canonical contract output (ground truth)
 │   └── fixtures/
 │       ├── awx_job_success.json
 │       ├── awx_job_partial.json
