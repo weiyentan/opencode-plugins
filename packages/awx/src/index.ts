@@ -23,6 +23,8 @@ import type { PluginInput, Hooks, PluginModule } from "@opencode-ai/plugin";
 import { z } from "zod";
 import { createAwxAuthHook, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
+import { createClient } from "./client.js";
+import type { AwxClient } from "./client.js";
 
 /** Plugin-specific configuration from opencode.jsonc */
 export interface AwxPluginOptions {
@@ -54,6 +56,9 @@ async function server(
   /* ── Auth hook ────────────────────────────────────────────── */
   const authHook = createAwxAuthHook();
 
+  /* ── AWX HTTP client — created when baseUrl + token are available ── */
+  let awxClient: AwxClient | undefined;
+
   /* ── Init-time validation ─────────────────────────────────── */
   // If a baseUrl is configured, attempt to validate the connection.
   // Token validation depends on whether the user has already stored a PAT.
@@ -62,6 +67,8 @@ async function server(
     try {
       const storedKey = await input.client.getSecret?.("awx");
       if (storedKey) {
+        awxClient = createClient(baseUrl, String(storedKey));
+
         const result = await validateToken(
           baseUrl,
           String(storedKey),
@@ -132,6 +139,38 @@ async function server(
 
           const name = args.name ?? "world";
           return `Hello, ${name}! 👋`;
+        },
+      }),
+
+      /**
+       * List AWX job templates — Phase 0 stub tool.
+       *
+       * Placeholder that validates the createClient wiring and tool
+       * registration pipeline. Will be replaced with a real AWX API
+       * call in Phase 1.
+       */
+      listTemplates: tool({
+        description: [
+          "List AWX job templates. Phase 0 stub tool — validates",
+          "createClient wiring and tool registration pipeline.",
+          "Will return a real template list in Phase 1.",
+        ].join(" "),
+        args: {},
+        async execute(_args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return "Request was aborted.";
+          }
+
+          if (!awxClient) {
+            return (
+              "[stub] list-templates: AWX client not available. " +
+              "Configure a baseUrl in opencode.jsonc and store your " +
+              "Personal Access Token via the plugin auth prompt."
+            );
+          }
+
+          return "[stub] list-templates: AWX integration not yet implemented.";
         },
       }),
     },
