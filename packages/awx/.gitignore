@@ -22,3 +22,6 @@ Thumbs.db
 # Test artifacts
 coverage/
 .vitest/
+
+# Runtime metrics (file-backed per-tool counters)
+.metrics/
