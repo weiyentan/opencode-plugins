@@ -87,7 +87,7 @@ async function server(
     await metricsStore.load();
   } catch {
     // load failures (e.g. corrupt file) are non-fatal — counters start fresh
-    input.client.app.log({
+    void input.client.app.log({
       body: {
         service: "plugin-awx",
         level: "error",
@@ -116,7 +116,7 @@ async function server(
           );
 
           if (!result.valid) {
-            input.client.app.log({
+            void input.client.app.log({
               body: {
                 service: "plugin-awx",
                 level: "error",
@@ -124,7 +124,7 @@ async function server(
               },
             });
           } else {
-            input.client.app.log({
+            void input.client.app.log({
               body: {
                 service: "plugin-awx",
                 level: "info",
@@ -137,7 +137,7 @@ async function server(
         }
       }
     } catch {
-      input.client.app.log({
+      void input.client.app.log({
         body: {
           service: "plugin-awx",
           level: "info",
