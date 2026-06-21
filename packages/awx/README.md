@@ -5,13 +5,14 @@ OpenCode server plugin for [AWX](https://github.com/ansible/awx) / Ansible Autom
 ## Status
 
 ✅ **Phase 0 — Repository Scaffolding** (complete)  
-✅ **Phase 1 — Client Infrastructure** (complete)
+✅ **Phase 1 — Client Infrastructure** (complete)  
+✅ **Phase 2 — Tool Implementation** (complete)
 
 The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers hello-world + listTemplates tools; wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | Pure functions: SSH→HTTPS URL conversion, git branch inference, required-var validation |
@@ -20,7 +21,7 @@ The AWX plugin delivers these modules:
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) begins next — see the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for available issues. The client middleware pipeline (issue #5) and metrics module (issue #5) provide the HTTP infrastructure that tools will use.
+Tool implementation (Phase 2) is complete — all 7 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
 ## Prerequisites
 
@@ -148,15 +149,15 @@ When the Python `awx_job_detail.py` v1.0 output contract changes (e.g., new fiel
 > **Important**: Fixtures are checked into the repository. They serve as the canonical reference for what the Python output contract produces. If you change the Python code without updating the fixtures, contract tests will catch the mismatch.
 ## Hot-Reload
 
-The OpenCode plugin server watches plugin source files and **automatically reloads** when changes are detected — no server restart required. This was verified during Phase 0 scaffolding:
+The OpenCode plugin server watches plugin source files and **automatically reloads** when changes are detected — no server restart required. This was verified during initial scaffolding:
 
 1. The plugin is registered by the OpenCode server (consuming `src/index.ts` as the entry point).
 2. Modifying the tool's `description` field in `src/index.ts` (e.g., changing the hello-world description text) triggers a plugin reload.
 3. The server picks up the new description on the next tool invocation.
 
-### Known Limitation (Phase 0)
+### Known Limitation
 
-At the scaffolding stage, hot-reload verification was performed structurally (the `tsc --noEmit` / `vitest run` cycle confirms the module compiles and tool execute signature is correct) but end-to-end hot-reload testing requires a running OpenCode server instance. Full integration testing of hot-reload behavior is tracked for a later phase.
+Hot-reload verification is performed structurally (the `tsc --noEmit` / `vitest run` cycle confirms the module compiles and tool execute signature is correct) but end-to-end hot-reload testing requires a running OpenCode server instance. Full integration testing of hot-reload behavior is tracked for a future enhancement.
 
 ### Dev-Mode Flag
 
@@ -220,7 +221,7 @@ packages/awx/
 │   └── contracts/
 │       └── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
 ├── tests/
-│   ├── plugin.test.ts            # Plugin scaffolding tests (hello-world)
+│   ├── plugin.test.ts            # Plugin registration and lifecycle tests
 │   ├── client.test.ts            # Client middleware pipeline tests
 │   ├── lifecycle.test.ts         # Lazy client/auth lifecycle tests (no-token → token → client-created)
 │   ├── metrics.test.ts           # MetricsStore persistence & counter tests incl. concurrent serialization
