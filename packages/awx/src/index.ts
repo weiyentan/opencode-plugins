@@ -28,6 +28,7 @@ import type { AwxClient } from "./client.js";
 import { listTemplates } from "./list-templates.js";
 import { listProjects } from "./list-projects.js";
 import { launchJob } from "./launch.js";
+import { fetchJobStatus } from "./job-status.js";
 
 /** Plugin-specific configuration from opencode.jsonc */
 export interface AwxPluginOptions {
@@ -426,6 +427,67 @@ async function server(
               warnings: [],
               errors: [message],
             });
+          }
+        },
+      }),
+
+      /**
+       * Fetch job status from AWX.
+       *
+       * Retrieves detailed job information from /api/v2/jobs/<id>/
+       * and returns it formatted according to the JobDetailOutput v1.0
+       * contract. Optionally includes full job stdout.
+       */
+      "awx-job-status": tool({
+        description: [
+          "Fetch detailed status of an AWX job by job ID.",
+          "Returns structured output matching the JobDetailOutput v1.0",
+          "contract: job metadata, resolved related resource names,",
+          "host status counts, derived boolean flags, warnings, and errors.",
+          "Supports optional --include-stdout to include the full job",
+          "console output as a string.",
+        ].join(" "),
+        args: {
+          job_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the AWX job to check."),
+          include_stdout: z
+            .boolean()
+            .optional()
+            .describe(
+              "If true, fetch and include the full job stdout text.",
+            ),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return "Request was aborted.";
+          }
+
+          const awxClient = await getAwxClient();
+          if (!awxClient) {
+            return (
+              "awx-job-status: AWX client not available. " +
+              "Configure a baseUrl in opencode.jsonc and store your " +
+              "Personal Access Token via the plugin auth prompt."
+            );
+          }
+
+          try {
+            const result = await fetchJobStatus(
+              awxClient,
+              args.job_id,
+              args.include_stdout,
+              context.abort,
+            );
+
+            return JSON.stringify(result);
+          } catch (err: unknown) {
+            const message =
+              err instanceof Error ? err.message : String(err);
+            return `awx-job-status error: ${message}`;
           }
         },
       }),

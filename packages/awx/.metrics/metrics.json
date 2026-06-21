@@ -8,6 +8,13 @@
       "totalLatencyMs": 1066,
       "tokenExpiryEvents": 4,
       "psFallbackCount": 0
+    },
+    "awx-job-status": {
+      "callCount": 113,
+      "errorCount": 36,
+      "totalLatencyMs": 108937,
+      "tokenExpiryEvents": 12,
+      "psFallbackCount": 0
     }
   }
 }
