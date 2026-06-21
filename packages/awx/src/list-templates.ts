@@ -1,0 +1,215 @@
+/**
+ * list-templates.ts — AWX job template listing with pagination consolidation
+ *
+ * Fetches job templates from the AWX /api/v2/job_templates/ endpoint,
+ * iterates through pages up to a configurable cap, sorts results by name,
+ * and enforces a per-page timeout budget.
+ *
+ * ## Timeout Budget
+ *
+ * Per-page timeout = toolTimeoutMs / (maxPages + 1).
+ * This ensures that even if every page times out sequentially, we never
+ * exceed the tool-level timeout (the +1 accounts for the tool overhead).
+ *
+ * ## Page Cap
+ *
+ * When maxPages > 0 and the cap is reached with more pages available,
+ * the output includes a warning field. The caller can detect truncation
+ * by checking for the presence of `warning`.
+ */
+import type { AwxClient } from "./client.js";
+
+// ── Types ─────────────────────────────────────────────────────────
+
+/** A simplified template result returned to the caller */
+export interface TemplateResult {
+  id: number;
+  name: string;
+  description: string;
+}
+
+/** Output of the list-templates operation */
+export interface ListTemplatesOutput {
+  count: number;
+  results: TemplateResult[];
+  warning?: string;
+}
+
+/** Options for listTemplates */
+export interface ListTemplatesOptions {
+  /** Number of items per page (default: 50) */
+  pageSize?: number;
+  /**
+   * Maximum pages to fetch.
+   * 0 = no cap (fetch all pages).
+   * Default: 5 (5 pages × 50 items = 250 max).
+   */
+  maxPages?: number;
+}
+
+// ── Internal AWX API types ───────────────────────────────────────
+
+interface AwxPageResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+interface AwxTemplateItem {
+  id: number;
+  name: string;
+  description: string;
+  [key: string]: unknown;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+
+/**
+ * Combine multiple AbortSignals into one — aborts if ANY source aborts.
+ * Uses native AbortSignal.any() on Node 20+, falls back to manual wiring.
+ */
+function anyAbortSignal(signals: AbortSignal[]): AbortSignal {
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any(signals);
+  }
+  const controller = new AbortController();
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort(signal.reason ?? new DOMException("Aborted", "AbortError"));
+      return controller.signal;
+    }
+    signal.addEventListener("abort", () => {
+      controller.abort(signal.reason ?? new DOMException("Aborted", "AbortError"));
+    }, { once: true });
+  }
+  return controller.signal;
+}
+
+/**
+ * Create an AbortSignal that fires after `ms` milliseconds.
+ * Uses setTimeout + AbortController for Node 18+ compatibility.
+ */
+function createTimeoutSignal(ms: number): { signal: AbortSignal; clear: () => void } {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new DOMException("Page timeout.", "TimeoutError")),
+    ms,
+  );
+  return {
+    signal: controller.signal,
+    clear: () => clearTimeout(timer),
+  };
+}
+
+/**
+ * Extract path + query string from a full AWX API URL.
+ * AWX pagination returns absolute URLs in `next` — we need just the path.
+ */
+function extractPath(fullUrl: string): string {
+  try {
+    const url = new URL(fullUrl);
+    return url.pathname + (url.search || "");
+  } catch {
+    // If it's already just a path, return as-is
+    return fullUrl;
+  }
+}
+
+/** Map a raw AWX template item to the simplified result shape */
+function mapTemplate(item: AwxTemplateItem): TemplateResult {
+  return {
+    id: item.id,
+    name: item.name,
+    description: item.description ?? "",
+  };
+}
+
+// ── Core Logic ────────────────────────────────────────────────────
+
+/**
+ * List AWX job templates with pagination consolidation.
+ *
+ * Fetches templates from `/api/v2/job_templates/`, iterating through
+ * pages up to the configured `maxPages` cap. Each page request gets a
+ * timeout budget of `toolTimeoutMs / (maxPages + 1)`.
+ *
+ * Results are sorted by name (alphanumeric, case-insensitive) before returning.
+ *
+ * @param client        The AWX HTTP client
+ * @param toolTimeoutMs Tool-level timeout in ms (used for per-page budget)
+ * @param options       Optional: pageSize, maxPages
+ * @param abortSignal   Optional tool context abort signal for cancellation
+ * @returns Consolidated, sorted template list with count and optional warning
+ */
+export async function listTemplates(
+  client: AwxClient,
+  toolTimeoutMs: number,
+  options?: ListTemplatesOptions,
+  abortSignal?: AbortSignal,
+): Promise<ListTemplatesOutput> {
+  const pageSize = options?.pageSize ?? 50;
+  const maxPages = options?.maxPages ?? 5;
+
+  // Per-page timeout budget: divide tool timeout by (maxPages + 1).
+  // The +1 provides a safety margin for tool overhead after the last page.
+  const effectiveMaxPages = Math.max(1, maxPages);
+  const perPageBudget = Math.floor(toolTimeoutMs / (effectiveMaxPages + 1));
+
+  const allResults: TemplateResult[] = [];
+  let nextPage: string | null = null;
+  let pagesFetched = 0;
+
+  do {
+    pagesFetched++;
+
+    // Build URL for current page
+    const path = nextPage
+      ? extractPath(nextPage)
+      : `/api/v2/job_templates/?page_size=${pageSize}`;
+
+    // Fetch this page with per-page timeout
+    const { signal: pageSignal, clear: clearTimeout_ } = createTimeoutSignal(perPageBudget);
+    const combinedSignal = abortSignal
+      ? anyAbortSignal([abortSignal, pageSignal])
+      : pageSignal;
+
+    try {
+      const response = await client.request(
+        "awx-list-templates",
+        path,
+        undefined,
+        combinedSignal,
+      );
+
+      if (!response.ok) {
+        throw new Error(`AWX API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as AwxPageResponse<AwxTemplateItem>;
+
+      allResults.push(...data.results.map(mapTemplate));
+      nextPage = data.next;
+    } finally {
+      clearTimeout_();
+    }
+
+    // Stop when no more pages OR we've hit the cap.
+    // maxPages <= 0 means "no cap" (fetch all).
+  } while (nextPage !== null && (maxPages <= 0 || pagesFetched < maxPages));
+
+  // Sort consolidated results by name (alphanumeric, case-insensitive)
+  allResults.sort((a, b) => a.name.localeCompare(b.name));
+
+  const output: ListTemplatesOutput = {
+    count: allResults.length,
+    results: allResults,
+  };
+
+  // If there are more pages but we hit the cap, emit a warning
+  if (nextPage !== null && maxPages > 0 && pagesFetched >= maxPages) {
+    output.warning = `Page cap of ${maxPages} page${maxPages !== 1 ? "s" : ""} reached. Some results may be omitted.`;
+  }
+
+  return output;
+}

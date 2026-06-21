@@ -15,7 +15,9 @@ import awxPluginModule from "../src/index.js";
 /** Minimal mock of PluginInput for scaffold tests */
 function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
   return {
-    client: {} as ReturnType<typeof vi.fn>,
+    client: {
+      app: { log: vi.fn() },
+    } as unknown as PluginInput["client"],
     project: {} as PluginInput["project"],
     directory: "/mock/dir",
     worktree: "/mock/worktree",
@@ -97,8 +99,10 @@ describe("AWX Plugin Scaffolding", () => {
       );
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
-      expect(result).toContain("world");
+      expect(typeof result).toBe("object");
+      const out = (result as { output: string }).output;
+      expect(typeof out).toBe("string");
+      expect(out).toContain("world");
     } finally {
       await hooks.dispose?.();
     }
@@ -114,7 +118,8 @@ describe("AWX Plugin Scaffolding", () => {
         mockToolContext(),
       );
 
-      expect(result).toContain("OpenCode");
+      const out = (result as { output: string }).output;
+      expect(out).toContain("OpenCode");
     } finally {
       await hooks.dispose?.();
     }
@@ -133,7 +138,8 @@ describe("AWX Plugin Scaffolding", () => {
         mockToolContext({ abort: aborted.signal }),
       );
 
-      expect(result).toContain("aborted");
+      const out = (result as { output: string }).output;
+      expect(out).toContain("aborted");
     } finally {
       await hooks.dispose?.();
     }

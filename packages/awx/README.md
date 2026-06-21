@@ -5,13 +5,14 @@ OpenCode server plugin for [AWX](https://github.com/ansible/awx) / Ansible Autom
 ## Status
 
 ✅ **Phase 0 — Repository Scaffolding** (complete)  
-✅ **Phase 1 — Client Infrastructure** (complete)
+✅ **Phase 1 — Client Infrastructure** (complete)  
+✅ **Phase 2 — Tool Implementation** (complete)
 
 The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers hello-world + listTemplates tools; wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | Pure functions: SSH→HTTPS URL conversion, git branch inference, required-var validation |
@@ -20,7 +21,7 @@ The AWX plugin delivers these modules:
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) begins next — see the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for available issues. The client middleware pipeline (issue #5) and metrics module (issue #5) provide the HTTP infrastructure that tools will use.
+Tool implementation (Phase 2) is complete — all 7 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
 ## Prerequisites
 
@@ -57,13 +58,67 @@ This package is consumed by the OpenCode plugin server as a dependency — no st
 ```bash
 # Unit tests (no AAP instance required)
 npm test
-
-# Integration tests (requires AAP instance and PAT)
-export AWX_TOKEN=your_pat_token_here
-npx vitest run tests/integration/
 ```
 
 Tests follow TDD (test-driven development) with [Vitest](https://vitest.dev) and verify behavior through the public plugin interface.
+
+### Running Integration Tests
+
+Integration tests in `tests/integration/` exercise the plugin's tools against a **live AAP instance** through the plugin's own tool registration mechanism.
+
+#### Read-Only Tools
+
+The suite `tests/integration/read-only.test.ts` covers `awx-list-templates` and `awx-list-projects`.
+
+#### Job Lifecycle Tools
+
+The suite `tests/integration/job-lifecycle.test.ts` covers the full AWX job lifecycle:
+
+- `awx-launch-job` → launches a job template
+- `awx-job-status` → fetches structured job detail (v1.0 output contract)
+- `awx-wait-job` → non-blocking status check (no polling)
+- `awx-get-job-events` → retrieves job events
+
+#### Prerequisites
+
+| Env Var | Default | Required | Description |
+|---------|---------|----------|-------------|
+| `AWX_TOKEN` | — | **Yes** | Valid AAP Personal Access Token (PAT) |
+| `AAP_BASE_URL` | `https://aap.tanscloud-internal.com` | No | Base URL of the AAP instance |
+| `JOB_TEMPLATE_ID` | `10` | No | Non-production AWX job template ID to launch |
+| `EXTRA_VARS_INVENTORY` | `"test"` | No | Inventory name for extra_vars |
+| `EXTRA_VARS_SCM_URL` | `"https://github.com/example/repo.git"` | No | SCM URL for extra_vars |
+| `EXTRA_VARS_SCM_BRANCH` | `"main"` | No | SCM branch for extra_vars |
+
+> **Important:** Use a non-production job template. The launch tool starts a real job on AAP. The plugin's transforms pipeline requires `inventory`, `scm_url`, and `scm_branch` in extra_vars — configure them via env vars to match your template's expectations.
+
+#### Run Command
+
+```bash
+# From packages/awx/
+export AWX_TOKEN=your_pat_token_here
+npx vitest run tests/integration/
+
+# Run a specific suite:
+npx vitest run tests/integration/read-only.test.ts
+npx vitest run tests/integration/job-lifecycle.test.ts
+
+# With custom AAP URL:
+export AWX_TOKEN=your_pat_token_here
+export AAP_BASE_URL=https://my-aap.internal.example.com
+npx vitest run tests/integration/
+```
+
+> **Note**: Integration tests are gated behind `AWX_TOKEN`. When `AWX_TOKEN` is not set, the live AAP tests are silently skipped using `describe.skipIf(!process.env.AWX_TOKEN)`.
+
+#### Agent-Side Polling Pattern
+
+Job lifecycle tools use an **agent-side polling** pattern (see ADR 0004):
+- `awx-launch-job` returns immediately with a job ID.
+- `awx-job-status` / `awx-wait-job` return the current status — the agent must loop to poll for completion.
+- `awx-get-job-events` retrieves events from a completed or running job.
+
+No tool blocks waiting for job completion. This avoids hanging the agent's execution loop and gives the agent control over polling strategy (poll interval, max attempts, timeout).
 
 ### Contract Tests
 
@@ -94,15 +149,15 @@ When the Python `awx_job_detail.py` v1.0 output contract changes (e.g., new fiel
 > **Important**: Fixtures are checked into the repository. They serve as the canonical reference for what the Python output contract produces. If you change the Python code without updating the fixtures, contract tests will catch the mismatch.
 ## Hot-Reload
 
-The OpenCode plugin server watches plugin source files and **automatically reloads** when changes are detected — no server restart required. This was verified during Phase 0 scaffolding:
+The OpenCode plugin server watches plugin source files and **automatically reloads** when changes are detected — no server restart required. This was verified during initial scaffolding:
 
 1. The plugin is registered by the OpenCode server (consuming `src/index.ts` as the entry point).
 2. Modifying the tool's `description` field in `src/index.ts` (e.g., changing the hello-world description text) triggers a plugin reload.
 3. The server picks up the new description on the next tool invocation.
 
-### Known Limitation (Phase 0)
+### Known Limitation
 
-At the scaffolding stage, hot-reload verification was performed structurally (the `tsc --noEmit` / `vitest run` cycle confirms the module compiles and tool execute signature is correct) but end-to-end hot-reload testing requires a running OpenCode server instance. Full integration testing of hot-reload behavior is tracked for a later phase.
+Hot-reload verification is performed structurally (the `tsc --noEmit` / `vitest run` cycle confirms the module compiles and tool execute signature is correct) but end-to-end hot-reload testing requires a running OpenCode server instance. Full integration testing of hot-reload behavior is tracked for a future enhancement.
 
 ### Dev-Mode Flag
 
@@ -166,7 +221,7 @@ packages/awx/
 │   └── contracts/
 │       └── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
 ├── tests/
-│   ├── plugin.test.ts            # Plugin scaffolding tests (hello-world)
+│   ├── plugin.test.ts            # Plugin registration and lifecycle tests
 │   ├── client.test.ts            # Client middleware pipeline tests
 │   ├── lifecycle.test.ts         # Lazy client/auth lifecycle tests (no-token → token → client-created)
 │   ├── metrics.test.ts           # MetricsStore persistence & counter tests incl. concurrent serialization

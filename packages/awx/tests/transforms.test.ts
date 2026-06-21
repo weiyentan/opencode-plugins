@@ -244,16 +244,24 @@ describe("validateRequiredVars", () => {
       expect(result).toEqual(["name", "branch"]);
     });
 
-    it("treats vars with explicit undefined value as present", () => {
+    it("treats vars with explicit undefined value as missing", () => {
       const vars = { name: undefined };
-      // `name` key exists — it's present (even if value is undefined)
-      expect(validateRequiredVars(vars, ["name"])).toEqual([]);
+      expect(validateRequiredVars(vars, ["name"])).toEqual(["name"]);
     });
 
-    it("treats vars with null value as present", () => {
+    it("treats vars with null value as missing", () => {
       const vars = { name: null };
-      // `name` key exists — it's present
-      expect(validateRequiredVars(vars, ["name"])).toEqual([]);
+      expect(validateRequiredVars(vars, ["name"])).toEqual(["name"]);
+    });
+
+    it("treats vars with blank string value as missing", () => {
+      const vars = { name: "" };
+      expect(validateRequiredVars(vars, ["name"])).toEqual(["name"]);
+    });
+
+    it("treats vars with whitespace-only string value as missing", () => {
+      const vars = { name: "   " };
+      expect(validateRequiredVars(vars, ["name"])).toEqual(["name"]);
     });
   });
 });
