@@ -16,7 +16,7 @@
  * | Variable       | Required | Default                                         | Description                          |
  * |----------------|----------|-------------------------------------------------|--------------------------------------|
  * | `AWX_TOKEN`    | Yes      | —                                               | AAP Personal Access Token            |
- * | `AAP_BASE_URL` | No       | `https://aap.tanscloud-internal.com`            | AAP base URL                         |
+ * | `AAP_BASE_URL` | No       | `https://example.com`            | AAP base URL                         |
  *
  * ## Running
  *
@@ -64,7 +64,7 @@ async function createPlugin(
   baseUrl?: string,
 ): Promise<Hooks> {
   const resolvedBaseUrl =
-    baseUrl ?? process.env.AAP_BASE_URL ?? "https://aap.tanscloud-internal.com";
+    baseUrl ?? process.env.AAP_BASE_URL ?? "https://example.com";
 
   const mockLog = vi.fn();
   const input: PluginInput = {

@@ -60,7 +60,7 @@ export interface AuthValidationResult {
  * Returns a structured result so the caller can surface clear error
  * messages to the user.
  *
- * @param baseUrl  The configured AAP base URL (e.g., "https://aap.tanscloud-internal.com")
+ * @param baseUrl  The configured AAP base URL (e.g., "https://example.com")
  * @param token    The bearer token (PAT) to validate
  * @param signal   Optional AbortSignal for timeout (recommend 10s)
  */

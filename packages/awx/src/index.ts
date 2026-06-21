@@ -15,7 +15,7 @@
  *
  * The plugin reads `baseUrl` from its plugin options in opencode.jsonc:
  * ```jsonc
- * { "plugin": [["./packages/awx", { "baseUrl": "https://aap.tanscloud-internal.com" }]] }
+ * { "plugin": [["./packages/awx", { "baseUrl": "https://example.com" }]] }
  * ```
  */
 import { tool } from "@opencode-ai/plugin";
@@ -59,7 +59,7 @@ export interface AwxPluginOptions {
   /**
    * Base URL of the AAP/AWX instance.
    * Must include protocol (https://) and hostname.
-   * Example: "https://aap.tanscloud-internal.com"
+   * Example: "https://example.com"
    */
   baseUrl?: string;
 }

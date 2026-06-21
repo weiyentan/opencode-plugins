@@ -35,7 +35,7 @@ Platform Architect recommends a two-tier strategy (bearer token primary, OAuth2 
 
 The responsible engineering approach is:
 
-1. **Spike first**: Before writing a single line of plugin code, run `curl -H "Authorization: Bearer <token>" https://aap.tanscloud-internal.com/api/v2/me/` against the target AAP. This is a 5-minute test that could save days of debugging.
+1. **Spike first**: Before writing a single line of plugin code, run `curl -H "Authorization: Bearer <token>" https://example.com/api/v2/me/` against the target AAP. This is a 5-minute test that could save days of debugging.
 2. **If bearer works**: Implement Platform Architect's two-tier approach (bearer + OAuth2 refresh).
 3. **If bearer doesn't work**: Implement a login flow that exchanges credentials for an OAuth2 token on init, then refreshes it. This is a fundamentally different auth module — not a "fallback" but a different primary path.
 

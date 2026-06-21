@@ -9,7 +9,7 @@ Review the Product Requirements Document (PRD) for an OpenCode server plugin (`@
 - **No existing Council sessions found** — this is the first Council run in this repository.
 - The repository (`opencode-plugins`) is currently empty except for a `.git/` directory and a `docs/prd/awx-plugin.md` file.
 - The PRD is 222 lines covering: problem statement, solution, 9 user stories, implementation decisions (auth hook, client module, 6 tools, output contract, 4-phase rollout), testing decisions (unit, contract, integration), and out-of-scope items.
-- The target AAP instance is `https://aap.tanscloud-internal.com` with existing AWX + EDA infrastructure running.
+- The target AAP instance is `https://example.com` with existing AWX + EDA infrastructure running.
 
 ## Known Assumptions
 

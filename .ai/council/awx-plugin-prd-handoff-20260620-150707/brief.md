@@ -14,7 +14,7 @@ A prior Council session (referenced as `.ai/council/awx-plugin-prd-20260620-1354
 
 These unknowns have been **resolved** in a subsequent grill-with-docs session:
 
-- **Bearer token:** Curl spike confirmed 200 OK against `aap.tanscloud-internal.com`.
+- **Bearer token:** Curl spike confirmed 200 OK against `example.com`.
 - **Output contract:** TypeScript types corrected to match `awx_job_detail.py` v1.0, verified against 3 fixtures.
 - **Plugin API:** `@opencode-ai/plugin` v1.14.29 types discovered and documented (tool, auth hook, abort signal).
 
@@ -32,7 +32,7 @@ The handoff recommends a 14-issue breakdown, starting with Phase 0 scaffolding a
 
 ## Known Assumptions
 
-1. The AAP instance at `aap.tanscloud-internal.com` remains accessible with the same API surface during implementation.
+1. The AAP instance at `example.com` remains accessible with the same API surface during implementation.
 2. The `@opencode-ai/plugin` v1.14.29 API is stable and will not change during development.
 3. The 6 ADRs capture all critical architecture decisions and no new decisions will surface during implementation.
 4. The 7-of-22 action scope (30%) is correctly bounded and documented.

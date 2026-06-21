@@ -15,7 +15,7 @@ This changes my position: I now agree with the Delivery Planner and Product Owne
 
 **On bearer token viability being an existential threat.** The Product Owner's Round 1 flagged this. The Senior Engineer's Round 1 confirmed it with a code reference: the existing `awx-windows` SKILL.md explicitly states "PAT Authentication Does NOT Work." My Round 1 auth concern was about *refresh* — I assumed the basic bearer-token flow worked and was worried about expiry. If the target AAP rejects PAT-based bearer tokens entirely, then my refresh discussion is moot. Two-tier auth (bearer + OAuth2 refresh) is irrelevant if the door is locked at layer 1.
 
-My recommendation now aligns with the Senior Engineer's: **an auth spike using `curl -H "Authorization: Bearer <PAT>" https://aap.tanscloud-internal.com/api/v2/me/` must be the single highest-priority action**, before any architecture decisions are finalized. If it fails, the entire auth architecture must be redesigned around either (a) an OAuth2 login flow exchanging username+password for a session token, or (b) Basic Auth (if the AAP instance allows it). This fundamentally changes the credential lifecycle, the `opencode.jsonc` configuration surface, and the deployment instructions.
+My recommendation now aligns with the Senior Engineer's: **an auth spike using `curl -H "Authorization: Bearer <PAT>" https://example.com/api/v2/me/` must be the single highest-priority action**, before any architecture decisions are finalized. If it fails, the entire auth architecture must be redesigned around either (a) an OAuth2 login flow exchanging username+password for a session token, or (b) Basic Auth (if the AAP instance allows it). This fundamentally changes the credential lifecycle, the `opencode.jsonc` configuration surface, and the deployment instructions.
 
 **On the Senior Engineer's polling redesign being architecturally superior.** My Round 1 recommended adding jitter to fixed-interval polling. That was optimizing the wrong thing. The Senior Engineer's core point — that plugin runtimes may have 30-60s timeouts incompatible with a 600-second poll loop — is a hard architectural constraint. Converting `awx-wait-job` to return immediately with a job ID and documenting a skill-level poll loop via `awx-job-status` is the right architectural response. It decouples the long-running operation from the plugin process lifetime and respects the plugin runtime's execution model.
 
@@ -167,7 +167,7 @@ My Round 1 verdict was **refine** at 0.75 confidence. I am staying at **refine**
 
 ### My Minimum Acceptable Path Forward
 
-1. **Auth spike (highest priority):** `curl -H "Authorization: Bearer <PAT>" https://aap.tanscloud-internal.com/api/v2/me/`. If it fails, design and cost the OAuth2 login-flow alternative. Do not proceed with architecture finalization until resolved.
+1. **Auth spike (highest priority):** `curl -H "Authorization: Bearer <PAT>" https://example.com/api/v2/me/`. If it fails, design and cost the OAuth2 login-flow alternative. Do not proceed with architecture finalization until resolved.
 
 2. **Contract compatibility test (before any tool code):** Read `awx_job_detail.py` output fields, correct the TypeScript types, write fixture-based diff test. This is a zero-write gate.
 

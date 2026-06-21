@@ -10,7 +10,7 @@ cost_metadata:
   round2_invocations: 0
 
 main_assumptions:
-  - "AAP instance at aap.tanscloud-internal.com remains accessible with the same API surface during implementation"
+  - "AAP instance at example.com remains accessible with the same API surface during implementation"
   - "@opencode-ai/plugin v1.14.29 API is stable and will not change during development"
   - "The 6 ADRs capture all critical architecture decisions"
   - "Bearer token (PAT) model is sufficient for MVP"

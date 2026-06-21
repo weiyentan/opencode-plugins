@@ -60,7 +60,7 @@ cost_concerns:
   - Undefined plugin API surface could require upstream changes with uncertain timeline (highest cost uncertainty)
   - Auth redesign (if bearer tokens don't work) cascades into credential storage, init flow, and security checklist changes — potentially 4-8 week delay
 must_answer_before_prd:
-  - Does `Authorization: Bearer <PAT>` work against https://aap.tanscloud-internal.com/api/v2/me/? (5-minute curl test)
+  - Does `Authorization: Bearer <PAT>` work against https://example.com/api/v2/me/? (5-minute curl test)
   - What is the actual OpenCode plugin runtime execution timeout?
   - Do @opencode-ai/plugin TypeScript types exist and support `type: "api-key"` auth hook?
 recommended_prd_shape:

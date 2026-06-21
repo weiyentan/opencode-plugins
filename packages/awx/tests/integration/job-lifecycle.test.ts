@@ -16,7 +16,7 @@
  * | Env Var | Default | Description |
  * |---------|---------|-------------|
  * | `AWX_TOKEN` | *(required)* | Valid AAP Personal Access Token (PAT) |
- * | `AAP_BASE_URL` | `https://aap.tanscloud-internal.com` | Base URL of the AAP instance |
+ * | `AAP_BASE_URL` | `https://example.com` | Base URL of the AAP instance |
  * | `JOB_TEMPLATE_ID` | `10` | Non-production AWX job template ID to launch |
  * | `EXTRA_VARS_INVENTORY` | `"test"` | Inventory name for extra_vars |
  * | `EXTRA_VARS_SCM_URL` | `"https://github.com/example/repo.git"` | SCM URL for extra_vars |
@@ -48,7 +48,7 @@ import awxPluginModule from "../../src/index.js";
 
 const AWX_TOKEN = process.env.AWX_TOKEN;
 const AAP_BASE_URL =
-  process.env.AAP_BASE_URL ?? "https://aap.tanscloud-internal.com";
+  process.env.AAP_BASE_URL ?? "https://example.com";
 const JOB_TEMPLATE_ID = Number(process.env.JOB_TEMPLATE_ID) || 10;
 const EXTRA_VARS: Record<string, string> = {
   inventory: process.env.EXTRA_VARS_INVENTORY ?? "test",

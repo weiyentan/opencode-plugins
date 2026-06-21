@@ -58,7 +58,7 @@ My Round 1 verdict was **refine** at 0.70 confidence. After reading all Round 1 
 
 Before this PRD moves to implementation, I need these six things:
 
-1. **Auth spike** (1 hour): Confirm bearer token auth works on `https://aap.tanscloud-internal.com`. If it fails, design and cost an OAuth2 token-exchange alternative. This is the single highest-risk item and must be resolved first.
+1. **Auth spike** (1 hour): Confirm bearer token auth works on `https://example.com`. If it fails, design and cost an OAuth2 token-exchange alternative. This is the single highest-risk item and must be resolved first.
 
 2. **Contract alignment** (30 min): Write a compatibility test that runs the existing fixtures through both `awx_job_detail.py` and the corrected TypeScript contract module, and diff the outputs. The TypeScript types must match the Python output byte for byte. This is a zero-write gate — no tool code until this passes.
 

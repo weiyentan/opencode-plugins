@@ -87,7 +87,7 @@ describe("createAwxAuthHook", () => {
 });
 
 describe("validateToken", () => {
-  const baseUrl = "https://aap.tanscloud-internal.com/";
+  const baseUrl = "https://example.com/";
   const token = "valid-pat-token";
 
   it("returns valid on 200 response", async () => {
@@ -114,11 +114,11 @@ describe("validateToken", () => {
   it("normalises baseUrl trailing slash", async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
 
-    await validateToken("https://aap.tanscloud-internal.com", token);
+    await validateToken("https://example.com", token);
 
     // Should have added trailing slash and api/v2/me/
     expect(mockFetch).toHaveBeenCalledWith(
-      "https://aap.tanscloud-internal.com/api/v2/me/",
+      "https://example.com/api/v2/me/",
       expect.any(Object),
     );
   });

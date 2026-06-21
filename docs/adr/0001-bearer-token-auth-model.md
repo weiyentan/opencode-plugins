@@ -16,7 +16,7 @@ This created a foundational unknown: if bearer tokens don't work, the entire aut
 
 ## Evidence
 
-A spike (`curl -H "Authorization: Bearer <PAT>" https://aap.tanscloud-internal.com/api/v2/me/`) returned HTTP 200 with full user data, confirming that bearer token authentication is supported on the target AAP instance. The documented PAT auth failure in the `awx-windows` skill appears to be specific to how the PowerShell `AnsibleTower` module constructs the request, not a server-side restriction.
+A spike (`curl -H "Authorization: Bearer <PAT>" https://example.com/api/v2/me/`) returned HTTP 200 with full user data, confirming that bearer token authentication is supported on the target AAP instance. The documented PAT auth failure in the `awx-windows` skill appears to be specific to how the PowerShell `AnsibleTower` module constructs the request, not a server-side restriction.
 
 ## Consequences
 

@@ -13,7 +13,7 @@
 
 | Term | Definition |
 |------|-----------|
-| **Bearer token** | A Personal Access Token (PAT) from AAP used in `Authorization: Bearer <token>` header. Validated via spike against `aap.tanscloud-internal.com`. |
+| **Bearer token** | A Personal Access Token (PAT) from AAP used in `Authorization: Bearer <token>` header. Validated via spike against `example.com`. |
 | **Output contract** | The structured response shape returned by job-related tools, matching `awx_job_detail.py` v1.0 schema. Top-level fields: `schema_version` ("1.0"), `job` (core metadata), `related` (resolved names — not URLs), `host_status_counts` (not `host_summary`), `derived` (boolean flags — not `extra_vars_summary`), `warnings`, `errors`. Optional: `stdout`, `raw_events`. |
 | **Extra-var transformations** | Business logic converting SSH→HTTPS URLs, inferring git branches, and validating required vars. Lives in the plugin's `transforms.ts` module (not in skills). |
 | **Plugin server function** | Entry point for a server-side plugin. Receives `PluginInput` (`client`, `project`, `directory`, `worktree`, `serverUrl`, `$` shell) and returns `Hooks` (including `auth`, `tool`, `event`, etc.). |
@@ -29,4 +29,4 @@
 
 | Term | Definition |
 |------|-----------|
-| **AAP** | Ansible Automation Platform at `https://aap.tanscloud-internal.com`. Runs AWX 21.0.0+ (AAP 2.3+). |
+| **AAP** | Ansible Automation Platform at `https://example.com`. Runs AWX 21.0.0+ (AAP 2.3+). |

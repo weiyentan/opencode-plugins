@@ -76,7 +76,7 @@ describe("AWX Plugin — Lazy Client/Auth Lifecycle", () => {
 
     const hooks: Hooks = await awxPluginModule.server(
       createPluginInput(getSecretMock),
-      { baseUrl: "https://aap.tanscloud-internal.com" },
+      { baseUrl: "https://example.com" },
     );
     try {
       const awxListTemplates = hooks.tool!["awx-list-templates"]!;

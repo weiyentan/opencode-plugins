@@ -274,7 +274,7 @@ export class CircuitBreaker {
 /**
  * Create an AWX HTTP client with middleware pipeline.
  *
- * @param baseUrl  The AAP base URL (e.g., "https://aap.tanscloud-internal.com")
+ * @param baseUrl  The AAP base URL (e.g., "https://example.com")
  * @param token    Bearer token (PAT) for Authorization header
  * @param opts     Optional client configuration
  */

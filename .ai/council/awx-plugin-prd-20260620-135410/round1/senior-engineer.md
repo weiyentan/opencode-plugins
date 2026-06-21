@@ -181,7 +181,7 @@ The safe approach is: Phase 2 should add the plugin as a *sidecar* that skills p
 
 ## Questions That Need Answers
 
-1. Has anyone verified that `Authorization: Bearer <PAT>` works against `https://aap.tanscloud-internal.com/api/v2/me/`? If not, can we do this as a spike before Round 2?
+1. Has anyone verified that `Authorization: Bearer <PAT>` works against `https://example.com/api/v2/me/`? If not, can we do this as a spike before Round 2?
 2. What is the OpenCode plugin execution timeout? Is it documented? Can it be configured per-tool or per-plugin?
 3. Where are the `@opencode-ai/plugin` TypeScript types? Are they published to npm? What's the auth hook interface signature?
 4. Can we review the skill renderers that consume the v1.0 contract to confirm which fields they actually use? This determines whether the contract mismatch is cosmetic or destructive.

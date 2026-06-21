@@ -84,7 +84,7 @@ The suite `tests/integration/job-lifecycle.test.ts` covers the full AWX job life
 | Env Var | Default | Required | Description |
 |---------|---------|----------|-------------|
 | `AWX_TOKEN` | — | **Yes** | Valid AAP Personal Access Token (PAT) |
-| `AAP_BASE_URL` | `https://aap.tanscloud-internal.com` | No | Base URL of the AAP instance |
+| `AAP_BASE_URL` | `https://example.com` | No | Base URL of the AAP instance |
 | `JOB_TEMPLATE_ID` | `10` | No | Non-production AWX job template ID to launch |
 | `EXTRA_VARS_INVENTORY` | `"test"` | No | Inventory name for extra_vars |
 | `EXTRA_VARS_SCM_URL` | `"https://github.com/example/repo.git"` | No | SCM URL for extra_vars |
