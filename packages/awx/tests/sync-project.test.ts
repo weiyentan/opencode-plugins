@@ -250,9 +250,10 @@ describe('"awx-sync-project" tool', () => {
       mockToolContext(),
     );
 
-    expect(typeof result).toBe("string");
-    expect(result as string).toContain("not found");
-    expect(result as string).toContain("999");
+    expect(result).toHaveProperty("output");
+    expect(typeof (result as { output: string }).output).toBe("string");
+    expect((result as { output: string }).output).toContain("not found");
+    expect((result as { output: string }).output).toContain("999");
   });
 
   /* ══════════════════════════════════════════════════════════════════
@@ -281,9 +282,10 @@ describe('"awx-sync-project" tool', () => {
       mockToolContext(),
     );
 
-    expect(typeof result).toBe("string");
-    expect(result as string).toContain("Not authorized");
-    expect(result as string).toContain("123");
+    expect(result).toHaveProperty("output");
+    expect(typeof (result as { output: string }).output).toBe("string");
+    expect((result as { output: string }).output).toContain("Not authorized");
+    expect((result as { output: string }).output).toContain("123");
   });
 
   /* ══════════════════════════════════════════════════════════════════
@@ -312,8 +314,9 @@ describe('"awx-sync-project" tool', () => {
       mockToolContext(),
     );
 
-    expect(typeof result).toBe("string");
-    expect(result as string).toContain("Not authorized");
-    expect(result as string).toContain("123");
+    expect(result).toHaveProperty("output");
+    expect(typeof (result as { output: string }).output).toBe("string");
+    expect((result as { output: string }).output).toContain("Not authorized");
+    expect((result as { output: string }).output).toContain("123");
   });
 });

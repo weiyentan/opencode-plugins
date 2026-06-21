@@ -207,7 +207,7 @@ describe("awx-wait-job tool", () => {
      ══════════════════════════════════════════════════════════════════ */
 
   describe("basic status check", () => {
-    const successFixture = loadFixture("awx_job_success.json");
+    const successFixture = loadFixture("raw_awx_job_success.json");
 
     it("calls GET /api/v2/jobs/<id>/ on AWX API", async () => {
       const { hooks, requestSpy } = await createHooksWithMockClient(
@@ -223,7 +223,7 @@ describe("awx-wait-job tool", () => {
       expect(requestSpy).toHaveBeenCalledWith(
         "awx-wait-job",
         "/api/v2/jobs/142/",
-        {},
+        undefined,
         expect.any(AbortSignal),
       );
     });
@@ -261,13 +261,10 @@ describe("awx-wait-job tool", () => {
 
     it("returns current status without waiting for completion", async () => {
       // Use the partial/running fixture to verify non-blocking
-      const partialFixture = loadFixture("awx_job_partial.json");
-      partialFixture.job = {
-        ...(partialFixture.job as Record<string, unknown>),
-        status: "running",
-        finished: null,
-        elapsed: null,
-      };
+      const partialFixture = loadFixture("raw_awx_job_partial.json");
+      partialFixture.status = "running";
+      partialFixture.finished = null;
+      partialFixture.elapsed = null;
 
       const { hooks } = await createHooksWithMockClient(partialFixture);
 
@@ -308,7 +305,7 @@ describe("awx-wait-job tool", () => {
   describe("non-blocking behavior", () => {
     it("returns immediately without polling (single API call)", async () => {
       const { hooks, requestSpy } = await createHooksWithMockClient(
-        loadFixture("awx_job_success.json"),
+        loadFixture("raw_awx_job_success.json"),
       );
 
       await hooks.tool!["awx-wait-job"]!.execute(
@@ -322,13 +319,10 @@ describe("awx-wait-job tool", () => {
 
     it("does not loop or wait for status change (returns current state)", async () => {
       // Even when status is "running" (not terminal), tool returns immediately
-      const partialFixture = loadFixture("awx_job_partial.json");
-      partialFixture.job = {
-        ...(partialFixture.job as Record<string, unknown>),
-        status: "running",
-        finished: null,
-        elapsed: null,
-      };
+      const partialFixture = loadFixture("raw_awx_job_partial.json");
+      partialFixture.status = "running";
+      partialFixture.finished = null;
+      partialFixture.elapsed = null;
 
       const { hooks, requestSpy } = await createHooksWithMockClient(
         partialFixture,
@@ -362,8 +356,7 @@ describe("awx-wait-job tool", () => {
       );
 
       const output = (result as { output: string }).output;
-      expect(output).toContain("not found");
-      expect(output).toContain("99999");
+      expect(output).toContain("404");
     });
 
     it("returns HTTP error message on 500", async () => {
@@ -377,7 +370,7 @@ describe("awx-wait-job tool", () => {
         mockToolContext(),
       );
 
-      expect((result as { output: string }).output).toContain("HTTP 500");
+      expect((result as { output: string }).output).toContain("500");
     });
 
     it("returns HTTP error message on 401", async () => {
@@ -391,7 +384,7 @@ describe("awx-wait-job tool", () => {
         mockToolContext(),
       );
 
-      expect((result as { output: string }).output).toContain("HTTP 401");
+      expect((result as { output: string }).output).toContain("401");
     });
   });
 

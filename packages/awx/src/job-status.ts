@@ -221,6 +221,7 @@ export function mapAwxJobToContract(
  * @param jobId           Numeric job ID
  * @param includeStdout   Whether to fetch and include stdout
  * @param abortSignal     Optional abort signal
+ * @param toolName        Optional tool name for metrics attribution (default: "awx-job-status")
  * @returns               Formatted JobDetailOutput
  */
 export async function fetchJobStatus(
@@ -228,10 +229,11 @@ export async function fetchJobStatus(
   jobId: number,
   includeStdout?: boolean,
   abortSignal?: AbortSignal,
+  toolName = "awx-job-status",
 ): Promise<JobDetailOutput> {
   // Fetch job detail
   const jobResponse = await client.request(
-    "awx-job-status",
+    toolName,
     `/api/v2/jobs/${jobId}/`,
     undefined,
     abortSignal,
@@ -250,7 +252,7 @@ export async function fetchJobStatus(
   let stdout: string | undefined;
   if (includeStdout) {
     const stdoutResponse = await client.request(
-      "awx-job-status",
+      toolName,
       `/api/v2/jobs/${jobId}/stdout/?format=txt`,
       undefined,
       abortSignal,

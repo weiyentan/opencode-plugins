@@ -113,7 +113,7 @@ describe("listProjects", () => {
     });
     expect(client.request).toHaveBeenCalledTimes(1);
     expect(client.request).toHaveBeenCalledWith(
-      "listProjects",
+      "awx-list-projects",
       "/api/v2/projects/?page=1&page_size=50",
       expect.any(Object),
       expect.any(AbortSignal),
@@ -199,9 +199,9 @@ describe("listProjects", () => {
     expect(result.results).toHaveLength(5);
     expect(client.request).toHaveBeenCalledTimes(3);
     // Verify page increment
-    expect(client.request).toHaveBeenNthCalledWith(1, "listProjects", "/api/v2/projects/?page=1&page_size=50", expect.any(Object), expect.any(AbortSignal));
-    expect(client.request).toHaveBeenNthCalledWith(2, "listProjects", "/api/v2/projects/?page=2&page_size=50", expect.any(Object), expect.any(AbortSignal));
-    expect(client.request).toHaveBeenNthCalledWith(3, "listProjects", "/api/v2/projects/?page=3&page_size=50", expect.any(Object), expect.any(AbortSignal));
+    expect(client.request).toHaveBeenNthCalledWith(1, "awx-list-projects", "/api/v2/projects/?page=1&page_size=50", expect.any(Object), expect.any(AbortSignal));
+    expect(client.request).toHaveBeenNthCalledWith(2, "awx-list-projects", "/api/v2/projects/?page=2&page_size=50", expect.any(Object), expect.any(AbortSignal));
+    expect(client.request).toHaveBeenNthCalledWith(3, "awx-list-projects", "/api/v2/projects/?page=3&page_size=50", expect.any(Object), expect.any(AbortSignal));
     expect(result.warning).toBeUndefined();
   });
 
@@ -396,7 +396,7 @@ describe("listProjects", () => {
     await listProjects(client, { pageSize: 10 });
 
     expect(client.request).toHaveBeenCalledWith(
-      "listProjects",
+      "awx-list-projects",
       "/api/v2/projects/?page=1&page_size=10",
       expect.any(Object),
       expect.any(AbortSignal),

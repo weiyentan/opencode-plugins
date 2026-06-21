@@ -713,6 +713,7 @@ async function server(
               args.job_id,
               false,
               context.abort,
+              "awx-wait-job",
             );
 
             return {
