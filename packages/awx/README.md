@@ -63,21 +63,33 @@ Tests follow TDD (test-driven development) with [Vitest](https://vitest.dev) and
 
 ### Running Integration Tests
 
-Integration tests in `tests/integration/` exercise the read-only tools (`awx-list-templates`, `awx-list-projects`) against a **live AAP instance** through the plugin's own tool registration mechanism.
+Integration tests in `tests/integration/` exercise the plugin's tools against a **live AAP instance** through the plugin's own tool registration mechanism.
+
+#### Read-Only Tools
+
+The suite `tests/integration/read-only.test.ts` covers `awx-list-templates` and `awx-list-projects`.
+
+#### Job Lifecycle Tools
+
+The suite `tests/integration/job-lifecycle.test.ts` covers the full AWX job lifecycle:
+
+- `awx-launch-job` → launches a job template
+- `awx-job-status` → fetches structured job detail (v1.0 output contract)
+- `awx-wait-job` → non-blocking status check (no polling)
+- `awx-get-job-events` → retrieves job events
 
 #### Prerequisites
 
-1. **AAP instance** — Access to a live Ansible Automation Platform (e.g., `https://aap.tanscloud-internal.com`).
-2. **Personal Access Token (PAT)** — Generate one from AAP:
-   - UI: Profile → Tokens → Add
-   - API: `POST /api/v2/tokens/`
+| Env Var | Default | Required | Description |
+|---------|---------|----------|-------------|
+| `AWX_TOKEN` | — | **Yes** | Valid AAP Personal Access Token (PAT) |
+| `AAP_BASE_URL` | `https://aap.tanscloud-internal.com` | No | Base URL of the AAP instance |
+| `JOB_TEMPLATE_ID` | `10` | No | Non-production AWX job template ID to launch |
+| `EXTRA_VARS_INVENTORY` | `"test"` | No | Inventory name for extra_vars |
+| `EXTRA_VARS_SCM_URL` | `"https://github.com/example/repo.git"` | No | SCM URL for extra_vars |
+| `EXTRA_VARS_SCM_BRANCH` | `"main"` | No | SCM branch for extra_vars |
 
-#### Environment Setup
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `AWX_TOKEN` | Yes | — | AAP Personal Access Token for authentication |
-| `AWX_BASE_URL` | No | `https://aap.tanscloud-internal.com` | AAP base URL |
+> **Important:** Use a non-production job template. The launch tool starts a real job on AAP. The plugin's transforms pipeline requires `inventory`, `scm_url`, and `scm_branch` in extra_vars — configure them via env vars to match your template's expectations.
 
 #### Run Command
 
@@ -86,13 +98,26 @@ Integration tests in `tests/integration/` exercise the read-only tools (`awx-lis
 export AWX_TOKEN=your_pat_token_here
 npx vitest run tests/integration/
 
+# Run a specific suite:
+npx vitest run tests/integration/read-only.test.ts
+npx vitest run tests/integration/job-lifecycle.test.ts
+
 # With custom AAP URL:
 export AWX_TOKEN=your_pat_token_here
-export AWX_BASE_URL=https://my-aap.internal.example.com
+export AAP_BASE_URL=https://my-aap.internal.example.com
 npx vitest run tests/integration/
 ```
 
-> **Note**: Integration tests are gated behind `AWX_TOKEN`. When `AWX_TOKEN` is not set, the live AAP tests are silently skipped — only the configuration-error tests run.
+> **Note**: Integration tests are gated behind `AWX_TOKEN`. When `AWX_TOKEN` is not set, the live AAP tests are silently skipped using `describe.skipIf(!process.env.AWX_TOKEN)`.
+
+#### Agent-Side Polling Pattern
+
+Job lifecycle tools use an **agent-side polling** pattern (see ADR 0004):
+- `awx-launch-job` returns immediately with a job ID.
+- `awx-job-status` / `awx-wait-job` return the current status — the agent must loop to poll for completion.
+- `awx-get-job-events` retrieves events from a completed or running job.
+
+No tool blocks waiting for job completion. This avoids hanging the agent's execution loop and gives the agent control over polling strategy (poll interval, max attempts, timeout).
 
 ### Contract Tests
 
