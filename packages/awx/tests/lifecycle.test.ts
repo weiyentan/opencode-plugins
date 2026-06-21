@@ -76,19 +76,21 @@ describe("AWX Plugin — Lazy Client/Auth Lifecycle", () => {
       { baseUrl: "https://aap.tanscloud-internal.com" },
     );
     try {
-      const listTemplates = hooks.tool!.listTemplates!;
+      const awxListTemplates = hooks.tool!.awxListTemplates!;
 
-      // ── Step 2: Without a token, listTemplates reports "not available" ──
-      const resultNoToken = await listTemplates.execute({}, mockToolContext());
+      // ── Step 2: Without a token, awxListTemplates reports "not available" ──
+      const resultNoToken = await awxListTemplates.execute({}, mockToolContext());
       expect(resultNoToken).toContain("not available");
       expect(resultNoToken).toContain("AWX client");
 
       // ── Step 3: Token becomes available (no plugin reload) ──────────
       getSecretMock.mockResolvedValue("my-pat-token");
 
-      // ── Step 4: Same plugin instance now creates the client ───────────
-      const resultWithToken = await listTemplates.execute({}, mockToolContext());
-      expect(resultWithToken).toContain("AWX integration not yet implemented");
+      // ── Step 4: Same plugin instance now creates and uses the client ──────
+      const resultWithToken = await awxListTemplates.execute({}, mockToolContext());
+      // The tool will try to make an HTTP request and fail (no fetch mock),
+      // but should return a JSON structure, not stub text.
+      expect(resultWithToken).toContain("Failed to fetch");
       // Must NOT still report "not available"
       expect(resultWithToken).not.toContain("not available");
     } finally {

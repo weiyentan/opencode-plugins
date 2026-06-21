@@ -25,6 +25,7 @@ import { createAwxAuthHook, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
 import { createClient, createTimeoutSignal } from "./client.js";
 import type { AwxClient } from "./client.js";
+import { listTemplates } from "./list-templates.js";
 
 /** Plugin-specific configuration from opencode.jsonc */
 export interface AwxPluginOptions {
@@ -77,13 +78,17 @@ async function server(
   }
 
   const persistence = setupMetricsPersistence(metricsStore, 30_000, (err) => {
-    void input.client.app.log({
-      body: {
-        service: "plugin-awx",
-        level: "error",
-        message: `Metrics persistence failed: ${err instanceof Error ? err.message : String(err)}`,
-      },
-    });
+    try {
+      input.client.app?.log?.({
+        body: {
+          service: "plugin-awx",
+          level: "error",
+          message: `Metrics persistence failed: ${err instanceof Error ? err.message : String(err)}`,
+        },
+      });
+    } catch {
+      // Swallow logging errors (e.g. during dispose after test teardown)
+    }
   });
 
   /* ── AWX HTTP client — lazy resolver, created on first tool call ── */
@@ -193,35 +198,78 @@ async function server(
       }),
 
       /**
-       * List AWX job templates — Phase 0 stub tool.
+       * List AWX job templates with pagination.
        *
-       * Placeholder that validates the createClient wiring and tool
-       * registration pipeline. Will be replaced with a real AWX API
-       * call in Phase 1.
+       * Fetches job templates from the AWX /api/v2/job_templates/ endpoint,
+       * consolidating results across pages up to a configurable page cap.
+       * Results are sorted by name. Supports per-page size override and
+       * returns a warning when the page cap limits results.
+       *
+       * The per-page timeout budget is derived from the tool-level timeout
+       * divided by (maxPages + 1).
        */
-      listTemplates: tool({
+      awxListTemplates: tool({
         description: [
-          "List AWX job templates. Phase 0 stub tool — validates",
-          "createClient wiring and tool registration pipeline.",
-          "Will return a real template list in Phase 1.",
+          "List AWX job templates with pagination. Fetches templates from",
+          "/api/v2/job_templates/, consolidating across pages up to a",
+          "configurable cap. Results sorted by name. Supports page size",
+          "override. Returns warning when page cap limits results.",
         ].join(" "),
-        args: {},
-        async execute(_args, context) {
+        args: {
+          pageSize: z
+            .number()
+            .int()
+            .min(1)
+            .max(200)
+            .optional()
+            .describe("Items per page (1-200, default: 50)"),
+          maxPages: z
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .describe("Maximum pages to fetch (0 = no cap, default: 5)"),
+        },
+        async execute(args, context) {
           // Respect the abort signal
           if (context.abort?.aborted) {
-            return "Request was aborted.";
+            return JSON.stringify({
+              count: 0,
+              results: [],
+              warning: "Request was aborted.",
+            });
           }
 
           const awxClient = await getAwxClient();
           if (!awxClient) {
-            return (
-              "[stub] list-templates: AWX client not available. " +
-              "Configure a baseUrl in opencode.jsonc and store your " +
-              "Personal Access Token via the plugin auth prompt."
-            );
+            return JSON.stringify({
+              count: 0,
+              results: [],
+              warning:
+                "AWX client not available. Configure a baseUrl in " +
+                "opencode.jsonc and store your Personal Access Token " +
+                "via the plugin auth prompt.",
+            });
           }
 
-          return "[stub] list-templates: AWX integration not yet implemented.";
+          try {
+            const result = await listTemplates(
+              awxClient,
+              30_000,
+              {
+                pageSize: args.pageSize,
+                maxPages: args.maxPages,
+              },
+              context.abort,
+            );
+            return JSON.stringify(result);
+          } catch (err) {
+            return JSON.stringify({
+              count: 0,
+              results: [],
+              warning: `Failed to fetch templates: ${err instanceof Error ? err.message : String(err)}`,
+            });
+          }
         },
       }),
     },

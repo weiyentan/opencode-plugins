@@ -1,5 +1,13 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-21T00:56:43.351Z",
-  "tools": {}
+  "updatedAt": "2026-06-21T06:28:02.861Z",
+  "tools": {
+    "awx-list-templates": {
+      "callCount": 4,
+      "errorCount": 4,
+      "totalLatencyMs": 1066,
+      "tokenExpiryEvents": 4,
+      "psFallbackCount": 0
+    }
+  }
 }

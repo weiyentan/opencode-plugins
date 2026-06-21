@@ -10,6 +10,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
 import awxPluginModule from "../src/index.js";
 import * as clientModule from "../src/client.js";
+import { listTemplates, type ListTemplatesOutput } from "../src/list-templates.js";
 
 /** Minimal mock of ToolContext for tool execute tests */
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
@@ -80,11 +81,11 @@ describe("AWX Plugin Index", () => {
       expect(typeof hooks.tool!.hello!.description).toBe("string");
     });
 
-    it("hooks.tool contains listTemplates tool", async () => {
+    it("hooks.tool contains awxListTemplates tool", async () => {
       const hooks = await createHooks(mockPluginInput());
 
-      expect(hooks.tool!.listTemplates).toBeDefined();
-      expect(typeof hooks.tool!.listTemplates!.description).toBe("string");
+      expect(hooks.tool!.awxListTemplates).toBeDefined();
+      expect(typeof hooks.tool!.awxListTemplates!.description).toBe("string");
     });
   });
 
@@ -108,15 +109,15 @@ describe("AWX Plugin Index", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════════
-     Lazy Client Resolution — getAwxClient() via listTemplates tool
+     Lazy Client Resolution — getAwxClient() via awxListTemplates tool
      ══════════════════════════════════════════════════════════════════ */
 
-  describe("lazy client resolution (via listTemplates)", () => {
-    it("returns undefined when no baseUrl configured", async () => {
+  describe("lazy client resolution (via awxListTemplates)", () => {
+    it("returns error message when no baseUrl configured", async () => {
       const input = mockPluginInput();
       const hooks = await createHooks(input);
 
-      const result = await hooks.tool!.listTemplates!.execute(
+      const result = await hooks.tool!.awxListTemplates!.execute(
         {},
         mockToolContext(),
       );
@@ -124,14 +125,14 @@ describe("AWX Plugin Index", () => {
       expect(result).toContain("AWX client not available");
     });
 
-    it("returns undefined when no token stored (getSecret returns null)", async () => {
+    it("returns error message when no token stored (getSecret returns null)", async () => {
       const input = mockPluginInput();
       // getSecret already returns null by default in mockPluginInput
       const hooks = await createHooks(input, {
         baseUrl: "https://aap.example.com",
       });
 
-      const result = await hooks.tool!.listTemplates!.execute(
+      const result = await hooks.tool!.awxListTemplates!.execute(
         {},
         mockToolContext(),
       );
@@ -139,30 +140,33 @@ describe("AWX Plugin Index", () => {
       expect(result).toContain("AWX client not available");
     });
 
-    it("returns AwxClient when token and baseUrl are set", async () => {
-      // getSecret returns a token string
-      (mockPluginInput().client as any).getSecret = vi
-        .fn()
-        .mockResolvedValue("my-test-token");
-
+    it("returns structured output when token and baseUrl are set", async () => {
       const input = mockPluginInput();
       (input.client as any).getSecret = vi
         .fn()
         .mockResolvedValue("my-test-token");
 
+      // Prevent actual fetch from being called — the tool will try to
+      // make an HTTP request when a client is created. Instead, make the
+      // request pass through with mock data.
       const hooks = await createHooks(input, {
         baseUrl: "https://aap.example.com",
       });
 
-      const result = await hooks.tool!.listTemplates!.execute(
+      // The tool calls client.request() which calls fetch internally.
+      // We need to mock the response. The tool returns a JSON string
+      // that can be parsed.
+      const result = await hooks.tool!.awxListTemplates!.execute(
         {},
         mockToolContext(),
       );
 
-      // When getAwxClient returns a client, listTemplates returns the stub
-      // (not the "client not available" message)
-      expect(result).toContain("AWX integration not yet implemented");
-      expect(result).not.toContain("AWX client not available");
+      // Without a mocked fetch, the request will fail with a network error.
+      // The tool should handle this gracefully and return a JSON string
+      // with an error structure.
+      const parsed = JSON.parse(result as string);
+      expect(parsed).toHaveProperty("count");
+      expect(parsed).toHaveProperty("results");
     });
   });
 
@@ -184,14 +188,188 @@ describe("AWX Plugin Index", () => {
       });
 
       // First call — should create a new client
-      await hooks.tool!.listTemplates!.execute({}, mockToolContext());
+      await hooks.tool!.awxListTemplates!.execute({}, mockToolContext());
       expect(createClientSpy).toHaveBeenCalledTimes(1);
 
       // Second call with same token — should reuse cached client
-      await hooks.tool!.listTemplates!.execute({}, mockToolContext());
+      await hooks.tool!.awxListTemplates!.execute({}, mockToolContext());
       expect(createClientSpy).toHaveBeenCalledTimes(1); // still 1, not 2
 
       createClientSpy.mockRestore();
+    });
+  });
+
+  /* ══════════════════════════════════════════════════════════════════
+     Tool Arguments — awxListTemplates
+     ══════════════════════════════════════════════════════════════════ */
+
+  describe("awxListTemplates args schema", () => {
+    it("is registered and has a description", async () => {
+      const hooks = await createHooks(mockPluginInput());
+      expect(hooks.tool!.awxListTemplates).toBeDefined();
+      expect(typeof hooks.tool!.awxListTemplates!.description).toBe("string");
+    });
+  });
+
+  /* ══════════════════════════════════════════════════════════════════
+     listTemplates Function — Core Unit Tests
+     ══════════════════════════════════════════════════════════════════ */
+
+  describe("listTemplates core function", () => {
+    /** Create a mock AwxClient that resolves with canned page data */
+    function mockClient(
+      pages: Array<{
+        count: number;
+        results: Array<{ id: number; name: string; description: string }>;
+        next: string | null;
+      }>,
+    ): clientModule.AwxClient {
+      let callIndex = 0;
+      return {
+        async request(
+          _toolName: string,
+          _path: string,
+          _init?: RequestInit,
+          _abortSignal?: AbortSignal,
+        ): Promise<Response> {
+          const page = pages[callIndex];
+          if (!page) {
+            return new Response(
+              JSON.stringify({ count: 0, results: [], next: null }),
+              { status: 200 },
+            );
+          }
+          callIndex++;
+          return new Response(JSON.stringify(page), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        },
+      };
+    }
+
+    it("fetches a single page and returns sorted results", async () => {
+      const client = mockClient([
+        {
+          count: 2,
+          results: [
+            { id: 2, name: "Z Template", description: "Last" },
+            { id: 1, name: "A Template", description: "First" },
+          ],
+          next: null,
+        },
+      ]);
+
+      const result = await listTemplates(client, 30_000, { maxPages: 1 });
+      expect(result.count).toBe(2);
+      expect(result.results[0]!.name).toBe("A Template");
+      expect(result.results[1]!.name).toBe("Z Template");
+      expect(result.warning).toBeUndefined();
+    });
+
+    it("iterates multiple pages when next URL is provided", async () => {
+      const client = mockClient([
+        {
+          count: 4,
+          results: [
+            { id: 1, name: "B Template", description: "" },
+            { id: 2, name: "A Template", description: "" },
+          ],
+          next: "/api/v2/job_templates/?page=2&page_size=50",
+        },
+        {
+          count: 4,
+          results: [
+            { id: 3, name: "D Template", description: "" },
+            { id: 4, name: "C Template", description: "" },
+          ],
+          next: null,
+        },
+      ]);
+
+      const result = await listTemplates(client, 30_000, { maxPages: 5 });
+      expect(result.count).toBe(4);
+      // Results should be sorted by name across all pages
+      expect(result.results.map((r) => r.name)).toEqual([
+        "A Template",
+        "B Template",
+        "C Template",
+        "D Template",
+      ]);
+      expect(result.warning).toBeUndefined();
+    });
+
+    it("respects page cap and emits warning when cap exceeded", async () => {
+      // Create 3 pages of data, but maxPages = 2
+      const makePage = (n: number) => ({
+        count: 6,
+        results: [
+          { id: n * 2 + 1, name: `Template ${n * 2 + 1}`, description: "" },
+          { id: n * 2 + 2, name: `Template ${n * 2 + 2}`, description: "" },
+        ],
+        next:
+          n < 2
+            ? `/api/v2/job_templates/?page=${n + 2}&page_size=50`
+            : null,
+      });
+
+      const client = mockClient([makePage(0), makePage(1), makePage(2)]);
+
+      const result = await listTemplates(client, 30_000, { maxPages: 2 });
+      expect(result.count).toBe(4); // 2 pages × 2 items
+      expect(result.warning).toContain("Page cap of 2 pages reached");
+    });
+
+    it("fetches all pages when maxPages is 0 (no cap)", async () => {
+      const client = mockClient([
+        {
+          count: 3,
+          results: [{ id: 1, name: "Only", description: "" }],
+          next: "/api/v2/job_templates/?page=2&page_size=50",
+        },
+        {
+          count: 3,
+          results: [{ id: 2, name: "Other", description: "" }],
+          next: "/api/v2/job_templates/?page=3&page_size=50",
+        },
+        {
+          count: 3,
+          results: [{ id: 3, name: "Another", description: "" }],
+          next: null,
+        },
+      ]);
+
+      const result = await listTemplates(client, 30_000, { maxPages: 0 });
+      expect(result.count).toBe(3);
+      expect(result.warning).toBeUndefined();
+    });
+
+    it("uses default maxPages=5 and pageSize=50 when no options provided", async () => {
+      const client = mockClient([
+        {
+          count: 1,
+          results: [{ id: 1, name: "Default", description: "" }],
+          next: null,
+        },
+      ]);
+
+      const result = await listTemplates(client, 30_000);
+      expect(result.count).toBe(1);
+    });
+
+    it("propagates client errors as exceptions", async () => {
+      const errorClient: clientModule.AwxClient = {
+        async request(): Promise<Response> {
+          return new Response("Not Found", {
+            status: 404,
+            statusText: "Not Found",
+          });
+        },
+      };
+
+      await expect(
+        listTemplates(errorClient, 30_000),
+      ).rejects.toThrow("AWX API error: 404 Not Found");
     });
   });
 
