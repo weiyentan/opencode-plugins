@@ -93,17 +93,19 @@ export function inferGitBranch(ref: string | null | undefined): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Validates that all required keys are present in the provided extra vars.
+ * Validates that all required keys are present and have non-empty values
+ * in the provided extra vars.
  *
  * Returns a list of missing var names (in the order they appear in `required`).
  * If `vars` is null or undefined, all required vars are reported as missing.
  *
- * Note: A key whose value is `null` or `undefined` is still considered *present*
- * (the key exists on the object). Only truly absent keys are reported as missing.
+ * A key is considered **missing** if:
+ * - The key does not exist on the object, OR
+ * - The value is `null`, `undefined`, or an empty/whitespace-only string.
  *
  * @param vars - The extra vars object to validate (may be null/undefined)
  * @param required - The list of required variable names
- * @returns Array of missing variable names (empty if all are present)
+ * @returns Array of missing variable names (empty if all are present and non-empty)
  */
 export function validateRequiredVars(
   vars: Record<string, unknown>,
@@ -112,7 +114,13 @@ export function validateRequiredVars(
   const missing: string[] = [];
 
   for (const name of required) {
-    if (vars == null || !(name in vars)) {
+    const value = vars?.[name];
+    if (
+      vars == null ||
+      value === null ||
+      value === undefined ||
+      (typeof value === "string" && value.trim() === "")
+    ) {
       missing.push(name);
     }
   }

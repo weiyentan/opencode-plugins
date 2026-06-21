@@ -186,6 +186,18 @@ describe("validateToken", () => {
     expect(result.error).toContain("baseUrl");
   });
 
+  it("returns invalid on TimeoutError (createTimeoutSignal abort)", async () => {
+    const timeoutError = new DOMException("The operation timed out.", "TimeoutError");
+    mockFetch.mockRejectedValueOnce(timeoutError);
+
+    const result = await validateToken(baseUrl, token);
+
+    expect(result.valid).toBe(false);
+    expect(result.status).toBeNull();
+    expect(result.error).toContain("Timeout");
+    expect(result.error).toContain("baseUrl");
+  });
+
   it("respects the abort signal", async () => {
     const controller = new AbortController();
     mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });

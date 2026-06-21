@@ -1,0 +1,40 @@
+{
+  "id": 142,
+  "name": "Deploy Web Stack — Production",
+  "status": "successful",
+  "failed": false,
+  "job_type": "run",
+  "playbook": "deploy-web-stack.yml",
+  "created": "2025-06-15T14:32:00Z",
+  "started": "2025-06-15T14:32:05Z",
+  "finished": "2025-06-15T14:34:12Z",
+  "elapsed": 127.0,
+  "execution_node": "awx-exec-01.tanscloud-internal.com",
+  "controller_node": "awx-controller-01.tanscloud-internal.com",
+  "scm_branch": "main",
+  "verbosity": 0,
+  "forks": 5,
+  "limit": "",
+  "summary_fields": {
+    "inventory": { "id": 1, "name": "Production" },
+    "project": { "id": 3, "name": "Web Stack Deploy" },
+    "job_template": { "id": 7, "name": "Deploy Web Stack" },
+    "instance_group": { "id": 1, "name": "default" },
+    "created_by": { "id": 2, "username": "svc_admin_ansible" },
+    "credentials": [
+      { "id": 5, "name": "SSH Key — Production" },
+      { "id": 8, "name": "Vault Password" }
+    ],
+    "labels": { "results": [
+      { "id": 1, "name": "production" },
+      { "id": 2, "name": "web" }
+    ]}
+  },
+  "host_summary": {
+    "ok": 12,
+    "failures": 0,
+    "skipped": 0,
+    "changed": 7,
+    "unreachable": 0
+  }
+}
