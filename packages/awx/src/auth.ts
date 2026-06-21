@@ -175,27 +175,10 @@ export function createAwxAuthHook() {
          * Returns the raw token as the secret key. OpenCode stores this
          * securely and injects it into tool requests as the auth key.
          *
-         * ## Error Messaging Limitation
+         * Empty or whitespace-only tokens fail authorization.
          *
-         * The OpenCode auth contract for `type: "api"` methods does NOT
-         * support a user-facing error/message field on the `{ type: "failed" }`
-         * response. The type definition only allows:
-         *
-         * ```
-         * { type: "failed" }
-         * ```
-         *
-         * Therefore, when the token is empty or whitespace-only, we cannot
-         * provide a custom error hint through the authorize() return value.
-         *
-         * Instead, the actionable guidance lives in the prompt message
-         * (see `prompts[0].message` above), which tells users:
-         * "Enter your AWX Personal Access Token (PAT). Generate one at
-         * AAP → Profile → Tokens or /api/v2/tokens/."
-         *
-         * If the OpenCode auth contract is extended in the future to support
-         * an `error` or `message` field on failed responses, add a hint like:
-         * "Enter a Personal Access Token from AAP → Profile → Tokens."
+         * We include a message field for better UX. If OpenCode ignores it,
+         * the prompt text above still provides the actionable guidance.
          */
         async authorize(inputs: Record<string, string>) {
           const token = inputs.token;
