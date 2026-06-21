@@ -224,6 +224,79 @@ async function server(
           return "[stub] list-templates: AWX integration not yet implemented.";
         },
       }),
+
+      /**
+       * Returns the current status of an AWX job by job ID.
+       *
+       * This is a NON-BLOCKING tool — it returns immediately with the current
+       * job status without waiting for job completion. It calls the AWX API
+       * GET /api/v2/jobs/<id>/ to verify the job exists and returns its
+       * current status.
+       *
+       * ## Agent-Side Polling Pattern
+       *
+       * To wait for job completion, the agent should call `awx-job-status`
+       * in a loop, checking for a terminal status (successful, failed, etc.).
+       *
+       * ## Orphaned Job Warning
+       *
+       * If the agent session is interrupted, the launched job continues
+       * running on AAP. Skills using this tool should set
+       * max_poll_attempts and recommend a job timeout to avoid orphaned
+       * jobs consuming cluster resources indefinitely.
+       */
+      awxWaitJob: tool({
+        description: [
+          "Returns the current status of an AWX job by job ID.",
+          "",
+          "NON-BLOCKING: This tool returns immediately without polling.",
+          "The agent should call awx-job-status in a loop to wait for completion.",
+          "",
+          "ORPHANED JOB WARNING: If the agent session is interrupted,",
+          "the job continues running on AAP. Skills should set",
+          "max_poll_attempts and recommend job timeout.",
+        ].join("\n"),
+        args: {
+          job_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The AWX job ID to check status for"),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return "Request was aborted.";
+          }
+
+          const awxClient = await getAwxClient();
+          if (!awxClient) {
+            return (
+              "awx-wait-job: AWX client not available. " +
+              "Configure a baseUrl in opencode.jsonc and store your " +
+              "Personal Access Token via the plugin auth prompt."
+            );
+          }
+
+          const response = await awxClient.request(
+            "awxWaitJob",
+            `/api/v2/jobs/${args.job_id}/`,
+            {},
+            context.abort,
+          );
+
+          if (response.status === 404) {
+            return `awx-wait-job: Job ${args.job_id} not found.`;
+          }
+
+          if (!response.ok) {
+            return `awx-wait-job: Failed to retrieve job ${args.job_id} — HTTP ${response.status}.`;
+          }
+
+          const data = await response.json();
+          return { output: JSON.stringify(data) };
+        },
+      }),
     },
   };
 }
