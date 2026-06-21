@@ -177,8 +177,11 @@ export function createAwxAuthHook() {
          *
          * Empty or whitespace-only tokens fail authorization.
          *
-         * We include a message field for better UX. If OpenCode ignores it,
-         * the prompt text above still provides the actionable guidance.
+         * We include a message field for better UX. If OpenCode ignores unknown
+         * fields, the prompt text above still provides actionable guidance.
+         *
+         * If the OpenCode auth type narrows this contract in future, remove the
+         * message field and rely on the prompt text.
          */
         async authorize(inputs: Record<string, string>) {
           const token = inputs.token;
