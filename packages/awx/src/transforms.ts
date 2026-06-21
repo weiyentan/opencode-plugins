@@ -22,7 +22,7 @@
  * @param url - The SCM URL to normalize (may be null/undefined)
  * @returns The HTTPS-normalized URL, or the original if not an SSH URL
  */
-export function normalizeScmUrl(url: string): string {
+export function normalizeScmUrl(url: string | null | undefined): string {
   if (url == null || url === "") {
     return "";
   }
@@ -69,7 +69,7 @@ export function normalizeScmUrl(url: string): string {
  * @param ref - The Git ref string (e.g., "refs/heads/main", "refs/tags/v1.0", "main")
  * @returns The extracted branch/tag name
  */
-export function inferGitBranch(ref: string): string {
+export function inferGitBranch(ref: string | null | undefined): string {
   if (ref == null || ref === "") {
     return "";
   }
