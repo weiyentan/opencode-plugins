@@ -25,6 +25,7 @@ import { createAwxAuthHook, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
 import { createClient, createTimeoutSignal } from "./client.js";
 import type { AwxClient } from "./client.js";
+import { listProjects } from "./list-projects.js";
 
 /** Plugin-specific configuration from opencode.jsonc */
 export interface AwxPluginOptions {
@@ -222,6 +223,83 @@ async function server(
           }
 
           return "[stub] list-templates: AWX integration not yet implemented.";
+        },
+      }),
+
+      /**
+       * List AWX projects with pagination.
+       *
+       * Fetches projects from the AWX /api/v2/projects/ endpoint,
+       * consolidating results across multiple pages up to a configurable
+       * page cap. Results are sorted alphabetically by name.
+       *
+       * Pagination behavior:
+       * - Default: up to 5 pages × 50 items/page = 250 items max
+       * - If more pages exist beyond the cap, returns a warning field
+       * - Per-page timeout: total tool timeout / (maxPages + 1)
+       */
+      listProjects: tool({
+        description: [
+          "List AWX projects with pagination. Fetches projects from",
+          "the AWX /api/v2/projects/ endpoint, consolidating results",
+          "across multiple pages up to a configurable page cap.",
+          "Results are sorted alphabetically by name.",
+        ].join(" "),
+        args: {
+          maxPages: z
+            .number()
+            .int()
+            .min(1)
+            .max(100)
+            .optional()
+            .describe("Maximum pages to fetch (default: 5, max: 100)."),
+          pageSize: z
+            .number()
+            .int()
+            .min(1)
+            .max(200)
+            .optional()
+            .describe("Items per page (default: 50, max: 200)."),
+          timeout: z
+            .number()
+            .int()
+            .min(1_000)
+            .optional()
+            .describe("Total tool timeout in milliseconds (default: 30000)."),
+        },
+        async execute(args, context) {
+          if (context.abort?.aborted) {
+            return "Request was aborted.";
+          }
+
+          const awxClient = await getAwxClient();
+          if (!awxClient) {
+            return (
+              "[stub] list-projects: AWX client not available. " +
+              "Configure a baseUrl in opencode.jsonc and store your " +
+              "Personal Access Token via the plugin auth prompt."
+            );
+          }
+
+          try {
+            const result = await listProjects(awxClient, {
+              maxPages: args.maxPages,
+              pageSize: args.pageSize,
+              timeout: args.timeout,
+              abortSignal: context.abort,
+            });
+
+            return {
+              output: `Found ${result.count} project(s).`,
+              metadata: result as unknown as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to list projects: ${message}`,
+              metadata: { error: message },
+            };
+          }
         },
       }),
     },
