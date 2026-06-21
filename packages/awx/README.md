@@ -57,13 +57,42 @@ This package is consumed by the OpenCode plugin server as a dependency — no st
 ```bash
 # Unit tests (no AAP instance required)
 npm test
-
-# Integration tests (requires AAP instance and PAT)
-export AWX_TOKEN=your_pat_token_here
-npx vitest run tests/integration/
 ```
 
 Tests follow TDD (test-driven development) with [Vitest](https://vitest.dev) and verify behavior through the public plugin interface.
+
+### Running Integration Tests
+
+Integration tests in `tests/integration/` exercise the read-only tools (`awx-list-templates`, `awx-list-projects`) against a **live AAP instance** through the plugin's own tool registration mechanism.
+
+#### Prerequisites
+
+1. **AAP instance** — Access to a live Ansible Automation Platform (e.g., `https://aap.tanscloud-internal.com`).
+2. **Personal Access Token (PAT)** — Generate one from AAP:
+   - UI: Profile → Tokens → Add
+   - API: `POST /api/v2/tokens/`
+
+#### Environment Setup
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AWX_TOKEN` | Yes | — | AAP Personal Access Token for authentication |
+| `AWX_BASE_URL` | No | `https://aap.tanscloud-internal.com` | AAP base URL |
+
+#### Run Command
+
+```bash
+# From packages/awx/
+export AWX_TOKEN=your_pat_token_here
+npx vitest run tests/integration/
+
+# With custom AAP URL:
+export AWX_TOKEN=your_pat_token_here
+export AWX_BASE_URL=https://my-aap.internal.example.com
+npx vitest run tests/integration/
+```
+
+> **Note**: Integration tests are gated behind `AWX_TOKEN`. When `AWX_TOKEN` is not set, the live AAP tests are silently skipped — only the configuration-error tests run.
 
 ### Contract Tests
 

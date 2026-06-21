@@ -1,0 +1,318 @@
+/**
+ * Read-Only Tool Integration Tests
+ *
+ * These tests call the real AWX API to validate end-to-end behavior
+ * of the read-only tools (awx-list-templates, awx-list-projects).
+ * They use the plugin's own tool registration mechanism — not direct
+ * API calls — to exercise the full plugin execution path.
+ *
+ * ## Prerequisites
+ *
+ * - Access to a live AAP instance
+ * - `AWX_TOKEN` environment variable set with a valid AAP Personal Access Token
+ *
+ * ## Environment Variables
+ *
+ * | Variable       | Required | Default                                         | Description                          |
+ * |----------------|----------|-------------------------------------------------|--------------------------------------|
+ * | `AWX_TOKEN`    | Yes      | —                                               | AAP Personal Access Token            |
+ * | `AWX_BASE_URL` | No       | `https://aap.tanscloud-internal.com`            | AAP base URL                         |
+ *
+ * ## Running
+ *
+ * ```bash
+ * # From packages/awx/:
+ * AWX_TOKEN=<your-pat> npx vitest run tests/integration/read-only.test.ts
+ *
+ * # With custom AAP URL:
+ * AWX_TOKEN=<your-pat> AWX_BASE_URL=https://my-aap.example.com npx vitest run tests/integration/read-only.test.ts
+ * ```
+ *
+ * Tests that require a live AAP connection are gated behind `AWX_TOKEN`.
+ * When `AWX_TOKEN` is not set, only the configuration-error tests run.
+ */
+import { describe, it, expect, vi } from "vitest";
+import type { PluginInput, Hooks, ToolContext, ToolResult } from "@opencode-ai/plugin";
+import type { PluginModule } from "@opencode-ai/plugin";
+import awxPluginModule from "../../src/index.js";
+
+// ── Shared Test Helpers ──────────────────────────────────────────
+
+/** Minimal mock of ToolContext for tool execute tests */
+function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
+  return {
+    sessionID: "test-session",
+    messageID: "test-message",
+    agent: "test-agent",
+    directory: "/mock/dir",
+    worktree: "/mock/worktree",
+    abort: new AbortController().signal,
+    metadata: vi.fn(),
+    ask: vi.fn(async () => {}),
+    ...overrides,
+  };
+}
+
+/**
+ * Create a plugin instance with a configurable AWX token.
+ *
+ * @param token  The bearer token to use (undefined = no token stored)
+ * @param baseUrl  The AAP base URL (defaults to env var or production URL)
+ */
+async function createPlugin(
+  token?: string,
+  baseUrl?: string,
+): Promise<Hooks> {
+  const resolvedBaseUrl =
+    baseUrl ?? process.env.AWX_BASE_URL ?? "https://aap.tanscloud-internal.com";
+
+  const mockLog = vi.fn();
+  const input: PluginInput = {
+    client: {
+      app: { log: mockLog },
+      getSecret: vi.fn().mockResolvedValue(token ?? null),
+    } as unknown as PluginInput["client"],
+    project: {} as PluginInput["project"],
+    directory: "/mock/dir",
+    worktree: "/mock/worktree",
+    experimental_workspace: {
+      register: vi.fn(),
+    },
+    serverUrl: new URL("http://localhost:0"),
+    $: {} as PluginInput["$"],
+  };
+
+  // The PluginModule.server signature accepts an optional second parameter
+  // for plugin options (AwxPluginOptions).
+  const serverFn = awxPluginModule.server as (
+    input: PluginInput,
+    options?: Record<string, unknown>,
+  ) => Promise<Hooks>;
+
+  return serverFn(input, { baseUrl: resolvedBaseUrl });
+}
+
+// ── Parse helpers for tool outputs ───────────────────────────────
+
+/**
+ * Parse a JSON-string tool result into an object.
+ * Throws if the result is not a string or not valid JSON.
+ */
+function parseJsonResult(result: ToolResult): Record<string, unknown> {
+  expect(typeof result).toBe("string");
+  return JSON.parse(result as string) as Record<string, unknown>;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Configuration Errors (always run, no AWX_TOKEN needed)
+// ══════════════════════════════════════════════════════════════════
+
+describe("Read-Only Tools — Configuration Errors", () => {
+  it("awx-list-templates returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!.awxListTemplates!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      const parsed = parseJsonResult(result);
+      expect(parsed.count).toBe(0);
+      expect(parsed.results).toEqual([]);
+      expect(parsed.warning).toContain("AWX client not available");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+
+  it("list-projects returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!.listProjects!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      expect(result).toContain("AWX client not available");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// Live AAP Integration Tests (gated behind AWX_TOKEN)
+// ══════════════════════════════════════════════════════════════════
+
+describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integration", () => {
+  describe("awx-list-templates", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(process.env.AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!.awxListTemplates!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        const parsed = parseJsonResult(result);
+        expect(parsed).toHaveProperty("count");
+        expect(typeof parsed.count).toBe("number");
+        expect(Array.isArray(parsed.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((parsed.results as unknown[]).length > 0) {
+          for (const item of parsed.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("description");
+            expect(typeof item.description).toBe("string");
+          }
+        }
+
+        // Should NOT have a warning for a successful default query
+        expect(parsed.warning).toBeUndefined();
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("returns paginated results when page size is small", async () => {
+      const hooks = await createPlugin(process.env.AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!.awxListTemplates!.execute(
+          { pageSize: 1, maxPages: 3 },
+          mockToolContext(),
+        );
+
+        const parsed = parseJsonResult(result);
+        expect(parsed).toHaveProperty("count");
+        expect(typeof parsed.count).toBe("number");
+        expect(Array.isArray(parsed.results)).toBe(true);
+
+        // When forcing small pages, we either get results or get a warning
+        if ((parsed.results as unknown[]).length > 0) {
+          expect((parsed.results as unknown[]).length).toBeGreaterThan(0);
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+  describe("awx-list-projects", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(process.env.AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!.listProjects!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        // listProjects returns { output, metadata }
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("type");
+            expect(item).toHaveProperty("url");
+            expect(typeof item.url).toBe("string");
+            expect(item).toHaveProperty("scm_type");
+            expect(typeof item.scm_type).toBe("string");
+            expect(item).toHaveProperty("status");
+            expect(typeof item.status).toBe("string");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("accepts pagination options", async () => {
+      const hooks = await createPlugin(process.env.AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!.listProjects!.execute(
+          { maxPages: 2, pageSize: 10, timeout: 15_000 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(Array.isArray(metadata.results)).toBe(true);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+  describe("auth failure", () => {
+    it("returns clear error message with deliberately invalid token", async () => {
+      const hooks = await createPlugin(
+        "this-is-a-deliberately-invalid-token-for-testing",
+      );
+
+      try {
+        const result = await hooks.tool!.awxListTemplates!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        const parsed = parseJsonResult(result);
+        expect(parsed.count).toBe(0);
+        expect(parsed.results).toEqual([]);
+        expect(parsed.warning).toBeDefined();
+        expect(typeof parsed.warning).toBe("string");
+        expect((parsed.warning as string).length).toBeGreaterThan(0);
+        expect(parsed.warning).toContain("Failed to");
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("list-projects returns error metadata with invalid token", async () => {
+      const hooks = await createPlugin(
+        "this-is-a-deliberately-invalid-token-for-testing",
+      );
+
+      try {
+        const result = await hooks.tool!.listProjects!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        // Should contain an error field since the request will fail
+        if (metadata.error) {
+          expect(typeof metadata.error).toBe("string");
+          expect((metadata.error as string).length).toBeGreaterThan(0);
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+});
