@@ -115,7 +115,7 @@ export async function listProjects(
       const path = `/api/v2/projects/?page=${page}&page_size=${pageSize}`;
 
       const response = await client.request(
-        "listProjects",
+        "awx-list-projects",
         path,
         { headers: { "Content-Type": "application/json" } },
         pageController.signal,

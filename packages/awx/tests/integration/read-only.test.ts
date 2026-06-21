@@ -16,7 +16,7 @@
  * | Variable       | Required | Default                                         | Description                          |
  * |----------------|----------|-------------------------------------------------|--------------------------------------|
  * | `AWX_TOKEN`    | Yes      | —                                               | AAP Personal Access Token            |
- * | `AWX_BASE_URL` | No       | `https://aap.tanscloud-internal.com`            | AAP base URL                         |
+ * | `AAP_BASE_URL` | No       | `https://aap.tanscloud-internal.com`            | AAP base URL                         |
  *
  * ## Running
  *
@@ -25,7 +25,7 @@
  * AWX_TOKEN=<your-pat> npx vitest run tests/integration/read-only.test.ts
  *
  * # With custom AAP URL:
- * AWX_TOKEN=<your-pat> AWX_BASE_URL=https://my-aap.example.com npx vitest run tests/integration/read-only.test.ts
+ * AWX_TOKEN=<your-pat> AAP_BASE_URL=https://my-aap.example.com npx vitest run tests/integration/read-only.test.ts
  * ```
  *
  * Tests that require a live AAP connection are gated behind `AWX_TOKEN`.
@@ -64,7 +64,7 @@ async function createPlugin(
   baseUrl?: string,
 ): Promise<Hooks> {
   const resolvedBaseUrl =
-    baseUrl ?? process.env.AWX_BASE_URL ?? "https://aap.tanscloud-internal.com";
+    baseUrl ?? process.env.AAP_BASE_URL ?? "https://aap.tanscloud-internal.com";
 
   const mockLog = vi.fn();
   const input: PluginInput = {

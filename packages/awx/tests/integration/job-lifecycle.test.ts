@@ -225,7 +225,7 @@ describe.skipIf(!AWX_TOKEN)("AWX Job Lifecycle Integration", () => {
 
       // Host status counts
       expect(parsed.host_status_counts).toHaveProperty("ok");
-      expect(parsed.host_status_counts).toHaveProperty("failures");
+      expect(parsed.host_status_counts).toHaveProperty("failed");
       expect(parsed.host_status_counts).toHaveProperty("unreachable");
 
       // Derived boolean flags

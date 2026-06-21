@@ -276,7 +276,7 @@ async function server(
             );
 
             if (!projectRes.ok) {
-              return formatErrorResponse(project_id, projectRes.status);
+              return { output: formatErrorResponse(project_id, projectRes.status) };
             }
 
             const project = (await projectRes.json()) as Record<string, unknown>;
@@ -290,7 +290,7 @@ async function server(
             );
 
             if (!updateRes.ok) {
-              return formatErrorResponse(project_id, updateRes.status);
+              return { output: formatErrorResponse(project_id, updateRes.status) };
             }
 
             const projectUpdate = (await updateRes.json()) as Record<string, unknown>;
@@ -707,27 +707,23 @@ async function server(
             };
           }
 
-          const response = await awxClient.request(
-            "awx-wait-job",
-            `/api/v2/jobs/${args.job_id}/`,
-            {},
-            context.abort,
-          );
+          try {
+            const result = await fetchJobStatus(
+              awxClient,
+              args.job_id,
+              false,
+              context.abort,
+            );
 
-          if (response.status === 404) {
-            return { output: `awx-wait-job: Job ${args.job_id} not found.` };
+            return {
+              output: `Job ${args.job_id} status: ${result.job.status}`,
+              metadata: result as unknown as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            const message =
+              err instanceof Error ? err.message : String(err);
+            return { output: `awx-wait-job error: ${message}` };
           }
-
-          if (!response.ok) {
-            return { output: `awx-wait-job: Failed to retrieve job ${args.job_id} — HTTP ${response.status}.` };
-          }
-
-          const data = await response.json() as { job?: { id?: number; status?: string } };
-          const jobLabel = data?.job ? `Job ${data.job.id}: ${data.job.status}` : `Job status retrieved`;
-          return {
-            output: jobLabel,
-            metadata: data as Record<string, unknown>,
-          };
         },
       }),
 
