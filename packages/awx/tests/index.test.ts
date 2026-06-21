@@ -11,6 +11,7 @@ import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
 import awxPluginModule from "../src/index.js";
 import * as clientModule from "../src/client.js";
 import { listTemplates, type ListTemplatesOutput } from "../src/list-templates.js";
+import * as listProjectsModule from "../src/list-projects.js";
 
 /** Minimal mock of ToolContext for tool execute tests */
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
@@ -86,6 +87,13 @@ describe("AWX Plugin Index", () => {
 
       expect(hooks.tool!.awxListTemplates).toBeDefined();
       expect(typeof hooks.tool!.awxListTemplates!.description).toBe("string");
+    });
+
+    it("hooks.tool contains listProjects tool", async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!.listProjects).toBeDefined();
+      expect(typeof hooks.tool!.listProjects!.description).toBe("string");
     });
   });
 
@@ -167,6 +175,112 @@ describe("AWX Plugin Index", () => {
       const parsed = JSON.parse(result as string);
       expect(parsed).toHaveProperty("count");
       expect(parsed).toHaveProperty("results");
+    });
+  });
+
+  /* ══════════════════════════════════════════════════════════════════
+     listProjects Tool — Resolution & Execution
+     ══════════════════════════════════════════════════════════════════ */
+
+  describe("listProjects tool execution", () => {
+    it("returns stub message when no baseUrl configured", async () => {
+      const input = mockPluginInput();
+      const hooks = await createHooks(input);
+
+      const result = await hooks.tool!.listProjects!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      expect(result).toContain("AWX client not available");
+    });
+
+    it("returns stub message when no token stored", async () => {
+      const input = mockPluginInput();
+      const hooks = await createHooks(input, {
+        baseUrl: "https://aap.example.com",
+      });
+
+      const result = await hooks.tool!.listProjects!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      expect(result).toContain("AWX client not available");
+    });
+
+    it("calls listProjects and returns structured result when client is available", async () => {
+      // Spy on listProjects to verify it's called
+      const listProjectsSpy = vi.spyOn(listProjectsModule, "listProjects")
+        .mockResolvedValue({
+          count: 2,
+          results: [
+            { id: 1, name: "alpha", type: "project", url: "/api/v2/projects/1/", summary_fields: {}, created: "", modified: "", description: "", scm_type: "git", status: "successful" },
+            { id: 2, name: "beta", type: "project", url: "/api/v2/projects/2/", summary_fields: {}, created: "", modified: "", description: "", scm_type: "git", status: "successful" },
+          ],
+        });
+
+      const input = mockPluginInput();
+      (input.client as any).getSecret = vi.fn().mockResolvedValue("my-test-token");
+
+      const hooks = await createHooks(input, {
+        baseUrl: "https://aap.example.com",
+      });
+
+      const result = await hooks.tool!.listProjects!.execute(
+        { maxPages: 3, pageSize: 25, timeout: 15_000 },
+        mockToolContext(),
+      );
+
+      // Verify listProjects was called with the right args
+      expect(listProjectsSpy).toHaveBeenCalledTimes(1);
+      expect(listProjectsSpy).toHaveBeenCalledWith(
+        expect.any(Object), // AwxClient
+        expect.objectContaining({
+          maxPages: 3,
+          pageSize: 25,
+          timeout: 15_000,
+          abortSignal: expect.any(AbortSignal),
+        }),
+      );
+
+      // Verify structured output
+      expect(result).toEqual({
+        output: "Found 2 project(s).",
+        metadata: {
+          count: 2,
+          results: expect.arrayContaining([
+            expect.objectContaining({ name: "alpha" }),
+            expect.objectContaining({ name: "beta" }),
+          ]),
+        },
+      });
+
+      listProjectsSpy.mockRestore();
+    });
+
+    it("handles error from listProjects and returns error metadata", async () => {
+      const listProjectsSpy = vi.spyOn(listProjectsModule, "listProjects")
+        .mockRejectedValue(new Error("API connection refused"));
+
+      const input = mockPluginInput();
+      (input.client as any).getSecret = vi.fn().mockResolvedValue("my-test-token");
+
+      const hooks = await createHooks(input, {
+        baseUrl: "https://aap.example.com",
+      });
+
+      const result = await hooks.tool!.listProjects!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      expect(result).toEqual({
+        output: "Failed to list projects: API connection refused",
+        metadata: { error: "API connection refused" },
+      });
+
+      listProjectsSpy.mockRestore();
     });
   });
 
