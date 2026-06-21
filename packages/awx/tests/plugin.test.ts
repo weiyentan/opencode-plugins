@@ -15,7 +15,9 @@ import awxPluginModule from "../src/index.js";
 /** Minimal mock of PluginInput for scaffold tests */
 function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
   return {
-    client: {} as ReturnType<typeof vi.fn>,
+    client: {
+      app: { log: vi.fn() },
+    } as unknown as PluginInput["client"],
     project: {} as PluginInput["project"],
     directory: "/mock/dir",
     worktree: "/mock/worktree",
