@@ -70,11 +70,11 @@ describe("normalizeScmUrl", () => {
 
   describe("edge cases", () => {
     it("returns empty string for null input", () => {
-      expect(normalizeScmUrl(null as unknown as string)).toBe("");
+      expect(normalizeScmUrl(null)).toBe("");
     });
 
     it("returns empty string for undefined input", () => {
-      expect(normalizeScmUrl(undefined as unknown as string)).toBe("");
+      expect(normalizeScmUrl(undefined)).toBe("");
     });
 
     it("returns empty string for empty string input", () => {
@@ -143,11 +143,11 @@ describe("inferGitBranch", () => {
 
   describe("edge cases", () => {
     it("returns empty string for null input", () => {
-      expect(inferGitBranch(null as unknown as string)).toBe("");
+      expect(inferGitBranch(null)).toBe("");
     });
 
     it("returns empty string for undefined input", () => {
-      expect(inferGitBranch(undefined as unknown as string)).toBe("");
+      expect(inferGitBranch(undefined)).toBe("");
     });
 
     it("returns empty string for empty string input", () => {

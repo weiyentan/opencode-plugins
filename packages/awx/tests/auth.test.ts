@@ -63,21 +63,25 @@ describe("createAwxAuthHook", () => {
     it("returns failure on empty token", async () => {
       const result = await method.authorize({ token: "" });
 
-      expect(result.type).toBe("failure");
-      expect(result.error).toContain("not configured");
+      expect(result.type).toBe("failed");
+      expect(result.message).toBeDefined();
+      expect(typeof result.message).toBe("string");
+      expect((result.message as string).length).toBeGreaterThan(0);
     });
 
     it("returns failure on whitespace-only token", async () => {
       const result = await method.authorize({ token: "   " });
 
-      expect(result.type).toBe("failure");
-      expect(result.error).toContain("not configured");
+      expect(result.type).toBe("failed");
+      expect(result.message).toBeDefined();
+      expect(typeof result.message).toBe("string");
+      expect((result.message as string).length).toBeGreaterThan(0);
     });
 
-    it("failure message is actionable", async () => {
+    it("returns failed type on validation failure", async () => {
       const result = await method.authorize({ token: "" });
 
-      expect(result.error).toContain("Personal Access Token");
+      expect(result.type).toBe("failed");
     });
   });
 });

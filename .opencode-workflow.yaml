@@ -1,7 +1,7 @@
 # OpenCode Workflow Configuration
 # Controls how to-issues and develop-loop interact with your issue tracker.
 
-issue_tracker: gitlab
+issue_tracker: github
 
 # GitLab project in namespace/repo format
 # glab uses the current git repo's remote to determine this automatically

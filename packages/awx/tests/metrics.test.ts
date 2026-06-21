@@ -11,8 +11,12 @@
  * breaking these tests.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { MetricsStore, createDefaultMetrics } from "../src/metrics";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  MetricsStore,
+  createDefaultMetrics,
+  setupMetricsPersistence,
+} from "../src/metrics";
 import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
@@ -309,6 +313,163 @@ describe("MetricsStore", () => {
       const metrics = store.getMetrics("nonexistent");
       expect(metrics).toBeDefined();
       expect(metrics.callCount).toBe(0);
+    });
+  });
+
+  // ——— Lifecycle integration (periodic persist) ———
+
+  describe("lifecycle integration", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /**
+     * This test validates that `setupMetricsPersistence` wires `persist()` to
+     * a periodic timer — fulfilling the requirement that plugin-level metrics
+     * are flushed to disk on a recurring interval.
+     *
+     * Note: `setupMetricsPersistence` is a helper that the plugin's `server()`
+     * function calls during initialization, along with `store.load()`.
+     */
+    it("setupMetricsPersistence calls persist() periodically at the given interval", async () => {
+      vi.useFakeTimers();
+
+      const store = new MetricsStore();
+      const persistSpy = vi.spyOn(store, "persist");
+      persistSpy.mockResolvedValue(undefined);
+
+      const { clear } = setupMetricsPersistence(store, 1000);
+
+      // No persist should have been called before the interval fires
+      expect(persistSpy).not.toHaveBeenCalled();
+
+      // Advance past first interval
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(persistSpy).toHaveBeenCalledTimes(1);
+
+      // Advance past second interval
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(persistSpy).toHaveBeenCalledTimes(2);
+
+      // Clean up
+      await clear();
+      vi.useRealTimers();
+    });
+
+    it("clear() stops periodic persist and does a final persist", async () => {
+      vi.useFakeTimers();
+
+      const store = new MetricsStore();
+      const persistSpy = vi.spyOn(store, "persist");
+      persistSpy.mockResolvedValue(undefined);
+
+      const { clear } = setupMetricsPersistence(store, 1000);
+
+      // Advance past one interval
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(persistSpy).toHaveBeenCalledTimes(1);
+
+      // Clear should do a final persist and stop the interval
+      await clear();
+      // 1 from interval + 1 from final persist
+      expect(persistSpy).toHaveBeenCalledTimes(2);
+
+      // Advance more time — no more persists should happen
+      persistSpy.mockClear();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(persistSpy).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it("persistence serialization: concurrent interval persist and clear() do not lose metrics", async () => {
+      vi.useFakeTimers();
+
+      const dir = await tempPersistDir();
+      const filePath = persistPath(dir);
+      const store = new MetricsStore(filePath);
+
+      // Record initial metrics
+      store.recordCall("tool-a", 100);
+      store.recordCall("tool-b", 50);
+
+      // Set up persistence at 1s interval. When the interval fires,
+      // it enqueues a persist call via persistQueue.
+      const { clear } = setupMetricsPersistence(store, 1000);
+
+      // Step 1: simulate an interval persist firing by advancing time
+      await vi.advanceTimersByTimeAsync(1000);
+
+      // The interval's persist has been queued through persistQueue but
+      // hasn't completed yet (it's an async operation that awaits dynamic
+      // imports and file I/O). While it's in flight, record additional
+      // metrics.
+      store.recordCall("tool-a", 50); // tool-a now: 2 calls / 150ms
+
+      // Step 2: concurrently call clear() — this stops the interval and
+      // enqueues a final persist behind the in-flight one.
+      const clearPromise = clear();
+
+      // Both persists are serialized through persistQueue. The interval's
+      // persist runs first (reading whatever state is current when it
+      // executes), then clear()'s persist runs next (reading the final
+      // state with all metrics).
+      await clearPromise;
+
+      // Load from disk — all metrics must be present. If the queue
+      // serialization were broken, the persists could interleave and
+      // data could be lost.
+      const reader = new MetricsStore(filePath);
+      await reader.load();
+      expect(reader.getMetrics("tool-a").callCount).toBe(2);
+      expect(reader.getMetrics("tool-a").totalLatencyMs).toBe(150);
+      expect(reader.getMetrics("tool-b").callCount).toBe(1);
+      expect(reader.getMetrics("tool-b").totalLatencyMs).toBe(50);
+
+      await fs.rm(dir, { recursive: true, force: true });
+      vi.useRealTimers();
+    });
+
+    it("onError callback fires when persist fails", async () => {
+      vi.useFakeTimers();
+
+      const store = new MetricsStore();
+      const persistSpy = vi.spyOn(store, "persist");
+      persistSpy.mockRejectedValue(new Error("disk full"));
+
+      const onError = vi.fn();
+      const { clear } = setupMetricsPersistence(store, 1000, onError);
+
+      // Advance past first interval — the .catch() should fire onError
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith(expect.any(Error));
+
+      await clear();
+      vi.useRealTimers();
+    });
+
+    it("load() restores persisted counters on initialization (lifecycle pattern)", async () => {
+      const dir = await tempPersistDir();
+      const filePath = persistPath(dir);
+
+      // First session: record and persist
+      const store1 = new MetricsStore(filePath);
+      store1.recordCall("tool-a", 100);
+      store1.recordPsFallback("tool-b");
+      await store1.persist();
+
+      // Simulate plugin reload: new store pointing to same file
+      const store2 = new MetricsStore(filePath);
+      await store2.load(); // This is called during plugin initialization
+
+      // Verify counters restored
+      expect(store2.getMetrics("tool-a").callCount).toBe(1);
+      expect(store2.getMetrics("tool-a").totalLatencyMs).toBe(100);
+      expect(store2.getMetrics("tool-b").psFallbackCount).toBe(1);
+
+      await fs.rm(dir, { recursive: true, force: true });
     });
   });
 });

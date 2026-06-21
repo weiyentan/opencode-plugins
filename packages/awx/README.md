@@ -11,7 +11,7 @@ The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers the hello-world tool; validates plugin load, tool registration, and hot-reload |
+| **Plugin entry** | `src/index.ts` | Registers hello-world + listTemplates tools; wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | Pure functions: SSH→HTTPS URL conversion, git branch inference, required-var validation |
@@ -158,7 +158,7 @@ A single `tsconfig.json` at `packages/awx/tsconfig.json` is used instead of Type
 ```
 packages/awx/
 ├── src/
-│   ├── index.ts              # Plugin entry point — Hooks (auth + tools)
+│   ├── index.ts              # Plugin entry point — Hooks (auth + tools + dispose); client wiring & metrics lifecycle
 │   ├── auth.ts               # Bearer token auth hook (type: "api")
 │   ├── client.ts             # HTTP middleware pipeline (circuit breaker, retry, timeout)
 │   ├── metrics.ts            # Per-tool counters with file-backed durability
@@ -166,12 +166,14 @@ packages/awx/
 │   └── contracts/
 │       └── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
 ├── tests/
-│   ├── plugin.test.ts        # Plugin scaffolding tests (hello-world)
-│   ├── client.test.ts        # Client middleware pipeline tests
-│   ├── metrics.test.ts       # MetricsStore persistence & counter tests
+│   ├── plugin.test.ts            # Plugin scaffolding tests (hello-world)
+│   ├── client.test.ts            # Client middleware pipeline tests
+│   ├── lifecycle.test.ts         # Lazy client/auth lifecycle tests (no-token → token → client-created)
+│   ├── metrics.test.ts           # MetricsStore persistence & counter tests incl. concurrent serialization
+│   ├── plugin-init-timeout.test.ts  # Init-time timeout cleanup tests (clear() called after validation)
 │   ├── contracts/
-│   │   ├── contract.test.ts  # Contract compatibility tests
-│   │   └── __snapshots__/    # Canonical contract output (ground truth)
+│   │   ├── contract.test.ts      # Contract compatibility tests
+│   │   └── __snapshots__/        # Canonical contract output (ground truth)
 │   └── fixtures/
 │       ├── awx_job_success.json
 │       ├── awx_job_partial.json

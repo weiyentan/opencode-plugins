@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createClient } from "../src/client.js";
+import { MetricsStore } from "../src/metrics.js";
 
 /* ── Mock fetch ───────────────────────────────────────────────── */
 const mockFetch = vi.fn();
@@ -574,6 +575,167 @@ describe("caller-supplied headers", () => {
 /* ══════════════════════════════════════════════════════════════════
    Circuit-Open Response — JSON body fields
    ══════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════
+   Metrics Accounting — recordCall + recordError in finally block
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("metrics accounting", () => {
+  it("records call and error for circuit-breaker-open synthetic 503", async () => {
+    vi.useFakeTimers();
+
+    const metrics = new MetricsStore();
+    const client = createClient("https://aap.example.com", "token", {
+      maxRetries: 0,
+      metricsStore: metrics,
+    });
+
+    // Trip the breaker with 5 consecutive 503s
+    for (let i = 0; i < 5; i++) {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 503 } as Response);
+      await client.request("metrics-cbo", "/api/v2/data/");
+    }
+
+    // Verify metrics after the trip
+    const afterTrip = metrics.getMetrics("metrics-cbo");
+    expect(afterTrip.callCount).toBe(5);
+    expect(afterTrip.errorCount).toBe(5);
+
+    // Clear mock and make one more request (breaker is open)
+    mockFetch.mockClear();
+    const response = await client.request("metrics-cbo", "/api/v2/data/");
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(response.status).toBe(503);
+
+    // Verify metrics after circuit-open rejection
+    const afterOpen = metrics.getMetrics("metrics-cbo");
+    expect(afterOpen.callCount).toBe(6);  // 5 failed calls + 1 circuit-open
+    expect(afterOpen.errorCount).toBe(6); // 5 failures + circuit-open = error
+
+    vi.useRealTimers();
+  });
+
+  it("records call for 2xx success and no error", async () => {
+    const metrics = new MetricsStore();
+    const client = createClient("https://aap.example.com", "token", {
+      metricsStore: metrics,
+    });
+
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200 } as Response);
+    await client.request("metrics-ok", "/api/v2/me/");
+
+    const m = metrics.getMetrics("metrics-ok");
+    expect(m.callCount).toBe(1);
+    expect(m.errorCount).toBe(0);
+  });
+
+  it("records call and error for 4xx response", async () => {
+    const metrics = new MetricsStore();
+    const client = createClient("https://aap.example.com", "token", {
+      metricsStore: metrics,
+    });
+
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404 } as Response);
+    const response = await client.request("metrics-4xx", "/api/v2/nonexistent/");
+    expect(response.status).toBe(404);
+
+    const m = metrics.getMetrics("metrics-4xx");
+    expect(m.callCount).toBe(1);
+    expect(m.errorCount).toBe(1);
+  });
+
+  it("records call and error for 5xx after retries exhausted", async () => {
+    vi.useFakeTimers();
+
+    const metrics = new MetricsStore();
+    const client = createClient("https://aap.example.com", "token", {
+      maxRetries: 1, // 2 total attempts
+      metricsStore: metrics,
+    });
+
+    mockFetch
+      .mockResolvedValueOnce({ ok: false, status: 503 } as Response)
+      .mockResolvedValueOnce({ ok: false, status: 503 } as Response);
+
+    const requestPromise = client.request("metrics-5xx", "/api/v2/data/");
+    await vi.runAllTimersAsync();
+    const response = await requestPromise;
+    expect(response.status).toBe(503);
+
+    const m = metrics.getMetrics("metrics-5xx");
+    // After retries exhausted, recordCall fires once per request() invocation
+    expect(m.callCount).toBe(1);
+    expect(m.errorCount).toBe(1);
+
+    vi.useRealTimers();
+  });
+
+  it("records call and error for network error after retries exhausted", async () => {
+    vi.useFakeTimers();
+
+    const metrics = new MetricsStore();
+    const client = createClient("https://aap.example.com", "token", {
+      maxRetries: 0,
+      metricsStore: metrics,
+    });
+
+    mockFetch.mockRejectedValueOnce(new TypeError("fetch failed"));
+
+    await expect(
+      client.request("metrics-net", "/api/v2/data/"),
+    ).rejects.toThrow("fetch failed");
+
+    const m = metrics.getMetrics("metrics-net");
+    expect(m.callCount).toBe(1);
+    expect(m.errorCount).toBe(1);
+
+    vi.useRealTimers();
+  });
+
+  it("records call but not error on abort (finally runs, error is a cancellation)", async () => {
+    vi.useFakeTimers();
+
+    // Mock fetch to honor the abort signal (real fetch rejects with
+    // DOMException when the signal is already aborted)
+    mockFetch.mockImplementationOnce((_url: string, init?: RequestInit) => {
+      const signal = init?.signal;
+      return new Promise<Response>((_resolve, reject) => {
+        if (signal?.aborted) {
+          reject(new DOMException("Aborted", "AbortError"));
+          return;
+        }
+        signal?.addEventListener("abort", () => {
+          reject(new DOMException("Aborted", "AbortError"));
+        }, { once: true });
+      });
+    });
+
+    const metrics = new MetricsStore();
+    const client = createClient("https://aap.example.com", "token", {
+      maxRetries: 0,
+      metricsStore: metrics,
+    });
+
+    const controller = new AbortController();
+    const requestPromise = client.request(
+      "metrics-abort",
+      "/api/v2/data/",
+      undefined,
+      controller.signal,
+    );
+    controller.abort();
+
+    await expect(requestPromise).rejects.toThrow(DOMException);
+
+    // recordCall fires from finally even when the promise rejects
+    const m = metrics.getMetrics("metrics-abort");
+    expect(m.callCount).toBe(1);
+    // AbortError is a cancellation, not a request error — no recordError
+    expect(m.errorCount).toBe(0);
+
+    vi.useRealTimers();
+  });
+});
 
 describe("circuit-open response", () => {
   it("returns code and message fields in json body", async () => {

@@ -137,7 +137,7 @@ export class MetricsStore {
   /**
    * Record an error for a tool.
    * Called by the client when a fetch request fails (any error: 4xx, 5xx,
-   * network error, timeout, abort, circuit breaker open).
+   * network error, timeout, abort).
    */
   recordError(toolName: string): void {
     const m = this.ensure(toolName);
@@ -278,4 +278,56 @@ export class MetricsStore {
   reset(): void {
     this.counters.clear();
   }
+}
+
+// ——— Lifecycle helper ———
+
+/**
+ * Set up periodic persistence for a MetricsStore.
+ *
+ * Starts a `setInterval` that calls `store.persist()` at the given interval.
+ * Returns a `clear()` function that stops the interval and does a final
+ * persist to ensure in-memory counters are flushed to disk.
+ *
+ * This is the integration point for the plugin lifecycle:
+ * 1. Plugin's `server()` creates a `MetricsStore` and calls `store.load()`.
+ * 2. Plugin's `server()` calls this helper to start periodic persistence.
+ * 3. Plugin's `dispose()` hook calls `clear()` to stop the interval and
+ *    perform a final persist.
+ *
+ * @param store      - The MetricsStore to persist periodically
+ * @param intervalMs - Interval in milliseconds (default: 30_000 = 30s)
+ * @param onError    - Optional callback invoked when a persist attempt fails.
+ *                     Receives the error object so the caller can surface
+ *                     failures (e.g., via app logging) without crashing the
+ *                     interval.
+ */
+export function setupMetricsPersistence(
+  store: MetricsStore,
+  intervalMs: number = 30_000,
+  onError?: (err: unknown) => void,
+): { clear: () => Promise<void> } {
+  let persistQueue = Promise.resolve();
+
+  function enqueuePersist(): Promise<void> {
+    persistQueue = persistQueue
+      .then(() => store.persist())
+      .catch((err) => {
+        // persist failures (e.g., permission denied) should not crash
+        // the interval; surface the error via the optional callback.
+        onError?.(err);
+      });
+    return persistQueue;
+  }
+
+  const intervalId = setInterval(() => {
+    void enqueuePersist();
+  }, intervalMs);
+
+  return {
+    async clear(): Promise<void> {
+      clearInterval(intervalId);
+      await enqueuePersist();
+    },
+  };
 }

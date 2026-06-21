@@ -104,5 +104,5 @@ For network errors and timeouts, the native `fetch` error (`TypeError` or
 - No third-party HTTP dependencies — uses Node.js 18+ native `fetch`, `AbortSignal`, `AbortController`
 - Node 18 compatibility is handled transparently: `createTimeoutSignal()` replaces `AbortSignal.timeout()`, and `anyAbortSignal()` provides a manual fallback when `AbortSignal.any()` is unavailable
 - Per-tool breaker state stored in a simple in-memory `Map<string, CircuitBreaker>` — does not persist across plugin restarts
-- Metrics counters (`metrics.ts`) are wired into the `client.ts` pipeline: every call records success/error counts, latency, and token expiry events via `MetricsStore`
+- Metrics counters (`metrics.ts`) are wired into the `client.ts` pipeline: every call records success/error counts, latency, and token expiry events via `MetricsStore`. A shared `MetricsStore` instance can be injected via `ClientOptions.metricsStore` — when not provided, a new one is created internally.
 - When the circuit breaker is OPEN, the pipeline returns immediately without applying the 30s timeout (fail-fast per the design)

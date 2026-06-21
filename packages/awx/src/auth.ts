@@ -17,8 +17,9 @@
  * ## Token Validation
  *
  * Validation happens at plugin init time (NOT on first tool call) to provide
- * immediate, clear feedback. A failed validation blocks plugin initialization
- * so the user never gets a mysterious 401 on a later tool invocation.
+ * immediate, clear feedback. Failed init-time validation logs an actionable
+ * error, but plugin initialization continues so the user can re-authenticate
+ * or fix configuration.
  *
  * ## Error Messages
  *
@@ -173,14 +174,21 @@ export function createAwxAuthHook() {
          *
          * Returns the raw token as the secret key. OpenCode stores this
          * securely and injects it into tool requests as the auth key.
+         *
+         * Empty or whitespace-only tokens fail authorization.
+         *
+         * We include a message field for better UX. If OpenCode ignores unknown
+         * fields, the prompt text above still provides actionable guidance.
+         *
+         * If the OpenCode auth type narrows this contract in future, remove the
+         * message field and rely on the prompt text.
          */
         async authorize(inputs: Record<string, string>) {
           const token = inputs.token;
           if (!token || token.trim().length === 0) {
             return {
-              type: "failure" as const,
-              error:
-                "AWX auth not configured. Set your Personal Access Token in the plugin settings.",
+              type: "failed" as const,
+              message: "AWX auth not configured. Set your Personal Access Token in the plugin settings.",
             };
           }
 
