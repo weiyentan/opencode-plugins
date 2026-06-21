@@ -1,4 +1,4 @@
-# AWX Plugin (`@opencode-ai/plugin-awx`)
+# AWX Plugin (`@weiyentan/opencode-plugin-awx`)
 
 OpenCode server plugin for [AWX](https://github.com/ansible/awx) / Ansible Automation Platform (AAP). Provides native tool access to job templates, projects, and job lifecycle operations.
 
