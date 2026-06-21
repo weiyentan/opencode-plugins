@@ -72,7 +72,8 @@ export interface AwxPluginOptions {
  *
  * Returns Hooks including:
  * - Auth hook (type: "api" for bearer token / PAT)
- * - Tool registrations (hello-world scaffolding, eventually AWX tools)
+ * Plugins register tools (awx-list-templates, awx-launch-job, awx-job-status, etc.)
+ * and auth hooks for AWX API interaction.
  */
 async function server(
   input: PluginInput,
@@ -203,7 +204,7 @@ async function server(
        */
       hello: tool({
         description: [
-          "Returns a hello world greeting. Phase 0 scaffolding tool — verifies",
+          "Returns a hello world greeting. Sanity-check tool that verifies",
           "plugin load, tool registration, and hot-reload behavior on the",
           `AWX plugin server (connected to ${serverUrl.href}).`,
         ].join(" "),
@@ -328,7 +329,7 @@ async function server(
       }),
 
       /**
-       * List AWX job templates — Phase 0 stub tool.
+       * List AWX job templates.
        *
        * Fetches job templates from the AWX /api/v2/job_templates/ endpoint,
        * consolidating results across pages up to a configurable page cap.
