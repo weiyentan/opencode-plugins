@@ -117,7 +117,7 @@ export async function validateToken(
     };
   } catch (err: unknown) {
     // Handle AbortError (timeout) specifically
-    if (err instanceof DOMException && err.name === "AbortError") {
+    if (err instanceof DOMException && (err.name === "AbortError" || err.name === "TimeoutError")) {
       return {
         valid: false,
         error: [
