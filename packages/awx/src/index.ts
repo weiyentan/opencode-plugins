@@ -224,6 +224,126 @@ async function server(
           return "[stub] list-templates: AWX integration not yet implemented.";
         },
       }),
+
+      /**
+       * Get job events from an AWX job.
+       *
+       * Retrieves job events from the AWX API at
+       * `/api/v2/jobs/<job_id>/job_events/`. Supports optional
+       * filtering by event type and pagination for jobs with
+       * 500+ events.
+       *
+       * Returns structured JSON with `count`, `results`, and
+       * optional `next_page`.
+       */
+      awxGetJobEvents: tool({
+        description: [
+          "Get job events from an AWX job. Retrieves events from",
+          "`/api/v2/jobs/<job_id>/job_events/`. Supports optional",
+          "filtering by event type (e.g., `playbook_on_task_start`)",
+          "and pagination via the `page` parameter.",
+        ].join(" "),
+        args: {
+          job_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("AWX job ID to retrieve events for"),
+          event_filter: z
+            .string()
+            .optional()
+            .describe(
+              "Optional event type filter (e.g., 'playbook_on_task_start', 'runner_on_ok')",
+            ),
+          page: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe("Page number for paginated results"),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return "Request was aborted.";
+          }
+
+          const awxClient = await getAwxClient();
+          if (!awxClient) {
+            return JSON.stringify({
+              count: 0,
+              results: [],
+              next_page: null,
+              error:
+                "AWX client not available. Configure a baseUrl in " +
+                "opencode.jsonc and store your Personal Access Token " +
+                "via the plugin auth prompt.",
+            });
+          }
+
+          try {
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (args.event_filter) {
+              params.set("event", args.event_filter);
+            }
+            if (args.page) {
+              params.set("page", String(args.page));
+            }
+
+            const queryString = params.toString();
+            const path = `/api/v2/jobs/${args.job_id}/job_events/${queryString ? `?${queryString}` : ""}`;
+
+            const response = await awxClient.request(
+              "awxGetJobEvents",
+              path,
+              undefined,
+              context.abort,
+            );
+
+            if (!response.ok) {
+              return JSON.stringify({
+                count: 0,
+                results: [],
+                next_page: null,
+                error: `AWX API returned status ${response.status}: ${response.statusText}`,
+              });
+            }
+
+            const data = (await response.json()) as {
+              count?: number;
+              next?: string | null;
+              results?: unknown[];
+            };
+
+            // Extract next_page from the `next` URL if present
+            let nextPage: number | null = null;
+            if (data.next) {
+              const nextUrl = new URL(data.next);
+              const pageParam = nextUrl.searchParams.get("page");
+              if (pageParam) {
+                nextPage = Number.parseInt(pageParam, 10);
+              }
+            }
+
+            return JSON.stringify({
+              count: data.count ?? 0,
+              results: data.results ?? [],
+              next_page: nextPage,
+            });
+          } catch (err) {
+            return JSON.stringify({
+              count: 0,
+              results: [],
+              next_page: null,
+              error:
+                err instanceof Error
+                  ? err.message
+                  : "Unknown error fetching job events",
+            });
+          }
+        },
+      }),
     },
   };
 }
