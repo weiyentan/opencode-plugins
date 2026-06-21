@@ -1,0 +1,45 @@
+# CI pipeline for the opencode-plugins package (packages/awx/)
+# Runs lint, test, and build on push/PR to main.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+          cache-dependency-path: packages/awx/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: packages/awx
+
+      - name: Lint (typecheck)
+        run: npm run lint
+        working-directory: packages/awx
+
+      - name: Test
+        run: npm test
+        working-directory: packages/awx
+
+      - name: Build
+        run: npm run build
+        working-directory: packages/awx
