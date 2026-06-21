@@ -5,10 +5,13 @@
   "description": "OpenCode plugin for AWX / Ansible Automation Platform — native tool access to job templates, projects, and job lifecycle operations.",
   "type": "module",
   "files": ["dist/**", "README.md", "LICENSE"],
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./src/*": "./src/*"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "scripts": {
     "build": "tsc",
@@ -34,15 +37,7 @@
     "node": ">=18.0.0"
   },
   "publishConfig": {
-    "access": "public",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "import": "./dist/index.js"
-      }
-    }
+    "access": "public"
   },
   "keywords": [
     "opencode",

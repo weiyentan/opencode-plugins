@@ -104,16 +104,11 @@ The OpenCode plugin server watches plugin source files and **automatically reloa
 
 At the scaffolding stage, hot-reload verification was performed structurally (the `tsc --noEmit` / `vitest run` cycle confirms the module compiles and tool execute signature is correct) but end-to-end hot-reload testing requires a running OpenCode server instance. Full integration testing of hot-reload behavior is tracked for a later phase.
 
-### Dev-Mode Flag
+### Entry Points
 
-The `package.json` `type` field is set to `"module"`, and the `main` / `exports` fields point directly to `src/index.ts`. This allows the OpenCode server to consume TypeScript source directly in development mode, bypassing the build step for faster iteration. When running in development:
+The `package.json` `main`, `types`, and `exports` fields point to the compiled `dist/` output. This is the production-safe configuration — consumers import the compiled JavaScript with type declarations.
 
-```bash
-# The OpenCode server watches src/ and reloads on change
-# No explicit watch flag needed — this is the default plugin loading behavior
-```
-
-For production deployment, run `npm run build` to compile TypeScript into `dist/` and update the `main` field to point to the compiled output.
+For local development, the OpenCode plugin server can consume TypeScript source directly by overriding the entry point (e.g., changing `main` to `./src/index.ts`). The server watches source files and reloads automatically on change — no server restart required.
 
 ## CI Requirements
 
