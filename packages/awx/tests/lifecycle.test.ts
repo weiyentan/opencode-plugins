@@ -53,7 +53,10 @@ function createPluginInput(
   getSecretMock: (key: string) => Promise<string | undefined>,
 ): PluginInput {
   return {
-    client: { getSecret: getSecretMock } as PluginInput["client"],
+    client: {
+      getSecret: getSecretMock,
+      app: { log: vi.fn() },
+    } as PluginInput["client"],
     project: {} as PluginInput["project"],
     directory: "/mock/dir",
     worktree: "/mock/worktree",

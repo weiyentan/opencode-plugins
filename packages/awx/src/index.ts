@@ -77,7 +77,7 @@ async function server(
   }
 
   const persistence = setupMetricsPersistence(metricsStore, 30_000, (err) => {
-    void input.client.app.log({
+    void input.client?.app?.log({
       body: {
         service: "plugin-awx",
         level: "error",
