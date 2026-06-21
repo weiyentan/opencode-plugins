@@ -30,6 +30,30 @@ import { listProjects } from "./list-projects.js";
 import { launchJob } from "./launch.js";
 import { fetchJobStatus } from "./job-status.js";
 
+/**
+ * Format a user-facing error message for HTTP error responses.
+ *
+ * Maps HTTP status codes to meaningful error messages the agent
+ * can act on (e.g., "not found", "not authorized").
+ */
+function formatErrorResponse(projectId: number, status: number): string {
+  switch (status) {
+    case 404:
+      return `Project ${projectId} not found. Verify the project ID and try again.`;
+    case 401:
+    case 403:
+      return (
+        `Not authorized to sync project ${projectId}. ` +
+        "Check your Personal Access Token permissions."
+      );
+    default:
+      return (
+        `Failed to sync project ${projectId}. ` +
+        `AWX API returned HTTP ${status}.`
+      );
+  }
+}
+
 /** Plugin-specific configuration from opencode.jsonc */
 export interface AwxPluginOptions {
   /**
@@ -201,7 +225,108 @@ async function server(
       }),
 
       /**
-       * List AWX job templates with pagination.
+       * Trigger an SCM sync on an AWX project.
+       *
+       * Accepts a project_id, fetches the project details, and triggers
+       * an SCM update via POST /api/v2/projects/<id>/update/.
+       * Returns the project_update_id, status, and project metadata.
+       * The sync is async on AAP — the agent can poll the project update
+       * status using the returned project_update_id.
+       */
+      syncProject: tool({
+        description: [
+          "Trigger an SCM sync on an AWX project by project ID.",
+          "Fetches project details, triggers the update, and returns",
+          "the project update ID, status, and project metadata.",
+          "Sync is async — poll the project update status separately.",
+        ].join(" "),
+        args: {
+          project_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the AWX project to sync."),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return "Request was aborted.";
+          }
+
+          const awxClient = await getAwxClient();
+          if (!awxClient) {
+            return (
+              "[awx-sync-project] AWX client not available. " +
+              "Configure a baseUrl in opencode.jsonc and store your " +
+              "Personal Access Token via the plugin auth prompt."
+            );
+          }
+
+          const toolName = "syncProject";
+          const { project_id } = args;
+
+          try {
+            // Step 1: Fetch project details
+            const projectRes = await awxClient.request(
+              toolName,
+              `/api/v2/projects/${project_id}/`,
+              { method: "GET" },
+              context.abort,
+            );
+
+            if (!projectRes.ok) {
+              return formatErrorResponse(project_id, projectRes.status);
+            }
+
+            const project = (await projectRes.json()) as Record<string, unknown>;
+
+            // Step 2: Trigger SCM update
+            const updateRes = await awxClient.request(
+              toolName,
+              `/api/v2/projects/${project_id}/update/`,
+              { method: "POST" },
+              context.abort,
+            );
+
+            if (!updateRes.ok) {
+              return formatErrorResponse(project_id, updateRes.status);
+            }
+
+            const projectUpdate = (await updateRes.json()) as Record<string, unknown>;
+
+            // Step 3: Return structured output
+            const projectName = (project.name as string) ?? "";
+            const status = projectUpdate.status as string;
+
+            return {
+              output: [
+                `SCM sync triggered for project "${projectName}" (ID ${project_id}).`,
+                `Project update ID: ${projectUpdate.id as number}, status: ${status}.`,
+              ].join(" "),
+              metadata: {
+                project_update_id: projectUpdate.id as number,
+                status,
+                project_name: projectName,
+                project_id,
+                url: (project.url as string) ?? "",
+                scm_type: (project.scm_type as string) ?? "",
+                last_updated: (project.last_updated as string) ?? "",
+              },
+            };
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return "Request was aborted.";
+            }
+            return (
+              `[awx-sync-project] Unexpected error syncing project ${project_id}: ` +
+              `${err instanceof Error ? err.message : String(err)}`
+            );
+          }
+        },
+      }),
+
+      /**
+       * List AWX job templates — Phase 0 stub tool.
        *
        * Fetches job templates from the AWX /api/v2/job_templates/ endpoint,
        * consolidating results across pages up to a configurable page cap.
