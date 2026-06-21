@@ -86,6 +86,13 @@ describe("AWX Plugin Index", () => {
       expect(hooks.tool!.listTemplates).toBeDefined();
       expect(typeof hooks.tool!.listTemplates!.description).toBe("string");
     });
+
+    it("hooks.tool contains launchJob tool", async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!.launchJob).toBeDefined();
+      expect(typeof hooks.tool!.launchJob!.description).toBe("string");
+    });
   });
 
   /* ══════════════════════════════════════════════════════════════════

@@ -25,6 +25,7 @@ import { createAwxAuthHook, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
 import { createClient, createTimeoutSignal } from "./client.js";
 import type { AwxClient } from "./client.js";
+import { launchJob } from "./launch.js";
 
 /** Plugin-specific configuration from opencode.jsonc */
 export interface AwxPluginOptions {
@@ -222,6 +223,84 @@ async function server(
           }
 
           return "[stub] list-templates: AWX integration not yet implemented.";
+        },
+      }),
+
+      /**
+       * Launch an AWX job template with extra-vars transforms.
+       *
+       * Runs the transforms pipeline (SCM URL normalization, git branch
+       * inference, required vars validation) before calling the AWX launch
+       * API. If any transform fails, the launch is aborted with actionable
+       * error messages.
+       *
+       * Returns a JSON string with:
+       * - jobId: The AWX job ID (0 if transforms failed)
+       * - jobStatus: The AWX job status ("failed" if transforms failed)
+       * - warnings: Non-fatal transforms warnings
+       * - errors: Fatal transforms errors (empty on success)
+       */
+      launchJob: tool({
+        description: [
+          "Launch an AWX job template by ID with extra-vars transforms.",
+          "Transforms SCM URLs (SSH→HTTPS), infers git branches from",
+          "refs/heads/ refs, and validates required variables before",
+          "calling the AWX launch API. If any transform fails, the",
+          "launch is aborted and an error is returned.",
+        ].join(" "),
+        args: {
+          template_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The AWX job template ID to launch."),
+          extra_vars: z
+            .record(z.string(), z.unknown())
+            .optional()
+            .describe(
+              "Extra variables to pass to the job template. Transforms:" +
+              " scm_url (SSH→HTTPS), scm_branch (refs/heads/→short name)," +
+              " plus required vars validation (inventory, scm_url, scm_branch).",
+            ),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return "Request was aborted.";
+          }
+
+          const awxClient = await getAwxClient();
+          if (!awxClient) {
+            return JSON.stringify({
+              jobId: 0,
+              jobStatus: "failed",
+              warnings: [],
+              errors: [
+                "AWX client not available. Configure a baseUrl in" +
+                " opencode.jsonc and store your Personal Access Token" +
+                " via the plugin auth prompt.",
+              ],
+            });
+          }
+
+          try {
+            const result = await launchJob(
+              awxClient,
+              args.template_id,
+              args.extra_vars,
+            );
+
+            return JSON.stringify(result);
+          } catch (err) {
+            const message =
+              err instanceof Error ? err.message : String(err);
+            return JSON.stringify({
+              jobId: 0,
+              jobStatus: "failed",
+              warnings: [],
+              errors: [message],
+            });
+          }
         },
       }),
     },
