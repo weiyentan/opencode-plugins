@@ -65,6 +65,47 @@ npx vitest run tests/integration/
 
 Tests follow TDD (test-driven development) with [Vitest](https://vitest.dev) and verify behavior through the public plugin interface.
 
+### Integration Tests — Job Lifecycle
+
+Live integration tests for the full AWX job lifecycle live in `tests/integration/job-lifecycle.test.ts`. They exercise the plugin's tools against a real AAP instance:
+
+- `awx-launch-job` → launches a job template
+- `awx-job-status` → fetches structured job detail (v1.0 output contract)
+- `awx-wait-job` → non-blocking status check (no polling)
+- `awx-get-job-events` → retrieves job events
+
+#### Prerequisites
+
+| Env Var | Default | Required | Description |
+|---------|---------|----------|-------------|
+| `AWX_TOKEN` | — | **Yes** | Valid AAP Personal Access Token (PAT) |
+| `AAP_BASE_URL` | `https://aap.tanscloud-internal.com` | No | Base URL of the AAP instance |
+| `JOB_TEMPLATE_ID` | `10` | No | Non-production AWX job template ID to launch |
+| `EXTRA_VARS_INVENTORY` | `"test"` | No | Inventory name for extra_vars |
+| `EXTRA_VARS_SCM_URL` | `"https://github.com/example/repo.git"` | No | SCM URL for extra_vars |
+| `EXTRA_VARS_SCM_BRANCH` | `"main"` | No | SCM branch for extra_vars |
+
+> **Important:** Use a non-production job template. The launch tool starts a real job on AAP. The plugin's transforms pipeline requires `inventory`, `scm_url`, and `scm_branch` in extra_vars — configure them via env vars to match your template's expectations.
+
+#### Running
+
+```bash
+export AWX_TOKEN=your_pat_token_here
+export JOB_TEMPLATE_ID=27      # non-production template
+npx vitest run tests/integration/job-lifecycle.test.ts
+```
+
+When `AWX_TOKEN` is not set, all integration tests are silently skipped using `describe.skipIf(!process.env.AWX_TOKEN)`.
+
+#### Agent-Side Polling Pattern
+
+These tools use an **agent-side polling** pattern (see ADR 0004):
+- `awx-launch-job` returns immediately with a job ID.
+- `awx-job-status` / `awx-wait-job` return the current status — the agent must loop to poll for completion.
+- `awx-get-job-events` retrieves events from a completed or running job.
+
+No tool blocks waiting for job completion. This avoids hanging the agent's execution loop and gives the agent control over polling strategy (poll interval, max attempts, timeout).
+
 ### Contract Tests
 
 Contract tests (`tests/contract.test.ts`) validate that the TypeScript `JobDetailOutput` interface and zod schema match the Python `awx_job_detail.py` v1.0 output contract. A **snapshot-based approach** is used for CI safety:
