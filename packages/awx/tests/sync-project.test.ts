@@ -68,7 +68,7 @@ function createMockClient(): AwxClient {
   };
 }
 
-describe("syncProject tool", () => {
+describe('"awx-sync-project" tool', () => {
   let mockClient: AwxClient;
   let createClientSpy: ReturnType<typeof vi.spyOn>;
 
@@ -87,7 +87,7 @@ describe("syncProject tool", () => {
      Tool Registration
      ══════════════════════════════════════════════════════════════════ */
 
-  it("is registered as syncProject in hooks.tool", async () => {
+  it('is registered as "awx-sync-project" in hooks.tool', async () => {
     const input = mockPluginInput();
     (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
 
@@ -96,8 +96,8 @@ describe("syncProject tool", () => {
     });
 
     expect(hooks.tool).toBeDefined();
-    expect(hooks.tool!.syncProject).toBeDefined();
-    expect(typeof hooks.tool!.syncProject!.description).toBe("string");
+    expect(hooks.tool!["awx-sync-project"]).toBeDefined();
+    expect(typeof hooks.tool!["awx-sync-project"]!.description).toBe("string");
   });
 
   /* ══════════════════════════════════════════════════════════════════
@@ -143,7 +143,7 @@ describe("syncProject tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.syncProject!.execute(
+    const result = await hooks.tool!["awx-sync-project"]!.execute(
       { project_id: 123 },
       mockToolContext(),
     );
@@ -200,7 +200,7 @@ describe("syncProject tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    await hooks.tool!.syncProject!.execute(
+    await hooks.tool!["awx-sync-project"]!.execute(
       { project_id: 123 },
       mockToolContext(),
     );
@@ -208,7 +208,7 @@ describe("syncProject tool", () => {
     // First call: GET /api/v2/projects/123/
     expect(mockClient.request).toHaveBeenNthCalledWith(
       1,
-      "syncProject",
+      "awx-sync-project",
       "/api/v2/projects/123/",
       expect.objectContaining({ method: "GET" }),
       expect.any(AbortSignal),
@@ -217,7 +217,7 @@ describe("syncProject tool", () => {
     // Second call: POST /api/v2/projects/123/update/
     expect(mockClient.request).toHaveBeenNthCalledWith(
       2,
-      "syncProject",
+      "awx-sync-project",
       "/api/v2/projects/123/update/",
       expect.objectContaining({ method: "POST" }),
       expect.any(AbortSignal),
@@ -245,7 +245,7 @@ describe("syncProject tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.syncProject!.execute(
+    const result = await hooks.tool!["awx-sync-project"]!.execute(
       { project_id: 999 },
       mockToolContext(),
     );
@@ -276,7 +276,7 @@ describe("syncProject tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.syncProject!.execute(
+    const result = await hooks.tool!["awx-sync-project"]!.execute(
       { project_id: 123 },
       mockToolContext(),
     );
@@ -307,7 +307,7 @@ describe("syncProject tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.syncProject!.execute(
+    const result = await hooks.tool!["awx-sync-project"]!.execute(
       { project_id: 123 },
       mockToolContext(),
     );

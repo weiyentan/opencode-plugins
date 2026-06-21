@@ -113,7 +113,8 @@ describe("launchJob", () => {
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       status: 201,
-      json: () => Promise.resolve({ id: 123, status: "pending" }),
+      statusText: "Created",
+      text: () => Promise.resolve(JSON.stringify({ id: 123, status: "pending" })),
     } as Response);
 
     const result = await launchJob(client, 10, {
@@ -127,10 +128,18 @@ describe("launchJob", () => {
     expect(client.request).toHaveBeenCalledWith(
       "awx-launch-job",
       "/api/v2/job_templates/10/launch/",
-      expect.objectContaining({
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-      }),
+        body: JSON.stringify({
+          extra_vars: {
+            inventory: "prod",
+            scm_url: "https://github.com/org/playbooks",
+            scm_branch: "main",
+          },
+        }),
+      },
+      undefined,
     );
     // Should return the job ID and status
     expect(result.jobId).toBe(123);
@@ -146,7 +155,7 @@ describe("launchJob", () => {
       ok: false,
       status: 404,
       statusText: "Not Found",
-      json: () => Promise.resolve({ detail: "Not found." }),
+      text: () => Promise.resolve(JSON.stringify({ detail: "Not found." })),
     } as Response);
 
     await expect(
@@ -158,6 +167,91 @@ describe("launchJob", () => {
     ).rejects.toThrow("Not found.");
 
     // Only one API call should have been made (no retry on 4xx)
+    expect(client.request).toHaveBeenCalledTimes(1);
+  });
+
+  it("aborts launch when required var is null (no API call)", async () => {
+    const client = mockClient();
+
+    const result = await launchJob(client, 42, {
+      inventory: null as unknown as string,
+      scm_url: "https://github.com/org/repo",
+      scm_branch: "main",
+    });
+
+    expect(result.jobId).toBe(0);
+    expect(result.jobStatus).toBe("failed");
+    expect(result.errors).toContain('Missing required variable: "inventory"');
+    expect(client.request).not.toHaveBeenCalled();
+  });
+
+  it("aborts launch when required var is undefined (no API call)", async () => {
+    const client = mockClient();
+
+    const result = await launchJob(client, 42, {
+      inventory: undefined as unknown as string,
+      scm_url: "https://github.com/org/repo",
+      scm_branch: "main",
+    });
+
+    expect(result.jobId).toBe(0);
+    expect(result.jobStatus).toBe("failed");
+    expect(result.errors).toContain('Missing required variable: "inventory"');
+    expect(client.request).not.toHaveBeenCalled();
+  });
+
+  it("aborts launch when required var is blank string (no API call)", async () => {
+    const client = mockClient();
+
+    const result = await launchJob(client, 42, {
+      inventory: "",
+      scm_url: "https://github.com/org/repo",
+      scm_branch: "main",
+    });
+
+    expect(result.jobId).toBe(0);
+    expect(result.jobStatus).toBe("failed");
+    expect(result.errors).toContain('Missing required variable: "inventory"');
+    expect(client.request).not.toHaveBeenCalled();
+  });
+
+  it("throws clear error on HTTP error with non-JSON empty response", async () => {
+    const client = mockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      text: () => Promise.resolve(""),
+    } as Response);
+
+    await expect(
+      launchJob(client, 10, {
+        inventory: "prod",
+        scm_url: "https://github.com/org/repo",
+        scm_branch: "main",
+      }),
+    ).rejects.toThrow("AWX launch failed: HTTP 500: Internal Server Error");
+
+    expect(client.request).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws clear error on HTTP error with HTML response body", async () => {
+    const client = mockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      statusText: "Bad Gateway",
+      text: () => Promise.resolve("<html>Bad Gateway</html>"),
+    } as Response);
+
+    await expect(
+      launchJob(client, 10, {
+        inventory: "prod",
+        scm_url: "https://github.com/org/repo",
+        scm_branch: "main",
+      }),
+    ).rejects.toThrow("AWX launch failed: HTTP 502: <html>Bad Gateway</html>");
+
     expect(client.request).toHaveBeenCalledTimes(1);
   });
 });

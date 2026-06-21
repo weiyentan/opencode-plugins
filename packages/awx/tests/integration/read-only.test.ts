@@ -95,12 +95,12 @@ async function createPlugin(
 // ── Parse helpers for tool outputs ───────────────────────────────
 
 /**
- * Parse a JSON-string tool result into an object.
- * Throws if the result is not a string or not valid JSON.
+ * Extract metadata from a tool result.
+ * The standardised output shape is { output: string, metadata?: object }.
  */
-function parseJsonResult(result: ToolResult): Record<string, unknown> {
-  expect(typeof result).toBe("string");
-  return JSON.parse(result as string) as Record<string, unknown>;
+function getMetadata(result: ToolResult): Record<string, unknown> {
+  const obj = result as { output: string; metadata?: Record<string, unknown> };
+  return obj.metadata ?? {};
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -112,12 +112,12 @@ describe("Read-Only Tools — Configuration Errors", () => {
     const hooks = await createPlugin(/* no token */);
 
     try {
-      const result = await hooks.tool!.awxListTemplates!.execute(
+      const result = await hooks.tool!["awx-list-templates"]!.execute(
         {},
         mockToolContext(),
       );
 
-      const parsed = parseJsonResult(result);
+      const parsed = getMetadata(result);
       expect(parsed.count).toBe(0);
       expect(parsed.results).toEqual([]);
       expect(parsed.warning).toContain("AWX client not available");
@@ -130,12 +130,13 @@ describe("Read-Only Tools — Configuration Errors", () => {
     const hooks = await createPlugin(/* no token */);
 
     try {
-      const result = await hooks.tool!.listProjects!.execute(
+      const result = await hooks.tool!["awx-list-projects"]!.execute(
         {},
         mockToolContext(),
       );
 
-      expect(result).toContain("AWX client not available");
+      const out = (result as { output: string }).output;
+      expect(out).toContain("AWX client not available");
     } finally {
       await hooks.dispose?.();
     }
@@ -152,12 +153,12 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
       const hooks = await createPlugin(process.env.AWX_TOKEN);
 
       try {
-        const result = await hooks.tool!.awxListTemplates!.execute(
+        const result = await hooks.tool!["awx-list-templates"]!.execute(
           {},
           mockToolContext(),
         );
 
-        const parsed = parseJsonResult(result);
+        const parsed = getMetadata(result);
         expect(parsed).toHaveProperty("count");
         expect(typeof parsed.count).toBe("number");
         expect(Array.isArray(parsed.results)).toBe(true);
@@ -185,12 +186,12 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
       const hooks = await createPlugin(process.env.AWX_TOKEN);
 
       try {
-        const result = await hooks.tool!.awxListTemplates!.execute(
+        const result = await hooks.tool!["awx-list-templates"]!.execute(
           { pageSize: 1, maxPages: 3 },
           mockToolContext(),
         );
 
-        const parsed = parseJsonResult(result);
+        const parsed = getMetadata(result);
         expect(parsed).toHaveProperty("count");
         expect(typeof parsed.count).toBe("number");
         expect(Array.isArray(parsed.results)).toBe(true);
@@ -210,7 +211,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
       const hooks = await createPlugin(process.env.AWX_TOKEN);
 
       try {
-        const result = await hooks.tool!.listProjects!.execute(
+        const result = await hooks.tool!["awx-list-projects"]!.execute(
           {},
           mockToolContext(),
         );
@@ -249,7 +250,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
       const hooks = await createPlugin(process.env.AWX_TOKEN);
 
       try {
-        const result = await hooks.tool!.listProjects!.execute(
+        const result = await hooks.tool!["awx-list-projects"]!.execute(
           { maxPages: 2, pageSize: 10, timeout: 15_000 },
           mockToolContext(),
         );
@@ -273,12 +274,12 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
       );
 
       try {
-        const result = await hooks.tool!.awxListTemplates!.execute(
+        const result = await hooks.tool!["awx-list-templates"]!.execute(
           {},
           mockToolContext(),
         );
 
-        const parsed = parseJsonResult(result);
+        const parsed = getMetadata(result);
         expect(parsed.count).toBe(0);
         expect(parsed.results).toEqual([]);
         expect(parsed.warning).toBeDefined();
@@ -296,7 +297,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
       );
 
       try {
-        const result = await hooks.tool!.listProjects!.execute(
+        const result = await hooks.tool!["awx-list-projects"]!.execute(
           {},
           mockToolContext(),
         );

@@ -136,20 +136,20 @@ describe("awx-wait-job tool", () => {
       const hooks = await createHooks(mockPluginInput());
 
       expect(hooks.tool).toBeDefined();
-      expect(hooks.tool!.awxWaitJob).toBeDefined();
+      expect(hooks.tool!["awx-wait-job"]).toBeDefined();
     });
 
     it("has a description string", async () => {
       const hooks = await createHooks(mockPluginInput());
 
-      expect(typeof hooks.tool!.awxWaitJob!.description).toBe("string");
-      expect(hooks.tool!.awxWaitJob!.description.length).toBeGreaterThan(0);
+      expect(typeof hooks.tool!["awx-wait-job"]!.description).toBe("string");
+      expect(hooks.tool!["awx-wait-job"]!.description.length).toBeGreaterThan(0);
     });
 
     it("description documents NON-BLOCKING behavior", async () => {
       const hooks = await createHooks(mockPluginInput());
 
-      const desc = hooks.tool!.awxWaitJob!.description;
+      const desc = hooks.tool!["awx-wait-job"]!.description;
       expect(desc).toMatch(/non.blocking/i);
       expect(desc).toMatch(/returns immediately/i);
     });
@@ -157,7 +157,7 @@ describe("awx-wait-job tool", () => {
     it("description warns about orphaned jobs", async () => {
       const hooks = await createHooks(mockPluginInput());
 
-      const desc = hooks.tool!.awxWaitJob!.description;
+      const desc = hooks.tool!["awx-wait-job"]!.description;
       expect(desc).toMatch(/orphaned/i);
       expect(desc).toMatch(/continues running/i);
     });
@@ -166,7 +166,7 @@ describe("awx-wait-job tool", () => {
       const hooks = await createHooks(mockPluginInput());
 
       // @ts-expect-error args is internal — we check the tool definition
-      const args = hooks.tool!.awxWaitJob.args;
+      const args = hooks.tool!["awx-wait-job"].args;
       expect(args).toBeDefined();
       expect(args.job_id).toBeDefined();
     });
@@ -180,12 +180,12 @@ describe("awx-wait-job tool", () => {
     it("returns error message when no baseUrl configured", async () => {
       const hooks = await createHooks(mockPluginInput());
 
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 42 },
         mockToolContext(),
       );
 
-      expect(result).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("AWX client not available");
     });
 
     it("returns error message when no token stored", async () => {
@@ -193,12 +193,12 @@ describe("awx-wait-job tool", () => {
         baseUrl: "https://aap.example.com",
       });
 
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 42 },
         mockToolContext(),
       );
 
-      expect(result).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("AWX client not available");
     });
   });
 
@@ -214,14 +214,14 @@ describe("awx-wait-job tool", () => {
         successFixture,
       );
 
-      await hooks.tool!.awxWaitJob!.execute(
+      await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 142 },
         mockToolContext(),
       );
 
       expect(requestSpy).toHaveBeenCalledTimes(1);
       expect(requestSpy).toHaveBeenCalledWith(
-        "awxWaitJob",
+        "awx-wait-job",
         "/api/v2/jobs/142/",
         {},
         expect.any(AbortSignal),
@@ -231,31 +231,32 @@ describe("awx-wait-job tool", () => {
     it("returns structured output containing schema_version 1.0", async () => {
       const { hooks } = await createHooksWithMockClient(successFixture);
 
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 142 },
         mockToolContext(),
       );
 
       expect(typeof result).toBe("object");
       expect(result).toHaveProperty("output");
-      const parsed = JSON.parse((result as { output: string }).output);
+      const parsed = (result as { metadata: Record<string, unknown> }).metadata;
       expect(parsed.schema_version).toBe("1.0");
     });
 
     it("returns job core metadata including id, name, status", async () => {
       const { hooks } = await createHooksWithMockClient(successFixture);
 
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 142 },
         mockToolContext(),
       );
 
-      const parsed = JSON.parse((result as { output: string }).output);
-      expect(parsed.job).toBeDefined();
-      expect(parsed.job.id).toBe(142);
-      expect(parsed.job.name).toBeDefined();
-      expect(parsed.job.status).toBeDefined();
-      expect(parsed.job.job_type).toBeDefined();
+      const parsed = (result as { metadata: Record<string, unknown> }).metadata;
+      const job = parsed.job as Record<string, unknown>;
+      expect(job).toBeDefined();
+      expect(job.id).toBe(142);
+      expect(job.name).toBeDefined();
+      expect(job.status).toBeDefined();
+      expect(job.job_type).toBeDefined();
     });
 
     it("returns current status without waiting for completion", async () => {
@@ -270,25 +271,26 @@ describe("awx-wait-job tool", () => {
 
       const { hooks } = await createHooksWithMockClient(partialFixture);
 
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 205 },
         mockToolContext(),
       );
 
-      const parsed = JSON.parse((result as { output: string }).output);
-      expect(parsed.job.status).toBe("running");
-      expect(parsed.job.finished).toBeNull();
+      const parsed = (result as { metadata: Record<string, unknown> }).metadata;
+      const job = parsed.job as Record<string, unknown>;
+      expect(job.status).toBe("running");
+      expect(job.finished).toBeNull();
     });
 
     it("returns job output that matches JobDetailOutput contract shape", async () => {
       const { hooks } = await createHooksWithMockClient(successFixture);
 
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 142 },
         mockToolContext(),
       );
 
-      const parsed = JSON.parse((result as { output: string }).output);
+      const parsed = (result as { metadata: Record<string, unknown> }).metadata;
       expect(parsed).toHaveProperty("schema_version");
       expect(parsed).toHaveProperty("job");
       expect(parsed).toHaveProperty("related");
@@ -309,7 +311,7 @@ describe("awx-wait-job tool", () => {
         loadFixture("awx_job_success.json"),
       );
 
-      await hooks.tool!.awxWaitJob!.execute(
+      await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 142 },
         mockToolContext(),
       );
@@ -332,7 +334,7 @@ describe("awx-wait-job tool", () => {
         partialFixture,
       );
 
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 205 },
         mockToolContext(),
       );
@@ -340,8 +342,9 @@ describe("awx-wait-job tool", () => {
       // Single call, no retry/poll for completion
       expect(requestSpy).toHaveBeenCalledTimes(1);
 
-      const parsed = JSON.parse((result as { output: string }).output);
-      expect(parsed.job.status).toBe("running");
+      const parsed = (result as { metadata: Record<string, unknown> }).metadata;
+      const job = parsed.job as Record<string, unknown>;
+      expect(job.status).toBe("running");
     });
   });
 
@@ -353,13 +356,14 @@ describe("awx-wait-job tool", () => {
     it("returns not-found message on 404", async () => {
       const { hooks } = await createHooksWithMockClient({}, 404);
 
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 99999 },
         mockToolContext(),
       );
 
-      expect(result).toContain("not found");
-      expect(result).toContain("99999");
+      const output = (result as { output: string }).output;
+      expect(output).toContain("not found");
+      expect(output).toContain("99999");
     });
 
     it("returns HTTP error message on 500", async () => {
@@ -368,12 +372,12 @@ describe("awx-wait-job tool", () => {
         500,
       );
 
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 42 },
         mockToolContext(),
       );
 
-      expect(result).toContain("HTTP 500");
+      expect((result as { output: string }).output).toContain("HTTP 500");
     });
 
     it("returns HTTP error message on 401", async () => {
@@ -382,12 +386,12 @@ describe("awx-wait-job tool", () => {
         401,
       );
 
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 42 },
         mockToolContext(),
       );
 
-      expect(result).toContain("HTTP 401");
+      expect((result as { output: string }).output).toContain("HTTP 401");
     });
   });
 
@@ -402,12 +406,12 @@ describe("awx-wait-job tool", () => {
       const aborted = new AbortController();
       aborted.abort();
 
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: 42 },
         mockToolContext({ abort: aborted.signal }),
       );
 
-      expect(result).toContain("aborted");
+      expect((result as { output: string }).output).toContain("aborted");
     });
   });
 });

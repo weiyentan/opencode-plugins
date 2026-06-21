@@ -27,11 +27,15 @@ export interface PipelineOptions {
    */
   scmBranchKey?: string;
   /**
-   * List of required variable names. Variables present but with
-   * null/undefined values are considered present.
+   * List of required variable names. Variables whose value is null,
+   * undefined, or an empty string are considered missing.
    * (default: ["inventory", "scm_url", "scm_branch"])
    */
   requiredVars?: string[];
+  /**
+   * Abort signal to cancel the request (forwarded to the HTTP client).
+   */
+  abortSignal?: AbortSignal;
 }
 
 /** Result of the transforms pipeline */
@@ -150,7 +154,7 @@ export async function launchJob(
   client: AwxClient,
   templateId: number,
   extraVars: Record<string, unknown> | undefined,
-  options?: PipelineOptions,
+  options?: PipelineOptions & { abortSignal?: AbortSignal },
 ): Promise<LaunchJobResult> {
   // ── Step 1: Run transforms pipeline ─────────────────────────────
   const pipeline = runTransformsPipeline(extraVars, options);
@@ -182,23 +186,31 @@ export async function launchJob(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     },
+    options?.abortSignal,
   );
 
-  const responseBody = await response.json() as Record<string, unknown>;
+  // ── Step 4: Parse response body (text-first to handle non-JSON) ──
+  const text = await response.text();
+  let responseBody: Record<string, unknown> | undefined;
+  try {
+    responseBody = text ? (JSON.parse(text) as Record<string, unknown>) : undefined;
+  } catch {
+    responseBody = undefined;
+  }
 
   // ── Handle error responses ──────────────────────────────────────
   if (!response.ok) {
     const detail =
-      (responseBody.detail as string) ??
-      (responseBody as Record<string, unknown>).detail as string ??
-      `AWX API returned ${response.status}: ${response.statusText}`;
-    // 4xx errors (invalid template_id, permissions, etc.)
-    throw new Error(detail);
+      typeof responseBody === "object" && responseBody && "detail" in responseBody
+        ? String((responseBody as { detail: unknown }).detail)
+        : text || response.statusText;
+    throw new Error(`AWX launch failed: HTTP ${response.status}: ${detail}`);
   }
 
-  // ── Step 4: Parse success response ──────────────────────────────
-  const jobId = Number(responseBody.id);
-  const jobStatus = String(responseBody.status ?? "unknown");
+  // ── Step 5: Parse success response ──────────────────────────────
+  const safeBody = responseBody ?? {};
+  const jobId = Number(safeBody.id);
+  const jobStatus = String(safeBody.status ?? "unknown");
 
   return {
     jobId,

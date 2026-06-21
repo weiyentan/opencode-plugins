@@ -110,6 +110,14 @@ async function createHooks(): Promise<Hooks> {
   return serverFn(createPluginInput(), { baseUrl: AAP_BASE_URL });
 }
 
+/**
+ * Extract metadata from a standardised tool result { output, metadata }.
+ */
+function getMetadata(result: unknown): Record<string, unknown> {
+  const obj = result as { output: string; metadata?: Record<string, unknown> };
+  return obj.metadata ?? {};
+}
+
 // ── Integration Tests ──────────────────────────────────────────
 
 /**
@@ -135,10 +143,10 @@ describe.skipIf(!AWX_TOKEN)("AWX Job Lifecycle Integration", () => {
 
   it("creates a plugin instance with all lifecycle tools registered", () => {
     expect(hooks.tool).toBeDefined();
-    expect(hooks.tool!.launchJob).toBeDefined();
+    expect(hooks.tool!["awx-launch-job"]).toBeDefined();
     expect(hooks.tool!["awx-job-status"]).toBeDefined();
-    expect(hooks.tool!.awxWaitJob).toBeDefined();
-    expect(hooks.tool!.awxGetJobEvents).toBeDefined();
+    expect(hooks.tool!["awx-wait-job"]).toBeDefined();
+    expect(hooks.tool!["awx-get-job-events"]).toBeDefined();
   });
 
   /* ═══════════════════════════════════════════════════════════════
@@ -146,12 +154,12 @@ describe.skipIf(!AWX_TOKEN)("AWX Job Lifecycle Integration", () => {
      ═══════════════════════════════════════════════════════════════ */
 
   it("awx-launch-job launches a job template and returns a job ID", async () => {
-    const result = await hooks.tool!.launchJob!.execute(
+    const result = await hooks.tool!["awx-launch-job"]!.execute(
       { template_id: JOB_TEMPLATE_ID, extra_vars: EXTRA_VARS },
       mockToolContext(),
     );
 
-    const parsed = JSON.parse(result as string);
+    const parsed = getMetadata(result);
 
     // The transforms pipeline must have completed without errors
     expect(parsed.errors).toEqual([]);
@@ -177,12 +185,12 @@ describe.skipIf(!AWX_TOKEN)("AWX Job Lifecycle Integration", () => {
     beforeAll(async () => {
       // Launch a single job that all lifecycle tests will reference.
       // This avoids launching N jobs for N tests.
-      const result = await hooks.tool!.launchJob!.execute(
+      const result = await hooks.tool!["awx-launch-job"]!.execute(
         { template_id: JOB_TEMPLATE_ID, extra_vars: EXTRA_VARS },
         mockToolContext(),
       );
-      const parsed = JSON.parse(result as string);
-      jobId = parsed.jobId;
+      const parsed = getMetadata(result);
+      jobId = parsed.jobId as number;
 
       // Guard: if transforms prevented launch, skip the lifecycle tests
       // with a clear error message.
@@ -203,13 +211,13 @@ describe.skipIf(!AWX_TOKEN)("AWX Job Lifecycle Integration", () => {
         mockToolContext(),
       );
 
-      const parsed = JSON.parse(result as string);
+      const parsed = getMetadata(result);
 
       // Top-level contract fields
       expect(parsed.schema_version).toBe("1.0");
-      expect(parsed.job.id).toBe(jobId);
-      expect(parsed.job.status).toBeDefined();
-      expect(parsed.job.job_type).toBe("run");
+      expect((parsed.job as Record<string, unknown>).id).toBe(jobId);
+      expect((parsed.job as Record<string, unknown>).status).toBeDefined();
+      expect((parsed.job as Record<string, unknown>).job_type).toBe("run");
 
       // Related resource names (resolved from summary_fields)
       expect(parsed.related).toHaveProperty("inventory_name");
@@ -233,20 +241,20 @@ describe.skipIf(!AWX_TOKEN)("AWX Job Lifecycle Integration", () => {
     /* ── Step 3: Wait (Non-Blocking) ──────────────────────── */
 
     it("awx-wait-job returns current job status without waiting (non-blocking)", async () => {
-      const result = await hooks.tool!.awxWaitJob!.execute(
+      const result = await hooks.tool!["awx-wait-job"]!.execute(
         { job_id: jobId },
         mockToolContext(),
       );
 
-      // The wait-job tool returns { output: JSON.stringify(data) }
+      // The wait-job tool returns { output, metadata }
       expect(typeof result).toBe("object");
       expect(result).toHaveProperty("output");
 
-      const parsed = JSON.parse((result as { output: string }).output);
+      const parsed = getMetadata(result);
 
       // Must return immediately without polling
-      expect(parsed.job.id).toBe(jobId);
-      expect(parsed.job.status).toBeDefined();
+      expect((parsed.job as Record<string, unknown>).id).toBe(jobId);
+      expect((parsed.job as Record<string, unknown>).status).toBeDefined();
       // The status may be "running" or "successful"/"failed" — the tool
       // does NOT block waiting for completion
       expect([
@@ -257,18 +265,18 @@ describe.skipIf(!AWX_TOKEN)("AWX Job Lifecycle Integration", () => {
         "failed",
         "error",
         "canceled",
-      ]).toContain(parsed.job.status);
+      ]).toContain((parsed.job as Record<string, unknown>).status);
     });
 
     /* ── Step 4: Get Events ───────────────────────────────── */
 
     it("awx-get-job-events returns events for the launched job", async () => {
-      const result = await hooks.tool!.awxGetJobEvents!.execute(
+      const result = await hooks.tool!["awx-get-job-events"]!.execute(
         { job_id: jobId },
         mockToolContext(),
       );
 
-      const parsed = JSON.parse(result as string);
+      const parsed = getMetadata(result);
 
       expect(typeof parsed.count).toBe("number");
       expect(Array.isArray(parsed.results)).toBe(true);
@@ -286,11 +294,11 @@ describe.skipIf(!AWX_TOKEN)("AWX Job Lifecycle Integration", () => {
         mockToolContext(),
       );
 
-      const parsed = JSON.parse(result as string);
+      const parsed = getMetadata(result);
 
       // Schema should still be valid
       expect(parsed.schema_version).toBe("1.0");
-      expect(parsed.job.id).toBe(jobId);
+      expect((parsed.job as Record<string, unknown>).id).toBe(jobId);
 
       // stdout may be null for a pending/running job or a failed launch,
       // but the tool must not error when include_stdout is requested.

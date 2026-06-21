@@ -78,6 +78,14 @@ function mockJsonResponse(data: unknown, status = 200): Response {
   });
 }
 
+/**
+ * Extract metadata from a standardised tool result { output, metadata }.
+ */
+function getMetadata(result: unknown): Record<string, unknown> {
+  const obj = result as { output: string; metadata?: Record<string, unknown> };
+  return obj.metadata ?? {};
+}
+
 describe("AWX Get Job Events Tool", () => {
   afterEach(async () => {
     vi.restoreAllMocks();
@@ -87,12 +95,12 @@ describe("AWX Get Job Events Tool", () => {
      Tool Registration
      ══════════════════════════════════════════════════════════════════ */
 
-  it("hooks.tool contains awxGetJobEvents tool", async () => {
+  it('hooks.tool contains "awx-get-job-events" tool', async () => {
     const hooks = await createHooks(mockPluginInput());
 
     expect(hooks.tool).toBeDefined();
-    expect(hooks.tool!.awxGetJobEvents).toBeDefined();
-    expect(typeof hooks.tool!.awxGetJobEvents!.description).toBe("string");
+    expect(hooks.tool!["awx-get-job-events"]).toBeDefined();
+    expect(typeof hooks.tool!["awx-get-job-events"]!.description).toBe("string");
   });
 
   /* ══════════════════════════════════════════════════════════════════
@@ -125,15 +133,15 @@ describe("AWX Get Job Events Tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.awxGetJobEvents!.execute(
+    const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42 },
       mockToolContext(),
     );
 
-    const parsed = JSON.parse(result as string);
+    const parsed = getMetadata(result);
     expect(parsed.count).toBe(3);
     expect(parsed.results).toHaveLength(3);
-    expect(parsed.results[0].event).toBe("playbook_on_start");
+    expect((parsed.results as Record<string, unknown>[])[0].event).toBe("playbook_on_start");
     expect(parsed.next_page).toBeNull();
   });
 
@@ -167,12 +175,12 @@ describe("AWX Get Job Events Tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.awxGetJobEvents!.execute(
+    const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42 },
       mockToolContext(),
     );
 
-    const parsed = JSON.parse(result as string);
+    const parsed = getMetadata(result);
     expect(parsed.count).toBe(501);
     expect(parsed.results).toHaveLength(500);
     expect(parsed.next_page).toBe(2);
@@ -204,7 +212,7 @@ describe("AWX Get Job Events Tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.awxGetJobEvents!.execute(
+    const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42, page: 2 },
       mockToolContext(),
     );
@@ -214,7 +222,7 @@ describe("AWX Get Job Events Tool", () => {
       .calls[0][1] as string;
     expect(requestPath).toContain("page=2");
 
-    const parsed = JSON.parse(result as string);
+    const parsed = getMetadata(result);
     expect(parsed.count).toBe(501);
     expect(parsed.next_page).toBe(3);
   });
@@ -228,12 +236,12 @@ describe("AWX Get Job Events Tool", () => {
     // No baseUrl configured
     const hooks = await createHooks(input);
 
-    const result = await hooks.tool!.awxGetJobEvents!.execute(
+    const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42 },
       mockToolContext(),
     );
 
-    const parsed = JSON.parse(result as string);
+    const parsed = getMetadata(result);
     expect(parsed.count).toBe(0);
     expect(parsed.results).toHaveLength(0);
     expect(parsed.next_page).toBeNull();
@@ -247,12 +255,12 @@ describe("AWX Get Job Events Tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.awxGetJobEvents!.execute(
+    const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42 },
       mockToolContext(),
     );
 
-    const parsed = JSON.parse(result as string);
+    const parsed = getMetadata(result);
     expect(parsed.count).toBe(0);
     expect(parsed.results).toHaveLength(0);
     expect(parsed.next_page).toBeNull();
@@ -279,12 +287,12 @@ describe("AWX Get Job Events Tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.awxGetJobEvents!.execute(
+    const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 999 },
       mockToolContext(),
     );
 
-    const parsed = JSON.parse(result as string);
+    const parsed = getMetadata(result);
     expect(parsed.count).toBe(0);
     expect(parsed.results).toHaveLength(0);
     expect(parsed.next_page).toBeNull();
@@ -308,12 +316,12 @@ describe("AWX Get Job Events Tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.awxGetJobEvents!.execute(
+    const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42 },
       mockToolContext(),
     );
 
-    const parsed = JSON.parse(result as string);
+    const parsed = getMetadata(result);
     expect(parsed.count).toBe(0);
     expect(parsed.results).toHaveLength(0);
     expect(parsed.next_page).toBeNull();
@@ -337,12 +345,12 @@ describe("AWX Get Job Events Tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.awxGetJobEvents!.execute(
+    const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 99999 },
       mockToolContext(),
     );
 
-    const parsed = JSON.parse(result as string);
+    const parsed = getMetadata(result);
     expect(parsed.count).toBe(0);
     expect(parsed.results).toHaveLength(0);
     expect(parsed.next_page).toBeNull();
@@ -359,12 +367,12 @@ describe("AWX Get Job Events Tool", () => {
     const aborted = new AbortController();
     aborted.abort();
 
-    const result = await hooks.tool!.awxGetJobEvents!.execute(
+    const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42 },
       mockToolContext({ abort: aborted.signal }),
     );
 
-    expect(result).toContain("aborted");
+    expect((result as { output: string }).output).toContain("aborted");
   });
 
   /* ══════════════════════════════════════════════════════════════════
@@ -395,7 +403,7 @@ describe("AWX Get Job Events Tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!.awxGetJobEvents!.execute(
+    const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42, event_filter: "playbook_on_task_start" },
       mockToolContext(),
     );
@@ -405,10 +413,10 @@ describe("AWX Get Job Events Tool", () => {
       .calls[0][1] as string;
     expect(requestPath).toContain("event=playbook_on_task_start");
 
-    const parsed = JSON.parse(result as string);
+    const parsed = getMetadata(result);
     expect(parsed.count).toBe(1);
     expect(parsed.results).toHaveLength(1);
-    expect(parsed.results[0].event).toBe("playbook_on_task_start");
+    expect((parsed.results as Record<string, unknown>[])[0].event).toBe("playbook_on_task_start");
     expect(parsed.next_page).toBeNull();
   });
 });

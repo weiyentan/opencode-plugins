@@ -175,27 +175,27 @@ describe("awx-job-status tool", () => {
       mockToolContext(),
     );
 
-    // Assert: result should be a valid JobDetailOutput
-    const parsed = JSON.parse(result as string);
-    const validation = JobDetailOutputSchema.safeParse(parsed);
+    // Assert: result metadata should be a valid JobDetailOutput
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+    const validation = JobDetailOutputSchema.safeParse(metadata);
     expect(validation.success).toBe(true);
     if (validation.success) {
-      expect(parsed.schema_version).toBe("1.0");
-      expect(parsed.job.id).toBe(142);
-      expect(parsed.job.status).toBe("successful");
-      expect(parsed.related.inventory_name).toBe("Production");
-      expect(parsed.related.job_template_name).toBe("Deploy Web Stack");
-      expect(parsed.related.created_by).toBe("svc_admin_ansible");
-      expect(parsed.related.credential_names).toEqual([
+      expect(metadata.schema_version).toBe("1.0");
+      expect((metadata.job as Record<string, unknown>).id).toBe(142);
+      expect((metadata.job as Record<string, unknown>).status).toBe("successful");
+      expect((metadata.related as Record<string, unknown>).inventory_name).toBe("Production");
+      expect((metadata.related as Record<string, unknown>).job_template_name).toBe("Deploy Web Stack");
+      expect((metadata.related as Record<string, unknown>).created_by).toBe("svc_admin_ansible");
+      expect((metadata.related as Record<string, unknown>).credential_names).toEqual([
         "SSH Key — Production",
         "Vault Password",
       ]);
-      expect(parsed.related.label_names).toEqual(["production", "web"]);
-      expect(parsed.host_status_counts.ok).toBe(12);
-      expect(parsed.host_status_counts.failed).toBe(0); // mapped from AWX `failures`
-      expect(parsed.derived.is_successful).toBe(true);
-      expect(parsed.derived.is_failed).toBe(false);
-      expect(parsed.derived.has_unreachable_hosts).toBe(false);
+      expect((metadata.related as Record<string, unknown>).label_names).toEqual(["production", "web"]);
+      expect((metadata.host_status_counts as Record<string, unknown>).ok).toBe(12);
+      expect((metadata.host_status_counts as Record<string, unknown>).failed).toBe(0); // mapped from AWX `failures`
+      expect((metadata.derived as Record<string, unknown>).is_successful).toBe(true);
+      expect((metadata.derived as Record<string, unknown>).is_failed).toBe(false);
+      expect((metadata.derived as Record<string, unknown>).has_unreachable_hosts).toBe(false);
     }
   });
 
@@ -232,13 +232,13 @@ describe("awx-job-status tool", () => {
     );
 
     // Assert
-    const parsed = JSON.parse(result as string);
-    const validation = JobDetailOutputSchema.safeParse(parsed);
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+    const validation = JobDetailOutputSchema.safeParse(metadata);
     expect(validation.success).toBe(true);
     if (validation.success) {
-      expect(parsed.stdout).toBeDefined();
-      expect(typeof parsed.stdout).toBe("string");
-      expect(parsed.stdout).toContain("PLAY [Deploy Web Stack]");
+      expect(metadata.stdout).toBeDefined();
+      expect(typeof metadata.stdout).toBe("string");
+      expect(metadata.stdout).toContain("PLAY [Deploy Web Stack]");
     }
   });
 
@@ -252,8 +252,8 @@ describe("awx-job-status tool", () => {
     );
 
     // Assert
-    const parsed = JSON.parse(result as string);
-    expect(parsed.stdout).toBeUndefined();
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+    expect(metadata.stdout).toBeUndefined();
     expect(fetch).toHaveBeenCalledTimes(1); // only job detail, not stdout
   });
 
@@ -275,8 +275,9 @@ describe("awx-job-status tool", () => {
       mockToolContext(),
     );
 
-    expect(result as string).toContain("awx-job-status error");
-    expect(result as string).toContain("AWX API error (404)");
+    const out = (result as { output: string }).output;
+    expect(out).toContain("awx-job-status error");
+    expect(out).toContain("AWX API error (404)");
   });
 
   it("returns error string when unauthorized (401)", async () => {
@@ -296,8 +297,9 @@ describe("awx-job-status tool", () => {
       mockToolContext(),
     );
 
-    expect(result as string).toContain("awx-job-status error");
-    expect(result as string).toContain("AWX API error (401)");
+    const out = (result as { output: string }).output;
+    expect(out).toContain("awx-job-status error");
+    expect(out).toContain("AWX API error (401)");
   });
 
   it("returns error string on server error (500)", async () => {
@@ -317,8 +319,9 @@ describe("awx-job-status tool", () => {
       mockToolContext(),
     );
 
-    expect(result as string).toContain("awx-job-status error");
-    expect(result as string).toContain("AWX API error (500)");
+    const out = (result as { output: string }).output;
+    expect(out).toContain("awx-job-status error");
+    expect(out).toContain("AWX API error (500)");
   });
 
   it("returns error when AWX client is not available", async () => {
@@ -333,7 +336,8 @@ describe("awx-job-status tool", () => {
       mockToolContext(),
     );
 
-    expect(result as string).toContain("AWX client not available");
+    const out = (result as { output: string }).output;
+    expect(out).toContain("AWX client not available");
 
     await localHooks.dispose?.();
   });
@@ -378,15 +382,15 @@ describe("awx-job-status tool", () => {
       mockToolContext(),
     );
 
-    const parsed = JSON.parse(result as string);
-    const validation = JobDetailOutputSchema.safeParse(parsed);
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+    const validation = JobDetailOutputSchema.safeParse(metadata);
     expect(validation.success).toBe(true);
     if (validation.success) {
-      expect(parsed.host_status_counts.unreachable).toBe(3);
-      expect(parsed.derived.has_unreachable_hosts).toBe(true);
-      expect(parsed.derived.is_failed).toBe(false);
-      expect(parsed.derived.is_successful).toBe(true);
-      expect(parsed.errors.length).toBeGreaterThan(0);
+      expect((metadata.host_status_counts as Record<string, unknown>).unreachable).toBe(3);
+      expect((metadata.derived as Record<string, unknown>).has_unreachable_hosts).toBe(true);
+      expect((metadata.derived as Record<string, unknown>).is_failed).toBe(false);
+      expect((metadata.derived as Record<string, unknown>).is_successful).toBe(true);
+      expect((metadata.errors as unknown[]).length).toBeGreaterThan(0);
     }
   });
 
@@ -429,13 +433,13 @@ describe("awx-job-status tool", () => {
       mockToolContext(),
     );
 
-    const parsed = JSON.parse(result as string);
-    const validation = JobDetailOutputSchema.safeParse(parsed);
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+    const validation = JobDetailOutputSchema.safeParse(metadata);
     expect(validation.success).toBe(true);
     if (validation.success) {
-      expect(parsed.derived.is_failed).toBe(true);
-      expect(parsed.derived.is_successful).toBe(false);
-      expect(parsed.errors.length).toBeGreaterThan(0);
+      expect((metadata.derived as Record<string, unknown>).is_failed).toBe(true);
+      expect((metadata.derived as Record<string, unknown>).is_successful).toBe(false);
+      expect((metadata.errors as unknown[]).length).toBeGreaterThan(0);
     }
   });
 });

@@ -82,25 +82,25 @@ describe("AWX Plugin Index", () => {
       expect(typeof hooks.tool!.hello!.description).toBe("string");
     });
 
-    it("hooks.tool contains awxListTemplates tool", async () => {
+    it('hooks.tool contains "awx-list-templates" tool', async () => {
       const hooks = await createHooks(mockPluginInput());
 
-      expect(hooks.tool!.awxListTemplates).toBeDefined();
-      expect(typeof hooks.tool!.awxListTemplates!.description).toBe("string");
+      expect(hooks.tool!["awx-list-templates"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-list-templates"]!.description).toBe("string");
     });
 
-    it("hooks.tool contains listProjects tool", async () => {
+    it('hooks.tool contains "awx-list-projects" tool', async () => {
       const hooks = await createHooks(mockPluginInput());
 
-      expect(hooks.tool!.listProjects).toBeDefined();
-      expect(typeof hooks.tool!.listProjects!.description).toBe("string");
+      expect(hooks.tool!["awx-list-projects"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-list-projects"]!.description).toBe("string");
     });
 
-    it("hooks.tool contains launchJob tool", async () => {
+    it('hooks.tool contains "awx-launch-job" tool', async () => {
       const hooks = await createHooks(mockPluginInput());
 
-      expect(hooks.tool!.launchJob).toBeDefined();
-      expect(typeof hooks.tool!.launchJob!.description).toBe("string");
+      expect(hooks.tool!["awx-launch-job"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-launch-job"]!.description).toBe("string");
     });
   });
 
@@ -124,20 +124,20 @@ describe("AWX Plugin Index", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════════
-     Lazy Client Resolution — getAwxClient() via awxListTemplates tool
+     Lazy Client Resolution — getAwxClient() via awx-list-templates tool
      ══════════════════════════════════════════════════════════════════ */
 
-  describe("lazy client resolution (via awxListTemplates)", () => {
+  describe('lazy client resolution (via "awx-list-templates")', () => {
     it("returns error message when no baseUrl configured", async () => {
       const input = mockPluginInput();
       const hooks = await createHooks(input);
 
-      const result = await hooks.tool!.awxListTemplates!.execute(
+      const result = await hooks.tool!["awx-list-templates"]!.execute(
         {},
         mockToolContext(),
       );
 
-      expect(result).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("AWX client not available");
     });
 
     it("returns error message when no token stored (getSecret returns null)", async () => {
@@ -147,12 +147,12 @@ describe("AWX Plugin Index", () => {
         baseUrl: "https://aap.example.com",
       });
 
-      const result = await hooks.tool!.awxListTemplates!.execute(
+      const result = await hooks.tool!["awx-list-templates"]!.execute(
         {},
         mockToolContext(),
       );
 
-      expect(result).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("AWX client not available");
     });
 
     it("returns structured output when token and baseUrl are set", async () => {
@@ -169,19 +169,19 @@ describe("AWX Plugin Index", () => {
       });
 
       // The tool calls client.request() which calls fetch internally.
-      // We need to mock the response. The tool returns a JSON string
-      // that can be parsed.
-      const result = await hooks.tool!.awxListTemplates!.execute(
+      // We need to mock the response. The tool returns { output, metadata }
+      // with metadata containing count and results.
+      const result = await hooks.tool!["awx-list-templates"]!.execute(
         {},
         mockToolContext(),
       );
 
       // Without a mocked fetch, the request will fail with a network error.
-      // The tool should handle this gracefully and return a JSON string
-      // with an error structure.
-      const parsed = JSON.parse(result as string);
-      expect(parsed).toHaveProperty("count");
-      expect(parsed).toHaveProperty("results");
+      // The tool should handle this gracefully and return { output, metadata }
+      // with count and results in metadata.
+      const obj = result as { output: string; metadata: Record<string, unknown> };
+      expect(obj.metadata).toHaveProperty("count");
+      expect(obj.metadata).toHaveProperty("results");
     });
   });
 
@@ -189,31 +189,31 @@ describe("AWX Plugin Index", () => {
      listProjects Tool — Resolution & Execution
      ══════════════════════════════════════════════════════════════════ */
 
-  describe("listProjects tool execution", () => {
-    it("returns stub message when no baseUrl configured", async () => {
+  describe('"awx-list-projects" tool execution', () => {
+    it("returns error message when no baseUrl configured", async () => {
       const input = mockPluginInput();
       const hooks = await createHooks(input);
 
-      const result = await hooks.tool!.listProjects!.execute(
+      const result = await hooks.tool!["awx-list-projects"]!.execute(
         {},
         mockToolContext(),
       );
 
-      expect(result).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("AWX client not available");
     });
 
-    it("returns stub message when no token stored", async () => {
+    it("returns error message when no token stored", async () => {
       const input = mockPluginInput();
       const hooks = await createHooks(input, {
         baseUrl: "https://aap.example.com",
       });
 
-      const result = await hooks.tool!.listProjects!.execute(
+      const result = await hooks.tool!["awx-list-projects"]!.execute(
         {},
         mockToolContext(),
       );
 
-      expect(result).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("AWX client not available");
     });
 
     it("calls listProjects and returns structured result when client is available", async () => {
@@ -234,7 +234,7 @@ describe("AWX Plugin Index", () => {
         baseUrl: "https://aap.example.com",
       });
 
-      const result = await hooks.tool!.listProjects!.execute(
+      const result = await hooks.tool!["awx-list-projects"]!.execute(
         { maxPages: 3, pageSize: 25, timeout: 15_000 },
         mockToolContext(),
       );
@@ -277,7 +277,7 @@ describe("AWX Plugin Index", () => {
         baseUrl: "https://aap.example.com",
       });
 
-      const result = await hooks.tool!.listProjects!.execute(
+      const result = await hooks.tool!["awx-list-projects"]!.execute(
         {},
         mockToolContext(),
       );
@@ -309,11 +309,11 @@ describe("AWX Plugin Index", () => {
       });
 
       // First call — should create a new client
-      await hooks.tool!.awxListTemplates!.execute({}, mockToolContext());
+      await hooks.tool!["awx-list-templates"]!.execute({}, mockToolContext());
       expect(createClientSpy).toHaveBeenCalledTimes(1);
 
       // Second call with same token — should reuse cached client
-      await hooks.tool!.awxListTemplates!.execute({}, mockToolContext());
+      await hooks.tool!["awx-list-templates"]!.execute({}, mockToolContext());
       expect(createClientSpy).toHaveBeenCalledTimes(1); // still 1, not 2
 
       createClientSpy.mockRestore();
@@ -321,14 +321,14 @@ describe("AWX Plugin Index", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════════
-     Tool Arguments — awxListTemplates
+     Tool Arguments — awx-list-templates
      ══════════════════════════════════════════════════════════════════ */
 
-  describe("awxListTemplates args schema", () => {
+  describe('"awx-list-templates" args schema', () => {
     it("is registered and has a description", async () => {
       const hooks = await createHooks(mockPluginInput());
-      expect(hooks.tool!.awxListTemplates).toBeDefined();
-      expect(typeof hooks.tool!.awxListTemplates!.description).toBe("string");
+      expect(hooks.tool!["awx-list-templates"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-list-templates"]!.description).toBe("string");
     });
   });
 

@@ -216,11 +216,11 @@ async function server(
         async execute(args, context) {
           // Respect the abort signal
           if (context.abort?.aborted) {
-            return "Request was aborted.";
+            return { output: "Request was aborted." };
           }
 
           const name = args.name ?? "world";
-          return `Hello, ${name}! 👋`;
+          return { output: `Hello, ${name}! 👋` };
         },
       }),
 
@@ -233,7 +233,7 @@ async function server(
        * The sync is async on AAP — the agent can poll the project update
        * status using the returned project_update_id.
        */
-      syncProject: tool({
+      "awx-sync-project": tool({
         description: [
           "Trigger an SCM sync on an AWX project by project ID.",
           "Fetches project details, triggers the update, and returns",
@@ -250,19 +250,20 @@ async function server(
         async execute(args, context) {
           // Respect the abort signal
           if (context.abort?.aborted) {
-            return "Request was aborted.";
+            return { output: "Request was aborted." };
           }
 
           const awxClient = await getAwxClient();
           if (!awxClient) {
-            return (
-              "[awx-sync-project] AWX client not available. " +
-              "Configure a baseUrl in opencode.jsonc and store your " +
-              "Personal Access Token via the plugin auth prompt."
-            );
+            return {
+              output:
+                "[awx-sync-project] AWX client not available. " +
+                "Configure a baseUrl in opencode.jsonc and store your " +
+                "Personal Access Token via the plugin auth prompt.",
+            };
           }
 
-          const toolName = "syncProject";
+          const toolName = "awx-sync-project";
           const { project_id } = args;
 
           try {
@@ -315,12 +316,13 @@ async function server(
             };
           } catch (err: unknown) {
             if (err instanceof DOMException && err.name === "AbortError") {
-              return "Request was aborted.";
+              return { output: "Request was aborted." };
             }
-            return (
-              `[awx-sync-project] Unexpected error syncing project ${project_id}: ` +
-              `${err instanceof Error ? err.message : String(err)}`
-            );
+            return {
+              output:
+                `[awx-sync-project] Unexpected error syncing project ${project_id}: ` +
+                `${err instanceof Error ? err.message : String(err)}`,
+            };
           }
         },
       }),
@@ -336,7 +338,7 @@ async function server(
        * The per-page timeout budget is derived from the tool-level timeout
        * divided by (maxPages + 1).
        */
-      awxListTemplates: tool({
+      "awx-list-templates": tool({
         description: [
           "List AWX job templates with pagination. Fetches templates from",
           "/api/v2/job_templates/, consolidating across pages up to a",
@@ -361,23 +363,25 @@ async function server(
         async execute(args, context) {
           // Respect the abort signal
           if (context.abort?.aborted) {
-            return JSON.stringify({
-              count: 0,
-              results: [],
-              warning: "Request was aborted.",
-            });
+            return { output: "Request was aborted." };
           }
 
           const awxClient = await getAwxClient();
           if (!awxClient) {
-            return JSON.stringify({
-              count: 0,
-              results: [],
-              warning:
+            return {
+              output:
                 "AWX client not available. Configure a baseUrl in " +
                 "opencode.jsonc and store your Personal Access Token " +
                 "via the plugin auth prompt.",
-            });
+              metadata: {
+                count: 0,
+                results: [],
+                warning:
+                  "AWX client not available. Configure a baseUrl in " +
+                  "opencode.jsonc and store your Personal Access Token " +
+                  "via the plugin auth prompt.",
+              },
+            };
           }
 
           try {
@@ -390,13 +394,21 @@ async function server(
               },
               context.abort,
             );
-            return JSON.stringify(result);
+            const output = `Found ${result.count} template(s).`;
+            return {
+              output: result.warning ? `${output} Warning: ${result.warning}` : output,
+              metadata: result as unknown as Record<string, unknown>,
+            };
           } catch (err) {
-            return JSON.stringify({
-              count: 0,
-              results: [],
-              warning: `Failed to fetch templates: ${err instanceof Error ? err.message : String(err)}`,
-            });
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to fetch templates: ${message}`,
+              metadata: {
+                count: 0,
+                results: [],
+                warning: `Failed to fetch templates: ${message}`,
+              },
+            };
           }
         },
       }),
@@ -413,7 +425,7 @@ async function server(
        * - If more pages exist beyond the cap, returns a warning field
        * - Per-page timeout: total tool timeout / (maxPages + 1)
        */
-      listProjects: tool({
+      "awx-list-projects": tool({
         description: [
           "List AWX projects with pagination. Fetches projects from",
           "the AWX /api/v2/projects/ endpoint, consolidating results",
@@ -444,16 +456,17 @@ async function server(
         },
         async execute(args, context) {
           if (context.abort?.aborted) {
-            return "Request was aborted.";
+            return { output: "Request was aborted." };
           }
 
           const awxClient = await getAwxClient();
           if (!awxClient) {
-            return (
-              "[stub] list-projects: AWX client not available. " +
-              "Configure a baseUrl in opencode.jsonc and store your " +
-              "Personal Access Token via the plugin auth prompt."
-            );
+            return {
+              output:
+                "[stub] list-projects: AWX client not available. " +
+                "Configure a baseUrl in opencode.jsonc and store your " +
+                "Personal Access Token via the plugin auth prompt.",
+            };
           }
 
           try {
@@ -492,7 +505,7 @@ async function server(
        * - warnings: Non-fatal transforms warnings
        * - errors: Fatal transforms errors (empty on success)
        */
-      launchJob: tool({
+      "awx-launch-job": tool({
         description: [
           "Launch an AWX job template by ID with extra-vars transforms.",
           "Transforms SCM URLs (SSH→HTTPS), infers git branches from",
@@ -518,21 +531,27 @@ async function server(
         async execute(args, context) {
           // Respect the abort signal
           if (context.abort?.aborted) {
-            return "Request was aborted.";
+            return { output: "Request was aborted." };
           }
 
           const awxClient = await getAwxClient();
           if (!awxClient) {
-            return JSON.stringify({
-              jobId: 0,
-              jobStatus: "failed",
-              warnings: [],
-              errors: [
+            return {
+              output:
                 "AWX client not available. Configure a baseUrl in" +
                 " opencode.jsonc and store your Personal Access Token" +
                 " via the plugin auth prompt.",
-              ],
-            });
+              metadata: {
+                jobId: 0,
+                jobStatus: "failed",
+                warnings: [],
+                errors: [
+                  "AWX client not available. Configure a baseUrl in" +
+                  " opencode.jsonc and store your Personal Access Token" +
+                  " via the plugin auth prompt.",
+                ],
+              },
+            };
           }
 
           try {
@@ -540,18 +559,28 @@ async function server(
               awxClient,
               args.template_id,
               args.extra_vars,
+              { abortSignal: context.abort },
             );
 
-            return JSON.stringify(result);
+            const output = result.jobId > 0
+              ? `Job ${result.jobId} launched (${result.jobStatus}).`
+              : "Launch aborted due to transform errors.";
+            return {
+              output,
+              metadata: result as unknown as Record<string, unknown>,
+            };
           } catch (err) {
             const message =
               err instanceof Error ? err.message : String(err);
-            return JSON.stringify({
-              jobId: 0,
-              jobStatus: "failed",
-              warnings: [],
-              errors: [message],
-            });
+            return {
+              output: `Failed to launch job: ${message}`,
+              metadata: {
+                jobId: 0,
+                jobStatus: "failed",
+                warnings: [],
+                errors: [message],
+              },
+            };
           }
         },
       }),
@@ -588,16 +617,17 @@ async function server(
         async execute(args, context) {
           // Respect the abort signal
           if (context.abort?.aborted) {
-            return "Request was aborted.";
+            return { output: "Request was aborted." };
           }
 
           const awxClient = await getAwxClient();
           if (!awxClient) {
-            return (
-              "awx-job-status: AWX client not available. " +
-              "Configure a baseUrl in opencode.jsonc and store your " +
-              "Personal Access Token via the plugin auth prompt."
-            );
+            return {
+              output:
+                "awx-job-status: AWX client not available. " +
+                "Configure a baseUrl in opencode.jsonc and store your " +
+                "Personal Access Token via the plugin auth prompt.",
+            };
           }
 
           try {
@@ -608,11 +638,17 @@ async function server(
               context.abort,
             );
 
-            return JSON.stringify(result);
+            const status = result?.job?.status ?? "unknown";
+            return {
+              output: `Job ${args.job_id} status: ${status}`,
+              metadata: result as unknown as Record<string, unknown>,
+            };
           } catch (err: unknown) {
             const message =
               err instanceof Error ? err.message : String(err);
-            return `awx-job-status error: ${message}`;
+            return {
+              output: `awx-job-status error: ${message}`,
+            };
           }
         },
       }),
@@ -637,7 +673,7 @@ async function server(
        * max_poll_attempts and recommend a job timeout to avoid orphaned
        * jobs consuming cluster resources indefinitely.
        */
-      awxWaitJob: tool({
+      "awx-wait-job": tool({
         description: [
           "Returns the current status of an AWX job by job ID.",
           "",
@@ -658,35 +694,40 @@ async function server(
         async execute(args, context) {
           // Respect the abort signal
           if (context.abort?.aborted) {
-            return "Request was aborted.";
+            return { output: "Request was aborted." };
           }
 
           const awxClient = await getAwxClient();
           if (!awxClient) {
-            return (
-              "awx-wait-job: AWX client not available. " +
-              "Configure a baseUrl in opencode.jsonc and store your " +
-              "Personal Access Token via the plugin auth prompt."
-            );
+            return {
+              output:
+                "awx-wait-job: AWX client not available. " +
+                "Configure a baseUrl in opencode.jsonc and store your " +
+                "Personal Access Token via the plugin auth prompt.",
+            };
           }
 
           const response = await awxClient.request(
-            "awxWaitJob",
+            "awx-wait-job",
             `/api/v2/jobs/${args.job_id}/`,
             {},
             context.abort,
           );
 
           if (response.status === 404) {
-            return `awx-wait-job: Job ${args.job_id} not found.`;
+            return { output: `awx-wait-job: Job ${args.job_id} not found.` };
           }
 
           if (!response.ok) {
-            return `awx-wait-job: Failed to retrieve job ${args.job_id} — HTTP ${response.status}.`;
+            return { output: `awx-wait-job: Failed to retrieve job ${args.job_id} — HTTP ${response.status}.` };
           }
 
-          const data = await response.json();
-          return { output: JSON.stringify(data) };
+          const data = await response.json() as { job?: { id?: number; status?: string } };
+          const jobLabel = data?.job ? `Job ${data.job.id}: ${data.job.status}` : `Job status retrieved`;
+          return {
+            output: jobLabel,
+            metadata: data as Record<string, unknown>,
+          };
         },
       }),
 
@@ -701,7 +742,7 @@ async function server(
        * Returns structured JSON with `count`, `results`, and
        * optional `next_page`.
        */
-      awxGetJobEvents: tool({
+      "awx-get-job-events": tool({
         description: [
           "Get job events from an AWX job. Retrieves events from",
           "`/api/v2/jobs/<job_id>/job_events/`. Supports optional",
@@ -730,20 +771,26 @@ async function server(
         async execute(args, context) {
           // Respect the abort signal
           if (context.abort?.aborted) {
-            return "Request was aborted.";
+            return { output: "Request was aborted." };
           }
 
           const awxClient = await getAwxClient();
           if (!awxClient) {
-            return JSON.stringify({
-              count: 0,
-              results: [],
-              next_page: null,
-              error:
+            return {
+              output:
                 "AWX client not available. Configure a baseUrl in " +
                 "opencode.jsonc and store your Personal Access Token " +
                 "via the plugin auth prompt.",
-            });
+              metadata: {
+                count: 0,
+                results: [],
+                next_page: null,
+                error:
+                  "AWX client not available. Configure a baseUrl in " +
+                  "opencode.jsonc and store your Personal Access Token " +
+                  "via the plugin auth prompt.",
+              },
+            };
           }
 
           try {
@@ -760,19 +807,22 @@ async function server(
             const path = `/api/v2/jobs/${args.job_id}/job_events/${queryString ? `?${queryString}` : ""}`;
 
             const response = await awxClient.request(
-              "awxGetJobEvents",
+              "awx-get-job-events",
               path,
               undefined,
               context.abort,
             );
 
             if (!response.ok) {
-              return JSON.stringify({
-                count: 0,
-                results: [],
-                next_page: null,
-                error: `AWX API returned status ${response.status}: ${response.statusText}`,
-              });
+              return {
+                output: `AWX API returned status ${response.status}: ${response.statusText}`,
+                metadata: {
+                  count: 0,
+                  results: [],
+                  next_page: null,
+                  error: `AWX API returned status ${response.status}: ${response.statusText}`,
+                },
+              };
             }
 
             const data = (await response.json()) as {
@@ -791,21 +841,28 @@ async function server(
               }
             }
 
-            return JSON.stringify({
-              count: data.count ?? 0,
-              results: data.results ?? [],
-              next_page: nextPage,
-            });
+            return {
+              output: `Found ${data.count ?? 0} event(s).`,
+              metadata: {
+                count: data.count ?? 0,
+                results: data.results ?? [],
+                next_page: nextPage,
+              },
+            };
           } catch (err) {
-            return JSON.stringify({
-              count: 0,
-              results: [],
-              next_page: null,
-              error:
-                err instanceof Error
-                  ? err.message
-                  : "Unknown error fetching job events",
-            });
+            const message =
+              err instanceof Error
+                ? err.message
+                : "Unknown error fetching job events";
+            return {
+              output: `Failed to get job events: ${message}`,
+              metadata: {
+                count: 0,
+                results: [],
+                next_page: null,
+                error: message,
+              },
+            };
           }
         },
       }),
