@@ -26,8 +26,8 @@
  * Failed auth produces user-actionable error messages:
  *   - No token configured: "AWX auth not configured. Set your Personal Access
  *     Token in the plugin settings."
- *   - Network failure: "Cannot reach AAP at <baseUrl>. Check your baseUrl in
- *     opencode.jsonc and ensure the AAP instance is accessible."
+ *   - Network failure: "Cannot reach AAP at <baseUrl>. Check AWX_BASE_URL
+ *     and ensure the AAP instance is reachable."
  *   - Invalid token (401): "AWX token is invalid or expired. Generate a new
  *     Personal Access Token at <baseUrl>/api/v2/tokens/ or Profile → Tokens."
  *   - Forbidden (403): "AWX token lacks sufficient permissions. Ensure the

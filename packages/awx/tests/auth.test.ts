@@ -171,7 +171,7 @@ describe("validateToken", () => {
     expect(result.valid).toBe(false);
     expect(result.status).toBeNull();
     expect(result.error).toContain("Cannot reach AAP");
-    expect(result.error).toContain("baseUrl");
+    expect(result.error).toContain("AWX_BASE_URL");
   });
 
   it("returns invalid on AbortError (timeout)", async () => {
@@ -183,7 +183,7 @@ describe("validateToken", () => {
     expect(result.valid).toBe(false);
     expect(result.status).toBeNull();
     expect(result.error).toContain("Timeout");
-    expect(result.error).toContain("baseUrl");
+    expect(result.error).toContain("AWX_BASE_URL");
   });
 
   it("returns invalid on TimeoutError (createTimeoutSignal abort)", async () => {
@@ -195,7 +195,7 @@ describe("validateToken", () => {
     expect(result.valid).toBe(false);
     expect(result.status).toBeNull();
     expect(result.error).toContain("Timeout");
-    expect(result.error).toContain("baseUrl");
+    expect(result.error).toContain("AWX_BASE_URL");
   });
 
   it("respects the abort signal", async () => {
