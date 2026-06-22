@@ -12,7 +12,7 @@ import awxPluginModule from "../src/index.js";
 import * as clientModule from "../src/client.js";
 import { listTemplates, type ListTemplatesOutput } from "../src/list-templates.js";
 import * as listProjectsModule from "../src/list-projects.js";
-import { __setAwxToken } from "../src/auth.js";
+import { __setAwxToken, getAwxToken, createAwxAuthHook } from "../src/auth.js";
 
 /** Minimal mock of ToolContext for tool execute tests */
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
@@ -69,6 +69,30 @@ describe("AWX Plugin Index", () => {
   afterEach(async () => {
     vi.restoreAllMocks();
     __setAwxToken(undefined);
+  });
+
+  /* ══════════════════════════════════════════════════════════════════
+     AuthHook.loader — Token Capture
+     ══════════════════════════════════════════════════════════════════ */
+
+  describe("AuthHook.loader", () => {
+    it("captures token from loader auth callback", async () => {
+      // Reset any existing token
+      __setAwxToken(undefined);
+
+      // Create the auth hook
+      const authHook = createAwxAuthHook();
+
+      // Ensure token is undefined before loader fires
+      expect(getAwxToken()).toBeUndefined();
+
+      // Simulate the OpenCode runtime invoking loader with a mock auth function
+      const mockAuth = async () => ({ type: "api" as const, key: "test-token-from-loader" });
+      await authHook.loader!(mockAuth, {} as any);
+
+      // Verify the token was captured
+      expect(getAwxToken()).toBe("test-token-from-loader");
+    });
   });
 
   /* ══════════════════════════════════════════════════════════════════

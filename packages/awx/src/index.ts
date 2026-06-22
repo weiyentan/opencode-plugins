@@ -21,9 +21,9 @@
 import { tool } from "@opencode-ai/plugin";
 import type { PluginInput, Hooks, PluginModule } from "@opencode-ai/plugin";
 import { z } from "zod";
-import { createAwxAuthHook, getAwxToken, validateToken } from "./auth.js";
+import { createAwxAuthHook, getAwxToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
-import { createClient, createTimeoutSignal } from "./client.js";
+import { createClient } from "./client.js";
 import type { AwxClient } from "./client.js";
 import { listTemplates } from "./list-templates.js";
 import { listProjects } from "./list-projects.js";
@@ -137,55 +137,6 @@ async function server(
     }
 
     return cachedClient;
-  }
-
-  /* ── Init-time validation ─────────────────────────────────── */
-  // If a baseUrl is configured, attempt to validate the connection.
-  // Token validation depends on whether the user has already stored a PAT.
-  // If no baseUrl is configured, skip — the user will configure it later.
-  if (baseUrl) {
-    try {
-      const storedKey = getAwxToken();
-      if (storedKey) {
-        const { signal, clear } = createTimeoutSignal(10_000);
-
-        try {
-          const result = await validateToken(
-            baseUrl,
-            String(storedKey),
-            signal,
-          );
-
-          if (!result.valid) {
-            void input.client.app.log({
-              body: {
-                service: "plugin-awx",
-                level: "error",
-                message: `Init-time token validation failed: ${result.error}`,
-              },
-            });
-          } else {
-            void input.client.app.log({
-              body: {
-                service: "plugin-awx",
-                level: "info",
-                message: `Token validated successfully against ${baseUrl}`,
-              },
-            });
-          }
-        } finally {
-          clear();
-        }
-      }
-    } catch {
-      void input.client.app.log({
-        body: {
-          service: "plugin-awx",
-          level: "info",
-          message: "No stored token found. Auth will be configured on first use.",
-        },
-      });
-    }
   }
 
   /* ── Hooks ────────────────────────────────────────────────── */
