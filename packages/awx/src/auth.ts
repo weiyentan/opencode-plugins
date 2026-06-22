@@ -122,7 +122,7 @@ export async function validateToken(
         valid: false,
         error: [
           `Timeout connecting to AAP at ${baseUrl}.`,
-          `Check your baseUrl in opencode.jsonc and ensure the AAP instance is reachable.`,
+          `Check AWX_BASE_URL and ensure the AAP instance is reachable.`,
         ].join(" "),
         status: null,
       };
@@ -135,7 +135,7 @@ export async function validateToken(
       valid: false,
       error: [
         `Cannot reach AAP at ${baseUrl}.`,
-        `Check your baseUrl in opencode.jsonc and ensure the AAP instance is accessible.`,
+        `Check AWX_BASE_URL and ensure the AAP instance is reachable.`,
         `Details: ${message}`,
       ].join(" "),
       status: null,
