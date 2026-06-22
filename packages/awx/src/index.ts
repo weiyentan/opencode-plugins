@@ -872,3 +872,4 @@ async function server(input: PluginInput): Promise<Hooks> {
  * - `AWX_BASE_URL`: Base URL of the AAP/AWX instance (e.g. "https://example.com")
  */
 export const AwxPlugin: Plugin = server;
+export default AwxPlugin;

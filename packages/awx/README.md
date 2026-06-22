@@ -163,7 +163,19 @@ Hot-reload verification is performed structurally (the `tsc --noEmit` / `vitest 
 
 The `package.json` `main`, `types`, and `exports` fields point to the compiled `dist/` output. This is the production-safe configuration — consumers import the compiled JavaScript with type declarations.
 
-For local development, the OpenCode plugin server can consume TypeScript source directly by overriding the entry point (e.g., changing `main` to `./src/index.ts`). The server watches source files and reloads automatically on change — no server restart required.
+#### Local Development (`.opencode/plugins/`)
+
+For local testing without publishing, a re-export wrapper is set up at `.opencode/plugins/awx-plugin.js` which re-exports `AwxPlugin` from the compiled `dist/` output. OpenCode automatically discovers plugins in this directory at startup, making it **the recommended local development approach** — you test exactly the compiled output that would ship, without modifying `package.json`.
+
+After making changes:
+
+```bash
+cd packages/awx
+npm run build          # Recompile to dist/
+# Restart OpenCode server to pick up the new build
+```
+
+Build outputs are gitignored (`.opencode/plugins/` is in `.gitignore`), so the wrapper is local-only and never committed.
 
 ## CI Requirements
 
