@@ -52,14 +52,15 @@ vi.mock("../src/auth.js", async (importOriginal) => {
 // Import must come after vi.mock — vitest hoists the mock calls
 // so by the time this import runs, the mocks are in place.
 import awxPluginModule from "../src/index.js";
+import { __setAwxToken } from "../src/auth.js";
 
 // ── Helpers ─────────────────────────────────────────────────────
 
-/** Minimal PluginInput that returns a stored token for init-time validation. */
+/** Minimal PluginInput with token set via __setAwxToken for init-time validation. */
 function mockPluginInputWithToken(): PluginInput {
+  __setAwxToken("test-pat-token");
   return {
     client: {
-      getSecret: vi.fn().mockResolvedValue("test-pat-token"),
       app: {
         log: vi.fn(),
       },
@@ -77,9 +78,9 @@ function mockPluginInputWithToken(): PluginInput {
 
 /** Minimal PluginInput with no stored token (validation path skipped). */
 function mockPluginInputWithoutToken(): PluginInput {
+  __setAwxToken(undefined);
   return {
     client: {
-      getSecret: vi.fn().mockResolvedValue(undefined),
       app: {
         log: vi.fn(),
       },
