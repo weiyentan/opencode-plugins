@@ -42,7 +42,7 @@
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
-import awxPluginModule from "../../src/index.js";
+import { AwxPlugin } from "../../src/index.js";
 
 // ── Environment Configuration ──────────────────────────────────
 
@@ -99,15 +99,11 @@ function createPluginInput(): PluginInput {
 
 /**
  * Create plugin hooks with the real AAP instance configuration.
- * Uses a cast because PluginModule.server is typed with one parameter
- * but accepts a second options parameter at runtime.
+ * Sets AWX_BASE_URL from the environment before creating the plugin.
  */
 async function createHooks(): Promise<Hooks> {
-  const serverFn = awxPluginModule.server as (
-    input: PluginInput,
-    options?: { baseUrl?: string },
-  ) => Promise<Hooks>;
-  return serverFn(createPluginInput(), { baseUrl: AAP_BASE_URL });
+  vi.stubEnv("AWX_BASE_URL", AAP_BASE_URL);
+  return AwxPlugin(createPluginInput());
 }
 
 /**

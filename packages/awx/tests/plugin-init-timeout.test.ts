@@ -51,7 +51,7 @@ vi.mock("../src/auth.js", async (importOriginal) => {
 
 // Import must come after vi.mock — vitest hoists the mock calls
 // so by the time this import runs, the mocks are in place.
-import awxPluginModule from "../src/index.js";
+import { AwxPlugin } from "../src/index.js";
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -99,10 +99,11 @@ function mockPluginInputWithoutToken(): PluginInput {
 
 describe("init-time timeout cleanup", () => {
   beforeEach(() => {
-    // Clear call counts between tests
+    // Clear call counts between tests AND unstub any env vars from prior tests
     mockClear.mockClear();
     mockCreateTimeoutSignal.mockClear();
     mockValidateToken.mockClear();
+    vi.unstubAllEnvs();
 
     // Re-establish default implementations (vitest restoreMocks may
     // have reverted vi.fn() instances between tests).
@@ -118,9 +119,9 @@ describe("init-time timeout cleanup", () => {
   });
 
   it("calls clear() after successful token validation", async () => {
-    const hooks: Hooks = await awxPluginModule.server(
+    vi.stubEnv("AWX_BASE_URL", "https://aap.example.com");
+    const hooks: Hooks = await AwxPlugin(
       mockPluginInputWithToken(),
-      { baseUrl: "https://aap.example.com" },
     );
     try {
       // createTimeoutSignal must have been called during init validation
@@ -141,9 +142,9 @@ describe("init-time timeout cleanup", () => {
       status: 401,
     });
 
-    const hooks: Hooks = await awxPluginModule.server(
+    vi.stubEnv("AWX_BASE_URL", "https://aap.example.com");
+    const hooks: Hooks = await AwxPlugin(
       mockPluginInputWithToken(),
-      { baseUrl: "https://aap.example.com" },
     );
     try {
       // clear() must still be called in the finally block (cleanup
@@ -155,9 +156,9 @@ describe("init-time timeout cleanup", () => {
   });
 
   it("does not call createTimeoutSignal when no token is stored", async () => {
-    const hooks: Hooks = await awxPluginModule.server(
+    vi.stubEnv("AWX_BASE_URL", "https://aap.example.com");
+    const hooks: Hooks = await AwxPlugin(
       mockPluginInputWithoutToken(),
-      { baseUrl: "https://aap.example.com" },
     );
     try {
       // No token → no validation → no timeout signal created
@@ -169,7 +170,7 @@ describe("init-time timeout cleanup", () => {
   });
 
   it("does not call createTimeoutSignal when baseUrl is not configured", async () => {
-    const hooks: Hooks = await awxPluginModule.server(
+    const hooks: Hooks = await AwxPlugin(
       mockPluginInputWithToken(),
       // No baseUrl → init validation skipped entirely
     );

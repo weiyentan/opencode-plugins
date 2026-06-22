@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
-import awxPluginModule from "../src/index.js";
+import { AwxPlugin } from "../src/index.js";
 import { JobDetailOutputSchema } from "../src/contracts/job-detail.js";
 
 // ─── Mock AWX API Responses ───────────────────────────────────
@@ -122,11 +122,10 @@ async function createHooks(
   input: PluginInput,
   options?: { baseUrl?: string },
 ): Promise<Hooks> {
-  const serverFn = awxPluginModule.server as (
-    input: PluginInput,
-    options?: unknown,
-  ) => Promise<Hooks>;
-  return serverFn(input, options);
+  if (options?.baseUrl) {
+    vi.stubEnv("AWX_BASE_URL", options.baseUrl);
+  }
+  return AwxPlugin(input);
 }
 
 function mockFetchResponse(

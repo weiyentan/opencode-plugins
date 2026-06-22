@@ -33,8 +33,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import type { PluginInput, Hooks, ToolContext, ToolResult } from "@opencode-ai/plugin";
-import type { PluginModule } from "@opencode-ai/plugin";
-import awxPluginModule from "../../src/index.js";
+import { AwxPlugin } from "../../src/index.js";
 
 // ── Shared Test Helpers ──────────────────────────────────────────
 
@@ -82,14 +81,8 @@ async function createPlugin(
     $: {} as PluginInput["$"],
   };
 
-  // The PluginModule.server signature accepts an optional second parameter
-  // for plugin options (AwxPluginOptions).
-  const serverFn = awxPluginModule.server as (
-    input: PluginInput,
-    options?: Record<string, unknown>,
-  ) => Promise<Hooks>;
-
-  return serverFn(input, { baseUrl: resolvedBaseUrl });
+  vi.stubEnv("AWX_BASE_URL", resolvedBaseUrl);
+  return AwxPlugin(input);
 }
 
 // ── Parse helpers for tool outputs ───────────────────────────────

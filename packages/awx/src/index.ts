@@ -13,13 +13,17 @@
  *
  * ## Configuration
  *
- * The plugin reads `baseUrl` from its plugin options in opencode.jsonc:
+ * The plugin reads `baseUrl` from the `AWX_BASE_URL` environment variable:
+ * ```bash
+ * export AWX_BASE_URL="https://example.com"
+ * ```
+ * The plugin is registered as a string-only entry in opencode.jsonc:
  * ```jsonc
- * { "plugin": [["./packages/awx", { "baseUrl": "https://example.com" }]] }
+ * { "plugin": [["@weiyentan/opencode-plugin-awx"]] }
  * ```
  */
 import { tool } from "@opencode-ai/plugin";
-import type { PluginInput, Hooks, PluginModule } from "@opencode-ai/plugin";
+import type { PluginInput, Hooks, Plugin } from "@opencode-ai/plugin";
 import { z } from "zod";
 import { createAwxAuthHook, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
@@ -54,33 +58,21 @@ function formatErrorResponse(projectId: number, status: number): string {
   }
 }
 
-/** Plugin-specific configuration from opencode.jsonc */
-export interface AwxPluginOptions {
-  /**
-   * Base URL of the AAP/AWX instance.
-   * Must include protocol (https://) and hostname.
-   * Example: "https://example.com"
-   */
-  baseUrl?: string;
-}
-
 /**
  * Plugin server function — the single entry point.
  *
  * Receives PluginInput (client, project, directory, worktree, serverUrl, $)
- * and optional plugin options from opencode.jsonc configuration.
+ * and returns Hooks. No plugin options are accepted — all configuration
+ * comes from environment variables:
+ * - `AWX_BASE_URL`: Base URL of the AAP/AWX instance (required)
  *
  * Returns Hooks including:
  * - Auth hook (type: "api" for bearer token / PAT)
- * Plugins register tools (awx-list-templates, awx-launch-job, awx-job-status, etc.)
- * and auth hooks for AWX API interaction.
+ * - Registered tools (awx-list-templates, awx-launch-job, awx-job-status, etc.)
  */
-async function server(
-  input: PluginInput,
-  options?: AwxPluginOptions,
-): Promise<Hooks> {
+async function server(input: PluginInput): Promise<Hooks> {
   const { serverUrl } = input;
-  const baseUrl = options?.baseUrl;
+  const baseUrl = process.env.AWX_BASE_URL;
 
   /* ── Auth hook ────────────────────────────────────────────── */
   const authHook = createAwxAuthHook();
@@ -869,11 +861,14 @@ async function server(
 }
 
 /**
- * Plugin module — the default export consumed by the OpenCode plugin server.
+ * AWX Plugin — the named async export consumed by the OpenCode plugin server.
+ *
+ * Registered in opencode.jsonc as a string-only plugin entry:
+ * ```jsonc
+ * { "plugin": [["@weiyentan/opencode-plugin-awx"]] }
+ * ```
+ *
+ * Configuration is read from environment variables:
+ * - `AWX_BASE_URL`: Base URL of the AAP/AWX instance (e.g. "https://example.com")
  */
-const pluginModule: PluginModule = {
-  id: "awx",
-  server,
-};
-
-export default pluginModule;
+export const AwxPlugin: Plugin = server;
