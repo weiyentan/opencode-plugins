@@ -19,7 +19,7 @@
  * ```
  * The plugin is registered as a string-only entry in opencode.jsonc:
  * ```jsonc
- * { "plugin": [["@weiyentan/opencode-plugin-awx"]] }
+ * { "plugin": ["@weiyentan/opencode-plugin-awx"] }
  * ```
  */
 import { tool } from "@opencode-ai/plugin";
@@ -251,7 +251,7 @@ async function server(input: PluginInput): Promise<Hooks> {
             return {
               output:
                 "[awx-sync-project] AWX client not available. " +
-                "Configure a baseUrl in opencode.jsonc and store your " +
+                "Set AWX_BASE_URL and store your " +
                 "Personal Access Token via the plugin auth prompt.",
             };
           }
@@ -363,15 +363,15 @@ async function server(input: PluginInput): Promise<Hooks> {
           if (!awxClient) {
             return {
               output:
-                "AWX client not available. Configure a baseUrl in " +
-                "opencode.jsonc and store your Personal Access Token " +
+                "AWX client not available. Set AWX_BASE_URL " +
+                "and store your Personal Access Token " +
                 "via the plugin auth prompt.",
               metadata: {
                 count: 0,
                 results: [],
                 warning:
-                  "AWX client not available. Configure a baseUrl in " +
-                  "opencode.jsonc and store your Personal Access Token " +
+                  "AWX client not available. Set AWX_BASE_URL " +
+                  "and store your Personal Access Token " +
                   "via the plugin auth prompt.",
               },
             };
@@ -457,7 +457,7 @@ async function server(input: PluginInput): Promise<Hooks> {
             return {
               output:
                 "[stub] list-projects: AWX client not available. " +
-                "Configure a baseUrl in opencode.jsonc and store your " +
+                "Set AWX_BASE_URL and store your " +
                 "Personal Access Token via the plugin auth prompt.",
             };
           }
@@ -531,16 +531,16 @@ async function server(input: PluginInput): Promise<Hooks> {
           if (!awxClient) {
             return {
               output:
-                "AWX client not available. Configure a baseUrl in" +
-                " opencode.jsonc and store your Personal Access Token" +
+                "AWX client not available. Set AWX_BASE_URL" +
+                " and store your Personal Access Token" +
                 " via the plugin auth prompt.",
               metadata: {
                 jobId: 0,
                 jobStatus: "failed",
                 warnings: [],
                 errors: [
-                  "AWX client not available. Configure a baseUrl in" +
-                  " opencode.jsonc and store your Personal Access Token" +
+                  "AWX client not available. Set AWX_BASE_URL" +
+                  " and store your Personal Access Token" +
                   " via the plugin auth prompt.",
                 ],
               },
@@ -618,7 +618,7 @@ async function server(input: PluginInput): Promise<Hooks> {
             return {
               output:
                 "awx-job-status: AWX client not available. " +
-                "Configure a baseUrl in opencode.jsonc and store your " +
+                "Set AWX_BASE_URL and store your " +
                 "Personal Access Token via the plugin auth prompt.",
             };
           }
@@ -695,7 +695,7 @@ async function server(input: PluginInput): Promise<Hooks> {
             return {
               output:
                 "awx-wait-job: AWX client not available. " +
-                "Configure a baseUrl in opencode.jsonc and store your " +
+                "Set AWX_BASE_URL and store your " +
                 "Personal Access Token via the plugin auth prompt.",
             };
           }
@@ -768,16 +768,16 @@ async function server(input: PluginInput): Promise<Hooks> {
           if (!awxClient) {
             return {
               output:
-                "AWX client not available. Configure a baseUrl in " +
-                "opencode.jsonc and store your Personal Access Token " +
+                "AWX client not available. Set AWX_BASE_URL " +
+                "and store your Personal Access Token " +
                 "via the plugin auth prompt.",
               metadata: {
                 count: 0,
                 results: [],
                 next_page: null,
                 error:
-                  "AWX client not available. Configure a baseUrl in " +
-                  "opencode.jsonc and store your Personal Access Token " +
+                  "AWX client not available. Set AWX_BASE_URL " +
+                  "and store your Personal Access Token " +
                   "via the plugin auth prompt.",
               },
             };
@@ -865,7 +865,7 @@ async function server(input: PluginInput): Promise<Hooks> {
  *
  * Registered in opencode.jsonc as a string-only plugin entry:
  * ```jsonc
- * { "plugin": [["@weiyentan/opencode-plugin-awx"]] }
+ * { "plugin": ["@weiyentan/opencode-plugin-awx"] }
  * ```
  *
  * Configuration is read from environment variables:
