@@ -13,3 +13,6 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Runtime metrics (file-backed per-tool counters)
+.metrics/

@@ -1,29 +1,31 @@
-/**
- * AWX Plugin for OpenCode
- *
- * Provides native tool access to AWX / Ansible Automation Platform
- * for job templates, projects, and job lifecycle operations.
- *
- * ## Plugin Lifecycle
- *
- * 1. On load, the plugin registers its auth hook (type: "api" bearer token).
- * 2. If a PAT was previously stored, init-time validation calls GET /api/v2/me/
- *    to verify the token is still active.
- * 3. Tools consume the validated token for all AWX API requests.
- *
- * ## Configuration
- *
- * The plugin reads `baseUrl` from its plugin options in opencode.jsonc:
- * ```jsonc
- * { "plugin": [["./packages/awx", { "baseUrl": "https://example.com" }]] }
- * ```
- */
+ /**
+  * AWX Plugin for OpenCode
+  *
+  * Provides native tool access to AWX / Ansible Automation Platform
+  * for job templates, projects, and job lifecycle operations.
+  *
+  * ## Plugin Lifecycle
+  *
+  * 1. On load, the plugin registers its auth hook (type: "api" bearer token)
+  *    with a `loader` callback that captures the stored PAT at load time.
+  * 2. The AWX client is created lazily on the first tool call via
+  *    `getAwxClient()`. No init-time validation — token validity is
+  *    checked on-demand when tools make API requests.
+  * 3. Tools consume the token (via `getAwxToken()`) for all AWX API requests.
+  *
+  * ## Configuration
+  *
+  * The plugin reads `baseUrl` from its plugin options in opencode.jsonc:
+  * ```jsonc
+  * { "plugin": [["./packages/awx", { "baseUrl": "https://example.com" }]] }
+  * ```
+  */
 import { tool } from "@opencode-ai/plugin";
 import type { PluginInput, Hooks, PluginModule } from "@opencode-ai/plugin";
 import { z } from "zod";
-import { createAwxAuthHook, validateToken } from "./auth.js";
+import { createAwxAuthHook, getAwxToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
-import { createClient, createTimeoutSignal } from "./client.js";
+import { createClient } from "./client.js";
 import type { AwxClient } from "./client.js";
 import { listTemplates } from "./list-templates.js";
 import { listProjects } from "./list-projects.js";
@@ -71,7 +73,11 @@ export interface AwxPluginOptions {
  * and optional plugin options from opencode.jsonc configuration.
  *
  * Returns Hooks including:
- * - Auth hook (type: "api" for bearer token / PAT)
+ * - Auth hook (type: "api" for bearer token / PAT) with a loader that
+ *   captures the stored token via `getAwxToken()` — no init-time validation.
+ * - Tools that lazily create the AWX client on first execution via
+ *   `getAwxClient()`, which reads the token from the auth hook loader.
+ *
  * Plugins register tools (awx-list-templates, awx-launch-job, awx-job-status, etc.)
  * and auth hooks for AWX API interaction.
  */
@@ -126,10 +132,10 @@ async function server(
   async function getAwxClient(): Promise<AwxClient | undefined> {
     if (!baseUrl) return undefined;
 
-    const token = await input.client.getSecret?.("awx");
+    const token = getAwxToken();
     if (!token) return undefined;
 
-    const tokenString = String(token);
+    const tokenString = token;
 
     if (!cachedClient || cachedToken !== tokenString) {
       cachedToken = tokenString;
@@ -137,55 +143,6 @@ async function server(
     }
 
     return cachedClient;
-  }
-
-  /* ── Init-time validation ─────────────────────────────────── */
-  // If a baseUrl is configured, attempt to validate the connection.
-  // Token validation depends on whether the user has already stored a PAT.
-  // If no baseUrl is configured, skip — the user will configure it later.
-  if (baseUrl) {
-    try {
-      const storedKey = await input.client.getSecret?.("awx");
-      if (storedKey) {
-        const { signal, clear } = createTimeoutSignal(10_000);
-
-        try {
-          const result = await validateToken(
-            baseUrl,
-            String(storedKey),
-            signal,
-          );
-
-          if (!result.valid) {
-            void input.client.app.log({
-              body: {
-                service: "plugin-awx",
-                level: "error",
-                message: `Init-time token validation failed: ${result.error}`,
-              },
-            });
-          } else {
-            void input.client.app.log({
-              body: {
-                service: "plugin-awx",
-                level: "info",
-                message: `Token validated successfully against ${baseUrl}`,
-              },
-            });
-          }
-        } finally {
-          clear();
-        }
-      }
-    } catch {
-      void input.client.app.log({
-        body: {
-          service: "plugin-awx",
-          level: "info",
-          message: "No stored token found. Auth will be configured on first use.",
-        },
-      });
-    }
   }
 
   /* ── Hooks ────────────────────────────────────────────────── */

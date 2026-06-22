@@ -12,6 +12,7 @@ import awxPluginModule from "../src/index.js";
 import * as clientModule from "../src/client.js";
 import { listTemplates, type ListTemplatesOutput } from "../src/list-templates.js";
 import * as listProjectsModule from "../src/list-projects.js";
+import { __setAwxToken, getAwxToken, createAwxAuthHook } from "../src/auth.js";
 
 /** Minimal mock of ToolContext for tool execute tests */
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
@@ -28,7 +29,7 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   };
 }
 
-/** Minimal mock of PluginInput with configurable getSecret */
+/** Minimal mock of PluginInput — token via __setAwxToken, no getSecret needed */
 function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
   const mockLog = vi.fn();
   const mockGetSecret = vi.fn().mockResolvedValue(null);
@@ -67,6 +68,31 @@ describe("AWX Plugin Index", () => {
   /* ── Clean up after each test ─────────────────────────────────── */
   afterEach(async () => {
     vi.restoreAllMocks();
+    __setAwxToken(undefined);
+  });
+
+  /* ══════════════════════════════════════════════════════════════════
+     AuthHook.loader — Token Capture
+     ══════════════════════════════════════════════════════════════════ */
+
+  describe("AuthHook.loader", () => {
+    it("captures token from loader auth callback", async () => {
+      // Reset any existing token
+      __setAwxToken(undefined);
+
+      // Create the auth hook
+      const authHook = createAwxAuthHook();
+
+      // Ensure token is undefined before loader fires
+      expect(getAwxToken()).toBeUndefined();
+
+      // Simulate the OpenCode runtime invoking loader with a mock auth function
+      const mockAuth = async () => ({ type: "api" as const, key: "test-token-from-loader" });
+      await authHook.loader!(mockAuth, {} as any);
+
+      // Verify the token was captured
+      expect(getAwxToken()).toBe("test-token-from-loader");
+    });
   });
 
   /* ══════════════════════════════════════════════════════════════════
@@ -140,9 +166,9 @@ describe("AWX Plugin Index", () => {
       expect((result as { output: string }).output).toContain("AWX client not available");
     });
 
-    it("returns error message when no token stored (getSecret returns null)", async () => {
+    it("returns error message when no token stored (__setAwxToken not called)", async () => {
       const input = mockPluginInput();
-      // getSecret already returns null by default in mockPluginInput
+      // __setAwxToken not called — no token available via AuthHook.loader
       const hooks = await createHooks(input, {
         baseUrl: "https://aap.example.com",
       });
@@ -157,16 +183,12 @@ describe("AWX Plugin Index", () => {
 
     it("returns structured output when token and baseUrl are set", async () => {
       const input = mockPluginInput();
-      (input.client as any).getSecret = vi
-        .fn()
-        .mockResolvedValue("my-test-token");
-
-      // Prevent actual fetch from being called — the tool will try to
-      // make an HTTP request when a client is created. Instead, make the
-      // request pass through with mock data.
       const hooks = await createHooks(input, {
         baseUrl: "https://aap.example.com",
       });
+
+      // Inject token for test; real runtime uses AuthHook.loader
+      __setAwxToken("my-test-token");
 
       // The tool calls client.request() which calls fetch internally.
       // We need to mock the response. The tool returns { output, metadata }
@@ -228,11 +250,12 @@ describe("AWX Plugin Index", () => {
         });
 
       const input = mockPluginInput();
-      (input.client as any).getSecret = vi.fn().mockResolvedValue("my-test-token");
-
       const hooks = await createHooks(input, {
         baseUrl: "https://aap.example.com",
       });
+
+      // Inject token for test; real runtime uses AuthHook.loader
+      __setAwxToken("my-test-token");
 
       const result = await hooks.tool!["awx-list-projects"]!.execute(
         { maxPages: 3, pageSize: 25, timeout: 15_000 },
@@ -271,11 +294,12 @@ describe("AWX Plugin Index", () => {
         .mockRejectedValue(new Error("API connection refused"));
 
       const input = mockPluginInput();
-      (input.client as any).getSecret = vi.fn().mockResolvedValue("my-test-token");
-
       const hooks = await createHooks(input, {
         baseUrl: "https://aap.example.com",
       });
+
+      // Inject token for test; real runtime uses AuthHook.loader
+      __setAwxToken("my-test-token");
 
       const result = await hooks.tool!["awx-list-projects"]!.execute(
         {},
@@ -300,13 +324,12 @@ describe("AWX Plugin Index", () => {
       const createClientSpy = vi.spyOn(clientModule, "createClient");
 
       const input = mockPluginInput();
-      (input.client as any).getSecret = vi
-        .fn()
-        .mockResolvedValue("my-test-token");
-
       const hooks = await createHooks(input, {
         baseUrl: "https://aap.example.com",
       });
+
+      // Inject token for test; real runtime uses AuthHook.loader
+      __setAwxToken("my-test-token");
 
       // First call — should create a new client
       await hooks.tool!["awx-list-templates"]!.execute({}, mockToolContext());

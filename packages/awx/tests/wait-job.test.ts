@@ -13,6 +13,7 @@ import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
 import awxPluginModule from "../src/index.js";
 import * as clientModule from "../src/client.js";
 import type { AwxClient } from "../src/client.js";
+import { __setAwxToken } from "../src/auth.js";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -43,7 +44,7 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   };
 }
 
-/** Minimal mock of PluginInput with configurable getSecret */
+/** Minimal mock of PluginInput — token via __setAwxToken, no getSecret needed */
 function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
   const mockLog = vi.fn();
   const mockGetSecret = vi.fn().mockResolvedValue(null);
@@ -114,10 +115,10 @@ async function createHooksWithMockClient(
   createClientSpy.mockReturnValue(client as any);
 
   const input = mockPluginInput();
-  (input.client as any).getSecret = vi.fn().mockResolvedValue("my-test-token");
   const hooks = await createHooks(input, {
     baseUrl: "https://aap.example.com",
   });
+  __setAwxToken("my-test-token");
 
   return { hooks, requestSpy };
 }
@@ -125,6 +126,7 @@ async function createHooksWithMockClient(
 describe("awx-wait-job tool", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    __setAwxToken(undefined);
   });
 
   /* ══════════════════════════════════════════════════════════════════

@@ -35,6 +35,7 @@ import { describe, it, expect, vi } from "vitest";
 import type { PluginInput, Hooks, ToolContext, ToolResult } from "@opencode-ai/plugin";
 import type { PluginModule } from "@opencode-ai/plugin";
 import awxPluginModule from "../../src/index.js";
+import { __setAwxToken } from "../../src/auth.js";
 
 // ── Shared Test Helpers ──────────────────────────────────────────
 
@@ -66,11 +67,12 @@ async function createPlugin(
   const resolvedBaseUrl =
     baseUrl ?? process.env.AAP_BASE_URL ?? "https://example.com";
 
+  __setAwxToken(token ?? undefined);
+
   const mockLog = vi.fn();
   const input: PluginInput = {
     client: {
       app: { log: mockLog },
-      getSecret: vi.fn().mockResolvedValue(token ?? null),
     } as unknown as PluginInput["client"],
     project: {} as PluginInput["project"],
     directory: "/mock/dir",

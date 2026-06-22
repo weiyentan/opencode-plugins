@@ -7,24 +7,25 @@
  *
  * The `getAwxClient()` function inside the plugin reads the current
  * stored AWX token at tool execution time (not at plugin init time)
- * and creates the client lazily. When no token is available, tools
- * report that the client is unavailable. When a token becomes
- * available, the same plugin instance can create and use the client
- * without any plugin reload.
+ * via `getAwxToken()` and creates the client lazily. When no token is
+ * available, tools report that the client is unavailable. When a token
+ * becomes available, the same plugin instance can create and use the
+ * client without any plugin reload.
  *
  * ## Test Strategy
  *
- * - Use a controlled mock for the OpencodeClient's `getSecret` method.
- * - Start with `getSecret` returning `undefined` (no token stored).
+ * - Start with `_awxToken` unset (undefined) — no token available.
  * - Create the plugin server with a `baseUrl` so that the lazy client
  *   path is exercised.
  * - Call a tool that relies on `getAwxClient()` → expects "not available".
- * - Change the mock to return a valid PAT token.
+ * - Set the token via `__setAwxToken()` (simulating the auth hook loader
+ *   having fired).
  * - Call the same tool again → expects client to be created and used.
  */
 import { describe, it, expect, vi } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
 import awxPluginModule from "../src/index.js";
+import { __setAwxToken } from "../src/auth.js";
 
 /** Minimal mock of ToolContext for tool execute tests */
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
@@ -41,22 +42,12 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   };
 }
 
-/**
- * Create a minimal PluginInput stub with a controllable getSecret mock.
- *
- * Only `getSecret` is provided on the client — the init-time validation
- * code path is not triggered because `getSecret` initially returns
- * `undefined` (no token stored at init time). The `app.log` calls
- * inside the init-validation catch blocks are therefore never reached.
- */
-function createPluginInput(
-  getSecretMock: (key: string) => Promise<string | undefined>,
-): PluginInput {
+/** Minimal PluginInput stub — token flows via AuthHook loader */
+function createPluginInput(): PluginInput {
   return {
     client: {
-      getSecret: getSecretMock,
       app: { log: vi.fn() },
-    } as PluginInput["client"],
+    } as unknown as PluginInput["client"],
     project: {} as PluginInput["project"],
     directory: "/mock/dir",
     worktree: "/mock/worktree",
@@ -71,11 +62,10 @@ function createPluginInput(
 describe("AWX Plugin — Lazy Client/Auth Lifecycle", () => {
   it("creates client lazily when token becomes available without plugin reload", async () => {
     // ── Step 1: Start with no AWX token available ──────────────
-    const getSecretMock = vi.fn<(key: string) => Promise<string | undefined>>();
-    getSecretMock.mockResolvedValue(undefined);
+    __setAwxToken(undefined);
 
     const hooks: Hooks = await awxPluginModule.server(
-      createPluginInput(getSecretMock),
+      createPluginInput(),
       { baseUrl: "https://example.com" },
     );
     try {
@@ -88,7 +78,7 @@ describe("AWX Plugin — Lazy Client/Auth Lifecycle", () => {
       expect(outNoToken).toContain("AWX client");
 
       // ── Step 3: Token becomes available (no plugin reload) ──────────
-      getSecretMock.mockResolvedValue("my-pat-token");
+      __setAwxToken("my-pat-token");
 
       // ── Step 4: Same plugin instance now creates and uses the client ──────
       const resultWithToken = await awxListTemplates.execute({}, mockToolContext());

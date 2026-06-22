@@ -10,16 +10,15 @@
  *
  * 1. On first plugin load, OpenCode prompts for a PAT via the auth hook text prompt.
  * 2. The `authorize()` function returns the PAT as the secret key.
- * 3. On every plugin load, init-time validation calls `GET /api/v2/me/`
- *    to verify the token is still active.
+ * 3. Validation is lazy — `validateToken()` runs on first tool call,
+ *    not at plugin init.
  * 4. If validation fails, the user receives a clear, actionable error message.
  *
  * ## Token Validation
  *
- * Validation happens at plugin init time (NOT on first tool call) to provide
- * immediate, clear feedback. Failed init-time validation logs an actionable
- * error, but plugin initialization continues so the user can re-authenticate
- * or fix configuration.
+ * Validation is lazy — it runs on first tool call, not at plugin init.
+ * This avoids blocking plugin load and allows the auth flow to complete
+ * before the token is exercised.
  *
  * ## Error Messages
  *
@@ -53,7 +52,7 @@ export interface AuthValidationResult {
 /**
  * Validates the bearer token by making a GET request to /api/v2/me/.
  *
- * This is the init-time validation called on plugin load. It checks:
+ * This is lazy validation called on the first tool request. It checks:
  * 1. The AAP instance is reachable at the configured baseUrl
  * 2. The bearer token is active and valid
  *
@@ -143,6 +142,29 @@ export async function validateToken(
   }
 }
 
+/** Captured bearer token populated by the auth hook loader at plugin load time */
+let _awxToken: string | undefined;
+
+/**
+ * Returns the captured AWX bearer token if the auth hook loader has fired.
+ *
+ * The token is set by the `loader` callback when OpenCode invokes it
+ * at plugin load time. Returns `undefined` if the plugin hasn't been
+ * authenticated yet.
+ */
+export function getAwxToken(): string | undefined {
+  return _awxToken;
+}
+
+/**
+ * @internal - Exported for testing only. Do not use in production code.
+ * Sets the bearer token for the AWX client. In production, this is
+ * populated by the auth hook's loader callback.
+ */
+export function __setAwxToken(token: string | undefined): void {
+  _awxToken = token;
+}
+
 /**
  * Creates an AWX auth hook configuration for the OpenCode plugin server.
  *
@@ -150,13 +172,32 @@ export async function validateToken(
  * non-rotating, user-provided tokens (e.g., API keys, PATs).
  *
  * The `authorize()` function simply returns the user's PAT as the key.
- * Validation is handled separately at init time via `validateToken()`.
+ * Validation is lazy — `validateToken()` runs on the first tool request.
+ *
+ * The `loader` callback captures the bearer token from OpenCode's stored
+ * credentials at plugin load time so that `getAwxClient()` can use it
+ * via `getAwxToken()` in the AuthHook.loader lifecycle.
  *
  * @returns Auth hook configuration compatible with OpenCode's Hooks.auth
  */
 export function createAwxAuthHook() {
   return {
     provider: "awx",
+    /**
+     * Loader invoked by the OpenCode binary at plugin load time.
+     * Calls `auth()` to retrieve the stored credential and captures
+     * the bearer token for use by `getAwxClient()`.
+     */
+    loader: async (
+      auth: () => Promise<{ type: string; key?: string }>,
+      _provider: unknown,
+    ) => {
+      const result = await auth();
+      if (result?.type === "api" && result.key) {
+        _awxToken = result.key;
+      }
+      return {};
+    },
     methods: [
       {
         type: "api" as const,

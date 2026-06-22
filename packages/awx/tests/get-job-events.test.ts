@@ -9,6 +9,7 @@ import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
 import awxPluginModule from "../src/index.js";
 import * as clientModule from "../src/client.js";
 import type { AwxClient } from "../src/client.js";
+import { __setAwxToken } from "../src/auth.js";
 
 /** Minimal mock of ToolContext for tool execute tests */
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
@@ -25,7 +26,7 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   };
 }
 
-/** Minimal mock of PluginInput with configurable getSecret */
+/** Minimal mock of PluginInput — token via __setAwxToken, no getSecret needed */
 function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
   return {
     client: {
@@ -89,6 +90,7 @@ function getMetadata(result: unknown): Record<string, unknown> {
 describe("AWX Get Job Events Tool", () => {
   afterEach(async () => {
     vi.restoreAllMocks();
+    __setAwxToken(undefined);
   });
 
   /* ══════════════════════════════════════════════════════════════════
@@ -125,13 +127,10 @@ describe("AWX Get Job Events Tool", () => {
     vi.spyOn(clientModule, "createClient").mockReturnValue(mockClient);
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi
-      .fn()
-      .mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42 },
@@ -167,13 +166,10 @@ describe("AWX Get Job Events Tool", () => {
     vi.spyOn(clientModule, "createClient").mockReturnValue(mockClient);
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi
-      .fn()
-      .mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42 },
@@ -204,13 +200,10 @@ describe("AWX Get Job Events Tool", () => {
     vi.spyOn(clientModule, "createClient").mockReturnValue(mockClient);
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi
-      .fn()
-      .mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42, page: 2 },
@@ -250,7 +243,7 @@ describe("AWX Get Job Events Tool", () => {
 
   it("returns error when AWX client is not available (no token)", async () => {
     const input = mockPluginInput();
-    // getSecret returns null (default)
+    // __setAwxToken not called — no token available
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
@@ -279,13 +272,10 @@ describe("AWX Get Job Events Tool", () => {
     vi.spyOn(clientModule, "createClient").mockReturnValue(mockClient);
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi
-      .fn()
-      .mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 999 },
@@ -308,13 +298,10 @@ describe("AWX Get Job Events Tool", () => {
     vi.spyOn(clientModule, "createClient").mockReturnValue(mockClient);
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi
-      .fn()
-      .mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42 },
@@ -337,13 +324,10 @@ describe("AWX Get Job Events Tool", () => {
     vi.spyOn(clientModule, "createClient").mockReturnValue(mockClient);
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi
-      .fn()
-      .mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 99999 },
@@ -395,13 +379,10 @@ describe("AWX Get Job Events Tool", () => {
     vi.spyOn(clientModule, "createClient").mockReturnValue(mockClient);
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi
-      .fn()
-      .mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     const result = await hooks.tool!["awx-get-job-events"]!.execute(
       { job_id: 42, event_filter: "playbook_on_task_start" },
