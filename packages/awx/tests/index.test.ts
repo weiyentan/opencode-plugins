@@ -187,8 +187,7 @@ describe("AWX Plugin Index", () => {
         baseUrl: "https://aap.example.com",
       });
 
-      // Set the token AFTER hooks creation so init-time validation
-      // does not make a real HTTP request.
+      // Inject token for test; real runtime uses AuthHook.loader
       __setAwxToken("my-test-token");
 
       // The tool calls client.request() which calls fetch internally.
@@ -255,8 +254,7 @@ describe("AWX Plugin Index", () => {
         baseUrl: "https://aap.example.com",
       });
 
-      // Set token AFTER hooks creation to avoid real HTTP request
-      // during init-time validation.
+      // Inject token for test; real runtime uses AuthHook.loader
       __setAwxToken("my-test-token");
 
       const result = await hooks.tool!["awx-list-projects"]!.execute(
@@ -300,8 +298,7 @@ describe("AWX Plugin Index", () => {
         baseUrl: "https://aap.example.com",
       });
 
-      // Set token AFTER hooks creation to avoid real HTTP request
-      // during init-time validation.
+      // Inject token for test; real runtime uses AuthHook.loader
       __setAwxToken("my-test-token");
 
       const result = await hooks.tool!["awx-list-projects"]!.execute(
@@ -331,8 +328,7 @@ describe("AWX Plugin Index", () => {
         baseUrl: "https://aap.example.com",
       });
 
-      // Set token AFTER hooks creation to avoid real HTTP request
-      // during init-time validation.
+      // Inject token for test; real runtime uses AuthHook.loader
       __setAwxToken("my-test-token");
 
       // First call — should create a new client

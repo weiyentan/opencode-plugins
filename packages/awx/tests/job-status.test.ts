@@ -158,8 +158,7 @@ describe("awx-job-status tool", () => {
       baseUrl: "https://aap.example.com",
     });
 
-    // Set the token AFTER hooks creation so init-time validation
-    // does not make a real HTTP request.
+    // Inject token for test; real runtime uses AuthHook.loader
     __setAwxToken("test-token");
   });
 

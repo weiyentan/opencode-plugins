@@ -10,16 +10,15 @@
  *
  * 1. On first plugin load, OpenCode prompts for a PAT via the auth hook text prompt.
  * 2. The `authorize()` function returns the PAT as the secret key.
- * 3. On every plugin load, init-time validation calls `GET /api/v2/me/`
- *    to verify the token is still active.
+ * 3. Validation is lazy — `validateToken()` runs on first tool call,
+ *    not at plugin init.
  * 4. If validation fails, the user receives a clear, actionable error message.
  *
  * ## Token Validation
  *
- * Validation happens at plugin init time (NOT on first tool call) to provide
- * immediate, clear feedback. Failed init-time validation logs an actionable
- * error, but plugin initialization continues so the user can re-authenticate
- * or fix configuration.
+ * Validation is lazy — it runs on first tool call, not at plugin init.
+ * This avoids blocking plugin load and allows the auth flow to complete
+ * before the token is exercised.
  *
  * ## Error Messages
  *
@@ -53,7 +52,7 @@ export interface AuthValidationResult {
 /**
  * Validates the bearer token by making a GET request to /api/v2/me/.
  *
- * This is the init-time validation called on plugin load. It checks:
+ * This is lazy validation called on the first tool request. It checks:
  * 1. The AAP instance is reachable at the configured baseUrl
  * 2. The bearer token is active and valid
  *
@@ -173,7 +172,7 @@ export function __setAwxToken(token: string | undefined): void {
  * non-rotating, user-provided tokens (e.g., API keys, PATs).
  *
  * The `authorize()` function simply returns the user's PAT as the key.
- * Validation is handled separately at init time via `validateToken()`.
+ * Validation is lazy — `validateToken()` runs on the first tool request.
  *
  * The `loader` callback captures the bearer token from OpenCode's stored
  * credentials at plugin load time so that `getAwxClient()` can use it
