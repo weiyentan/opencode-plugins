@@ -154,7 +154,7 @@ export async function listTemplates(
   // Per-page timeout budget: divide tool timeout by (maxPages + 1).
   // The +1 provides a safety margin for tool overhead after the last page.
   const effectiveMaxPages = Math.max(1, maxPages);
-  const perPageBudget = Math.floor(toolTimeoutMs / (effectiveMaxPages + 1));
+  const perPageBudget = Math.floor((toolTimeoutMs || 30_000) / ((effectiveMaxPages || 5) + 1));
 
   const allResults: TemplateResult[] = [];
   let nextPage: string | null = null;
@@ -169,7 +169,7 @@ export async function listTemplates(
       : `/api/v2/job_templates/?page_size=${pageSize}`;
 
     // Fetch this page with per-page timeout
-    const { signal: pageSignal, clear: clearTimeout_ } = createTimeoutSignal(perPageBudget);
+    const { signal: pageSignal, clear: clearTimeout_ } = createTimeoutSignal(Math.max(1, perPageBudget || 1000));
     const combinedSignal = abortSignal
       ? anyAbortSignal([abortSignal, pageSignal])
       : pageSignal;

@@ -284,7 +284,8 @@ export function createClient(
   opts?: ClientOptions,
 ): AwxClient {
   const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  const timeoutMs = opts?.timeoutMs ?? 30_000;
+  const rawTimeout = opts?.timeoutMs;
+  const timeoutMs = (typeof rawTimeout === "number" && !Number.isNaN(rawTimeout)) ? rawTimeout : 30_000;
   const maxRetries = opts?.maxRetries ?? DEFAULT_MAX_RETRIES;
   const breakerThreshold = opts?.circuitBreakerThreshold ?? 5;
   const breakerCooldownMs = opts?.circuitBreakerCooldownMs ?? 30_000;
