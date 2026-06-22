@@ -30,7 +30,7 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   };
 }
 
-/** Minimal mock of PluginInput with configurable getSecret */
+/** Minimal mock of PluginInput — token via __setAwxToken, no getSecret needed */
 function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
   return {
     client: {

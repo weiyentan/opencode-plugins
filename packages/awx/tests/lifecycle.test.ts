@@ -42,7 +42,7 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   };
 }
 
-/** Minimal PluginInput stub — no getSecret needed (token flows via AuthHook loader) */
+/** Minimal PluginInput stub — token flows via AuthHook loader */
 function createPluginInput(): PluginInput {
   return {
     client: {

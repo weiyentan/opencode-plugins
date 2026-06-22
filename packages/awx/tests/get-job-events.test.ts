@@ -26,7 +26,7 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   };
 }
 
-/** Minimal mock of PluginInput with configurable getSecret */
+/** Minimal mock of PluginInput — token via __setAwxToken, no getSecret needed */
 function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
   return {
     client: {
@@ -243,7 +243,7 @@ describe("AWX Get Job Events Tool", () => {
 
   it("returns error when AWX client is not available (no token)", async () => {
     const input = mockPluginInput();
-    // getSecret returns null (default)
+    // __setAwxToken not called — no token available
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });

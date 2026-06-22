@@ -177,7 +177,7 @@ export function __setAwxToken(token: string | undefined): void {
  *
  * The `loader` callback captures the bearer token from OpenCode's stored
  * credentials at plugin load time so that `getAwxClient()` can use it
- * without relying on the non-existent `getSecret()` runtime method.
+ * via `getAwxToken()` in the AuthHook.loader lifecycle.
  *
  * @returns Auth hook configuration compatible with OpenCode's Hooks.auth
  */

@@ -1,23 +1,25 @@
-/**
- * AWX Plugin for OpenCode
- *
- * Provides native tool access to AWX / Ansible Automation Platform
- * for job templates, projects, and job lifecycle operations.
- *
- * ## Plugin Lifecycle
- *
- * 1. On load, the plugin registers its auth hook (type: "api" bearer token).
- * 2. If a PAT was previously stored, init-time validation calls GET /api/v2/me/
- *    to verify the token is still active.
- * 3. Tools consume the validated token for all AWX API requests.
- *
- * ## Configuration
- *
- * The plugin reads `baseUrl` from its plugin options in opencode.jsonc:
- * ```jsonc
- * { "plugin": [["./packages/awx", { "baseUrl": "https://example.com" }]] }
- * ```
- */
+ /**
+  * AWX Plugin for OpenCode
+  *
+  * Provides native tool access to AWX / Ansible Automation Platform
+  * for job templates, projects, and job lifecycle operations.
+  *
+  * ## Plugin Lifecycle
+  *
+  * 1. On load, the plugin registers its auth hook (type: "api" bearer token)
+  *    with a `loader` callback that captures the stored PAT at load time.
+  * 2. The AWX client is created lazily on the first tool call via
+  *    `getAwxClient()`. No init-time validation — token validity is
+  *    checked on-demand when tools make API requests.
+  * 3. Tools consume the token (via `getAwxToken()`) for all AWX API requests.
+  *
+  * ## Configuration
+  *
+  * The plugin reads `baseUrl` from its plugin options in opencode.jsonc:
+  * ```jsonc
+  * { "plugin": [["./packages/awx", { "baseUrl": "https://example.com" }]] }
+  * ```
+  */
 import { tool } from "@opencode-ai/plugin";
 import type { PluginInput, Hooks, PluginModule } from "@opencode-ai/plugin";
 import { z } from "zod";
@@ -71,7 +73,11 @@ export interface AwxPluginOptions {
  * and optional plugin options from opencode.jsonc configuration.
  *
  * Returns Hooks including:
- * - Auth hook (type: "api" for bearer token / PAT)
+ * - Auth hook (type: "api" for bearer token / PAT) with a loader that
+ *   captures the stored token via `getAwxToken()` — no init-time validation.
+ * - Tools that lazily create the AWX client on first execution via
+ *   `getAwxClient()`, which reads the token from the auth hook loader.
+ *
  * Plugins register tools (awx-list-templates, awx-launch-job, awx-job-status, etc.)
  * and auth hooks for AWX API interaction.
  */

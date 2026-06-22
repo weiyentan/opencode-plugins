@@ -29,7 +29,7 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   };
 }
 
-/** Minimal mock of PluginInput with configurable getSecret */
+/** Minimal mock of PluginInput — token via __setAwxToken, no getSecret needed */
 function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
   const mockLog = vi.fn();
   const mockGetSecret = vi.fn().mockResolvedValue(null);
@@ -166,9 +166,9 @@ describe("AWX Plugin Index", () => {
       expect((result as { output: string }).output).toContain("AWX client not available");
     });
 
-    it("returns error message when no token stored (getSecret returns null)", async () => {
+    it("returns error message when no token stored (__setAwxToken not called)", async () => {
       const input = mockPluginInput();
-      // getSecret already returns null by default in mockPluginInput
+      // __setAwxToken not called — no token available via AuthHook.loader
       const hooks = await createHooks(input, {
         baseUrl: "https://aap.example.com",
       });

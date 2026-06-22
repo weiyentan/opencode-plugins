@@ -1,6 +1,7 @@
 /**
  * Type augmentations for the OpenCode plugin SDK.
  *
- * The getSecret() method previously declared here does not exist at runtime.
- * Token capture is now handled via the AuthHook.loader mechanism in auth.ts.
+ * Token capture is handled via the AuthHook.loader mechanism in auth.ts.
+ * The `loader` callback captures the stored PAT at plugin load time,
+ * making it available to tools via `getAwxToken()`.
  */
