@@ -1,6 +1,6 @@
 # ADR 0003: Plugin API Surface Discovery
 
-**Status:** Accepted  
+**Status:** Accepted (evolved)  
 **Date:** 2026-06-20  
 **Council Session:** `awx-plugin-prd-20260620-135410`
 
@@ -12,22 +12,31 @@ The PRD referenced `@opencode-ai/plugin` as a peer dependency but neither the Ty
 
 **Adopt the discovered `@opencode-ai/plugin` v1.14.29 API surface** as documented in the local installation at `C:\ai\opencode\node_modules\@opencode-ai\plugin`.
 
-## Discovered API Surface
+## Discovered API Surface (v1.14.29)
 
-### Plugin Entry Point
+### Plugin Entry Point (original v1.14.29 API)
 ```typescript
-// Package: @opencode-ai/plugin (exports: ".", "./tool", "./tui")
 import type { Plugin, PluginInput, PluginOptions, Hooks } from "@opencode-ai/plugin";
 
 export default {
   server: async (ctx: PluginInput, options?: PluginOptions): Promise<Hooks> => {
-    // ctx: { client, project, directory, worktree, serverUrl, $: BunShell }
-    return {
-      auth: { ... },
-      tool: { ... },
-    };
+    return { auth: { ... }, tool: { ... } };
   },
 };
+```
+
+### Plugin Entry Point (current — `@opencode-ai/plugin` v1.17.8+)
+The API evolved to a named export of type `Plugin`. The second `options` parameter was removed — configuration is sourced from environment variables (`AWX_BASE_URL`) instead of plugin options in `opencode.jsonc`. The plugin is registered as a string-only entry (no config tuple).
+
+```typescript
+import type { PluginInput, Hooks, Plugin } from "@opencode-ai/plugin";
+
+async function server(input: PluginInput): Promise<Hooks> {
+  const baseUrl = process.env.AWX_BASE_URL;
+  // ...
+}
+
+export const AwxPlugin: Plugin = server;
 ```
 
 ### Tool Registration (`@opencode-ai/plugin/tool`)
