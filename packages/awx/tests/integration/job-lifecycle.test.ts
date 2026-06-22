@@ -43,6 +43,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
 import awxPluginModule from "../../src/index.js";
+import { __setAwxToken } from "../../src/auth.js";
 
 // ── Environment Configuration ──────────────────────────────────
 
@@ -74,17 +75,15 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
 }
 
 /**
- * Create a PluginInput that returns the AWX_TOKEN from the environment.
- * The getSecret mock always resolves to AWX_TOKEN so the lazy client
- * resolver picks it up on every tool invocation.
+ * Create a PluginInput that configures the AWX_TOKEN from the environment.
+ * The token is set via __setAwxToken (mimicking the auth hook loader)
+ * so the lazy client resolver picks it up at plugin init time.
  */
 function createPluginInput(): PluginInput {
+  __setAwxToken(AWX_TOKEN);
   return {
     client: {
       app: { log: vi.fn() },
-      getSecret: vi
-        .fn<(key: string) => Promise<string | undefined>>()
-        .mockResolvedValue(AWX_TOKEN),
     } as unknown as PluginInput["client"],
     project: {} as PluginInput["project"],
     directory: "/mock/dir",

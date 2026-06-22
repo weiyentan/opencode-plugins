@@ -13,6 +13,7 @@ import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
 import awxPluginModule from "../src/index.js";
 import * as clientModule from "../src/client.js";
 import type { AwxClient } from "../src/client.js";
+import { __setAwxToken } from "../src/auth.js";
 
 /** Minimal mock of ToolContext for tool execute tests */
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
@@ -81,6 +82,7 @@ describe('"awx-sync-project" tool', () => {
   afterEach(() => {
     createClientSpy.mockRestore();
     vi.restoreAllMocks();
+    __setAwxToken(undefined);
   });
 
   /* ══════════════════════════════════════════════════════════════════
@@ -89,11 +91,10 @@ describe('"awx-sync-project" tool', () => {
 
   it('is registered as "awx-sync-project" in hooks.tool', async () => {
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     expect(hooks.tool).toBeDefined();
     expect(hooks.tool!["awx-sync-project"]).toBeDefined();
@@ -137,11 +138,10 @@ describe('"awx-sync-project" tool', () => {
       );
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     const result = await hooks.tool!["awx-sync-project"]!.execute(
       { project_id: 123 },
@@ -194,11 +194,10 @@ describe('"awx-sync-project" tool', () => {
       );
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     await hooks.tool!["awx-sync-project"]!.execute(
       { project_id: 123 },
@@ -239,11 +238,10 @@ describe('"awx-sync-project" tool', () => {
       );
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     const result = await hooks.tool!["awx-sync-project"]!.execute(
       { project_id: 999 },
@@ -271,11 +269,10 @@ describe('"awx-sync-project" tool', () => {
       );
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     const result = await hooks.tool!["awx-sync-project"]!.execute(
       { project_id: 123 },
@@ -303,11 +300,10 @@ describe('"awx-sync-project" tool', () => {
       );
 
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
-
     const hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+    __setAwxToken("test-token");
 
     const result = await hooks.tool!["awx-sync-project"]!.execute(
       { project_id: 123 },

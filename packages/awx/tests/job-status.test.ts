@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
 import awxPluginModule from "../src/index.js";
 import { JobDetailOutputSchema } from "../src/contracts/job-detail.js";
+import { __setAwxToken } from "../src/auth.js";
 
 // ─── Mock AWX API Responses ───────────────────────────────────
 
@@ -149,15 +150,22 @@ describe("awx-job-status tool", () => {
   let hooks: Hooks;
 
   beforeEach(async () => {
+    // Clear any leftover token state from previous tests
+    __setAwxToken(undefined);
+
     const input = mockPluginInput();
-    (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
     hooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });
+
+    // Set the token AFTER hooks creation so init-time validation
+    // does not make a real HTTP request.
+    __setAwxToken("test-token");
   });
 
   afterEach(async () => {
     vi.restoreAllMocks();
+    __setAwxToken(undefined);
     await hooks.dispose?.();
   });
 
@@ -325,8 +333,11 @@ describe("awx-job-status tool", () => {
   });
 
   it("returns error when AWX client is not available", async () => {
+    // Clear any token that may have been set by beforeEach for the
+    // majority of tests that DO need a token.
+    __setAwxToken(undefined);
+
     const input = mockPluginInput();
-    // getSecret returns null by default — no token available
     const localHooks = await createHooks(input, {
       baseUrl: "https://aap.example.com",
     });

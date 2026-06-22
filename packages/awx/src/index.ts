@@ -21,7 +21,7 @@
 import { tool } from "@opencode-ai/plugin";
 import type { PluginInput, Hooks, PluginModule } from "@opencode-ai/plugin";
 import { z } from "zod";
-import { createAwxAuthHook, validateToken } from "./auth.js";
+import { createAwxAuthHook, getAwxToken, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
 import { createClient, createTimeoutSignal } from "./client.js";
 import type { AwxClient } from "./client.js";
@@ -126,10 +126,10 @@ async function server(
   async function getAwxClient(): Promise<AwxClient | undefined> {
     if (!baseUrl) return undefined;
 
-    const token = await input.client.getSecret?.("awx");
+    const token = getAwxToken();
     if (!token) return undefined;
 
-    const tokenString = String(token);
+    const tokenString = token;
 
     if (!cachedClient || cachedToken !== tokenString) {
       cachedToken = tokenString;
@@ -145,7 +145,7 @@ async function server(
   // If no baseUrl is configured, skip — the user will configure it later.
   if (baseUrl) {
     try {
-      const storedKey = await input.client.getSecret?.("awx");
+      const storedKey = getAwxToken();
       if (storedKey) {
         const { signal, clear } = createTimeoutSignal(10_000);
 
