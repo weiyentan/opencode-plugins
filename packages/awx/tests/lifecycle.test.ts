@@ -24,7 +24,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
-import awxPluginModule from "../src/index.js";
+import { AwxPlugin } from "../src/index.js";
 
 /** Minimal mock of ToolContext for tool execute tests */
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
@@ -74,9 +74,9 @@ describe("AWX Plugin — Lazy Client/Auth Lifecycle", () => {
     const getSecretMock = vi.fn<(key: string) => Promise<string | undefined>>();
     getSecretMock.mockResolvedValue(undefined);
 
-    const hooks: Hooks = await awxPluginModule.server(
+    vi.stubEnv("AWX_BASE_URL", "https://example.com");
+    const hooks: Hooks = await AwxPlugin(
       createPluginInput(getSecretMock),
-      { baseUrl: "https://example.com" },
     );
     try {
       const awxListTemplates = hooks.tool!["awx-list-templates"]!;

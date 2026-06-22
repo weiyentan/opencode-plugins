@@ -5,12 +5,10 @@
  * produces a valid hook shape, and the hello-world tool is registered.
  */
 import { describe, it, expect, vi } from "vitest";
-import type { PluginInput, Hooks, PluginModule } from "@opencode-ai/plugin";
+import type { PluginInput, Hooks } from "@opencode-ai/plugin";
 import type { ToolContext, ToolResult } from "@opencode-ai/plugin";
 
-// This import will fail (RED) until src/index.ts is created
-// with a default PluginModule export.
-import awxPluginModule from "../src/index.js";
+import { AwxPlugin } from "../src/index.js";
 
 /** Minimal mock of PluginInput for scaffold tests */
 function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
@@ -46,18 +44,13 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
 }
 
 describe("AWX Plugin Scaffolding", () => {
-  it("exports a valid PluginModule with an id and server function", () => {
-    // Verify the default export matches the PluginModule contract
-    const mod = awxPluginModule as PluginModule;
-
-    expect(mod).toBeDefined();
-    expect(mod.id).toBe("awx");
-    expect(mod.server).toBeDefined();
-    expect(typeof mod.server).toBe("function");
+  it("exports a valid Plugin function", () => {
+    expect(AwxPlugin).toBeDefined();
+    expect(typeof AwxPlugin).toBe("function");
   });
 
-  it("server() returns a Hooks object with auth hook", async () => {
-    const hooks: Hooks = await awxPluginModule.server(mockPluginInput());
+  it("AwxPlugin() returns a Hooks object with auth hook", async () => {
+    const hooks: Hooks = await AwxPlugin(mockPluginInput());
     try {
       expect(hooks).toBeDefined();
       expect(hooks.auth).toBeDefined();
@@ -70,8 +63,8 @@ describe("AWX Plugin Scaffolding", () => {
   });
 
 
-  it("server() returns a Hooks object with a hello-world tool", async () => {
-    const hooks: Hooks = await awxPluginModule.server(mockPluginInput());
+  it("AwxPlugin() returns a Hooks object with a hello-world tool", async () => {
+    const hooks: Hooks = await AwxPlugin(mockPluginInput());
     try {
       // The hooks must contain a `tool` map
       expect(hooks).toBeDefined();
@@ -89,7 +82,7 @@ describe("AWX Plugin Scaffolding", () => {
   });
 
   it("hello-world tool execute returns a greeting with default name", async () => {
-    const hooks = await awxPluginModule.server(mockPluginInput());
+    const hooks = await AwxPlugin(mockPluginInput());
     try {
       const tool = hooks.tool!.hello!;
 
@@ -109,7 +102,7 @@ describe("AWX Plugin Scaffolding", () => {
   });
 
   it("hello-world tool accepts a custom name", async () => {
-    const hooks = await awxPluginModule.server(mockPluginInput());
+    const hooks = await AwxPlugin(mockPluginInput());
     try {
       const tool = hooks.tool!.hello!;
 
@@ -126,7 +119,7 @@ describe("AWX Plugin Scaffolding", () => {
   });
 
   it("hello-world tool returns abort message when signal is aborted", async () => {
-    const hooks = await awxPluginModule.server(mockPluginInput());
+    const hooks = await AwxPlugin(mockPluginInput());
     try {
       const tool = hooks.tool!.hello!;
 

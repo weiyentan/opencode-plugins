@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
-import awxPluginModule from "../src/index.js";
+import { AwxPlugin } from "../src/index.js";
 import * as clientModule from "../src/client.js";
 import type { AwxClient } from "../src/client.js";
 
@@ -49,16 +49,17 @@ function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
 }
 
 /**
- * Call server() with optional AwxPluginOptions.
- * Uses a cast because PluginModule.server is typed with only one parameter.
+ * Create hooks by calling AwxPlugin() directly.
+ * When baseUrl is provided, it sets process.env.AWX_BASE_URL via vi.stubEnv.
  */
 async function createHooks(
   input: PluginInput,
   options?: { baseUrl?: string },
 ): Promise<Hooks> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const serverFn = awxPluginModule.server as (input: PluginInput, options?: any) => Promise<Hooks>;
-  return serverFn(input, options);
+  if (options?.baseUrl) {
+    vi.stubEnv("AWX_BASE_URL", options.baseUrl);
+  }
+  return AwxPlugin(input);
 }
 
 /** Create a mock AwxClient with a controllable request method */
