@@ -917,20 +917,23 @@ async function server(input: PluginInput): Promise<Hooks> {
         description: [
           "Get individual resource detail from AWX.",
           "Generalized resource detail getter with type→endpoint dispatch.",
-          "Supports 'template' and 'project' resource types.",
-          "Returns structured output",
-          "in a standard envelope: { schema_version, resource_type, id, data }.",
+          "Supports 'template', 'project', and 'inventory' resource types.",
+          "Returns structured output in a standard envelope:",
+          "{ schema_version, resource_type, id, data }.",
           "For templates: name, description, job_type, resolved names,",
           "playbook, verbosity, launch flags, last_job_run, status,",
           "next_schedule, and labels.",
           "For projects: id, name, scm_type, scm_url, scm_branch, status,",
           "last_updated, resolved organization_name and created_by, derived",
           "success/failure flags.",
+          "For inventories: name, description, kind, host_count,",
+          "total_groups, has_inventory_sources, total_inventory_sources,",
+          "organization_name, and variables.",
         ].join(" "),
         args: {
           type: z
-            .enum(["template", "project"])
-            .describe("Resource type to fetch. Supports: template, project"),
+            .enum(["template", "project", "inventory"])
+            .describe("Resource type to fetch. Supports: template, project, inventory"),
           id: z
             .number()
             .int()

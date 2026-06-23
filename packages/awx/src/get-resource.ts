@@ -25,19 +25,21 @@
 import type { AwxClient } from "./client.js";
 import { mapTemplate } from "./mappers/map-template.js";
 import { mapProject } from "./mappers/map-project.js";
+import { mapInventory } from "./mappers/map-inventory.js";
 import type { TemplateDetailOutput } from "./contracts/template-detail.js";
 import type { ProjectDetailOutput } from "./contracts/project-detail.js";
+import type { InventoryDetailOutput } from "./contracts/inventory-detail.js";
 
 /**
  * Union of all supported resource detail output types.
  * Extend this when adding new resource types.
  */
-export type ResourceDetailOutput = TemplateDetailOutput | ProjectDetailOutput;
+export type ResourceDetailOutput = TemplateDetailOutput | ProjectDetailOutput | InventoryDetailOutput;
 
 /**
  * Supported resource type keys (used by the tool args Zod schema).
  */
-export type ResourceType = "template" | "project";
+export type ResourceType = "template" | "project" | "inventory";
 
 /**
  * Entry in the resource registry.
@@ -64,6 +66,10 @@ const RESOURCE_REGISTRY: Record<ResourceType, ResourceEntry> = {
   project: {
     path: "/api/v2/projects/{id}/",
     mapper: mapProject,
+  },
+  inventory: {
+    path: "/api/v2/inventories/{id}/",
+    mapper: mapInventory,
   },
 };
 
