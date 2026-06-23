@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-23T22:34:01.498Z",
+  "tools": {
+    "awx-list-templates": {
+      "callCount": 14,
+      "errorCount": 0,
+      "totalLatencyMs": 8857,
+      "tokenExpiryEvents": 0,
+      "psFallbackCount": 0
+    },
+    "awx-list-projects": {
+      "callCount": 1,
+      "errorCount": 0,
+      "totalLatencyMs": 285,
+      "tokenExpiryEvents": 0,
+      "psFallbackCount": 0
+    },
+    "awx-get-job-events": {
+      "callCount": 1,
+      "errorCount": 1,
+      "totalLatencyMs": 154,
+      "tokenExpiryEvents": 0,
+      "psFallbackCount": 0
+    }
+  }
+}

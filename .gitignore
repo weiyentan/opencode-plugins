@@ -14,5 +14,5 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Local OpenCode plugin builds (auto-discovered)
-.opencode/plugins/
+# Local OpenCode plugin dev directory (renamed from .opencode/ to prevent auto-discovery)
+opencode-plugin-dev/

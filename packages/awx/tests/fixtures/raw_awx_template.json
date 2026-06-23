@@ -1,0 +1,30 @@
+{
+  "id": 7,
+  "name": "Deploy Web Stack — Production",
+  "description": "Deploy the web application stack to production servers",
+  "job_type": "run",
+  "inventory": 1,
+  "project": 3,
+  "organization": 1,
+  "playbook": "deploy-web-stack.yml",
+  "verbosity": 2,
+  "ask_variables_on_launch": true,
+  "ask_inventory_on_launch": false,
+  "ask_limit_on_launch": true,
+  "last_job_run": "2025-06-15T14:32:00Z",
+  "status": "successful",
+  "next_schedule": null,
+  "summary_fields": {
+    "organization": { "id": 1, "name": "Default" },
+    "inventory": { "id": 1, "name": "Production" },
+    "project": { "id": 3, "name": "Web Stack Deploy" },
+    "labels": { "results": [
+      { "id": 1, "name": "production" },
+      { "id": 2, "name": "web" },
+      { "id": 3, "name": "deploy" }
+    ]},
+    "recent_jobs": [
+      { "id": 142, "name": "Deploy Web Stack — Production", "status": "successful", "finished": "2025-06-15T14:33:42.123456Z" }
+    ]
+  }
+}

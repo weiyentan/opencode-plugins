@@ -12,7 +12,7 @@ The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-debug-env) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-get-resource, awx-debug-env) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | Pure functions: SSH→HTTPS URL conversion, git branch inference, required-var validation |
@@ -21,7 +21,7 @@ The AWX plugin delivers these modules:
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) is complete — all 8 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
+Tool implementation (Phase 2) is complete — all 9 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
 ### Tool Output Formats
 
@@ -35,6 +35,7 @@ Tool implementation (Phase 2) is complete — all 8 AWX tools are implemented an
 | `awx-wait-job` | Plain text message + `JobDetailOutput` v1.0 metadata | — |
 | `awx-get-job-events` | Plain text message + structured metadata | — |
 | `awx-debug-env` | JSON string | — |
+| `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope | `type` (template\|project\|inventory) + `id` |
 
 Both `awx-list-templates` and `awx-list-projects` accept `--timeout` (total tool timeout in ms, default 30000).
 
@@ -187,9 +188,9 @@ Hot-reload verification is performed structurally (the `tsc --noEmit` / `vitest 
 
 The `package.json` `main`, `types`, and `exports` fields point to the compiled `dist/` output. This is the production-safe configuration — consumers import the compiled JavaScript with type declarations.
 
-#### Local Development (`.opencode/plugins/`)
+#### Local Development (`opencode-plugin-dev/plugins/`)
 
-For local testing without publishing, a re-export wrapper is set up at `.opencode/plugins/awx-plugin.js` which re-exports `AwxPlugin` from the compiled `dist/` output. OpenCode automatically discovers plugins in this directory at startup, making it **the recommended local development approach** — you test exactly the compiled output that would ship, without modifying `package.json`.
+For local testing without publishing, a re-export wrapper is set up at `opencode-plugin-dev/plugins/awx-plugin.js` which re-exports `AwxPlugin` from the compiled `dist/` output. The directory is named without a leading dot to prevent OpenCode from auto-discovering it at startup, keeping development artifacts isolated from the live plugin system.
 
 After making changes:
 
@@ -199,7 +200,7 @@ npm run build          # Recompile to dist/
 # Restart OpenCode server to pick up the new build
 ```
 
-Build outputs are gitignored (`.opencode/plugins/` is in `.gitignore`), so the wrapper is local-only and never committed.
+Build outputs are gitignored (`opencode-plugin-dev/` is in `.gitignore`), so the wrapper is local-only and never committed.
 
 ## CI Requirements
 
@@ -247,23 +248,39 @@ packages/awx/
 │   ├── index.ts              # Plugin entry point — Hooks (auth + tools + dispose); client wiring & metrics lifecycle
 │   ├── auth.ts               # Bearer token auth hook (type: "api")
 │   ├── client.ts             # HTTP middleware pipeline (circuit breaker, retry, timeout)
+│   ├── get-resource.ts       # Shared resource detail orchestrator — type→endpoint registry, fetch, map dispatch
 │   ├── metrics.ts            # Per-tool counters with file-backed durability
 │   ├── node-shim.d.ts        # Minimal Node.js declarations (fs/promises, path)
-│   └── contracts/
-│       └── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
+│   ├── contracts/
+│   │   ├── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
+│   │   ├── template-detail.ts # TemplateDetailOutput contract (schema_version, resource_type, id, data)
+│   │   ├── project-detail.ts  # ProjectDetailOutput contract
+│   │   └── inventory-detail.ts # InventoryDetailOutput contract
+│   └── mappers/
+│       ├── map-template.ts   # Raw AWX API response → TemplateDetailOutput
+│       ├── map-project.ts    # Raw AWX API response → ProjectDetailOutput
+│       └── map-inventory.ts  # Raw AWX API response → InventoryDetailOutput
 ├── tests/
 │   ├── plugin.test.ts            # Plugin registration and lifecycle tests
 │   ├── client.test.ts            # Client middleware pipeline tests
 │   ├── lifecycle.test.ts         # Lazy client/auth lifecycle tests (no-token → token → client-created)
 │   ├── metrics.test.ts           # MetricsStore persistence & counter tests incl. concurrent serialization
 │   ├── plugin-init-timeout.test.ts  # Init-time timeout cleanup tests (clear() called after validation)
+│   ├── get-resource.test.ts      # getResource orchestrator unit tests (dispatch, error handling, registry)
+│   ├── get-resource-tool.test.ts # awx-get-resource tool integration tests (via plugin tool registration)
+│   ├── map-template.test.ts      # mapTemplate mapper unit tests
+│   ├── map-project.test.ts       # mapProject mapper unit tests
+│   ├── map-inventory.test.ts     # mapInventory mapper unit tests
 │   ├── contracts/
 │   │   ├── contract.test.ts      # Contract compatibility tests
 │   │   └── __snapshots__/        # Canonical contract output (ground truth)
 │   └── fixtures/
 │       ├── awx_job_success.json
 │       ├── awx_job_partial.json
-│       └── awx_job_failure.json
+│       ├── awx_job_failure.json
+│       ├── raw_awx_template.json  # Raw AWX API response fixture (template)
+│       ├── raw_awx_project.json   # Raw AWX API response fixture (project)
+│       └── raw_awx_inventory.json # Raw AWX API response fixture (inventory)
 └── scripts/
     └── generate-snapshots.py # Python script to regenerate snapshots
 ```

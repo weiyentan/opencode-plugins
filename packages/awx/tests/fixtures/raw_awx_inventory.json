@@ -1,0 +1,20 @@
+{
+  "id": 12,
+  "name": "Production Servers",
+  "description": "Production environment inventory with smart grouping",
+  "kind": "smart",
+  "host_count": 48,
+  "total_groups": 6,
+  "has_inventory_sources": true,
+  "total_inventory_sources": 2,
+  "variables": "---\nansible_user: deploy\nansible_python_interpreter: /usr/bin/python3",
+  "summary_fields": {
+    "organization": { "id": 1, "name": "Default", "description": "Default organization" },
+    "created_by": { "id": 1, "username": "admin" },
+    "user_capabilities": {
+      "edit": true,
+      "delete": true
+    },
+    "labels": { "results": [] }
+  }
+}
