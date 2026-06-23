@@ -10,7 +10,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
 import { AwxPlugin } from "../src/index.js";
 import * as clientModule from "../src/client.js";
-import { listTemplates, type ListTemplatesOutput } from "../src/list-templates.js";
+import * as listTemplatesModule from "../src/list-templates.js";
 import * as listProjectsModule from "../src/list-projects.js";
 
 /** Minimal mock of ToolContext for tool execute tests */
@@ -261,9 +261,15 @@ describe("AWX Plugin Index", () => {
         }),
       );
 
-      // Verify structured output
+      // Verify structured output with pipe-table format
+      const expectedTable = [
+        "| ID | Name | Description | SCM |",
+        "| --- | --- | --- | --- |",
+        "| 1 | alpha |  | git |",
+        "| 2 | beta |  | git |",
+      ].join("\n");
       expect(result).toEqual({
-        output: "Found 2 project(s).",
+        output: `Found 2 project(s).\n\n${expectedTable}`,
         metadata: {
           count: 2,
           results: expect.arrayContaining([
@@ -298,6 +304,68 @@ describe("AWX Plugin Index", () => {
       });
 
       listProjectsSpy.mockRestore();
+    });
+
+    it("passes filter arg through to listProjects", async () => {
+      const listProjectsSpy = vi.spyOn(listProjectsModule, "listProjects")
+        .mockResolvedValue({
+          count: 0,
+          results: [],
+        });
+
+      const input = mockPluginInput();
+      (input.client as any).getSecret = vi.fn().mockResolvedValue("my-test-token");
+
+      const hooks = await createHooks(input, {
+        baseUrl: "https://aap.example.com",
+      });
+
+      await hooks.tool!["awx-list-projects"]!.execute(
+        { filter: ["name__icontains=workspace"] },
+        mockToolContext(),
+      );
+
+      expect(listProjectsSpy).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          filters: ["name__icontains=workspace"],
+        }),
+      );
+
+      listProjectsSpy.mockRestore();
+    });
+
+    it("passes filter and timeout arg through to listTemplates", async () => {
+      const listTemplatesSpy = vi.spyOn(
+        listTemplatesModule,
+        "listTemplates",
+      ).mockResolvedValue({
+        count: 0,
+        results: [],
+      });
+
+      const input = mockPluginInput();
+      (input.client as any).getSecret = vi.fn().mockResolvedValue("my-test-token");
+
+      const hooks = await createHooks(input, {
+        baseUrl: "https://aap.example.com",
+      });
+
+      await hooks.tool!["awx-list-templates"]!.execute(
+        { filter: ["name__icontains=test"], timeout: 15_000 },
+        mockToolContext(),
+      );
+
+      expect(listTemplatesSpy).toHaveBeenCalledWith(
+        expect.any(Object),
+        15_000,
+        expect.objectContaining({
+          filters: ["name__icontains=test"],
+        }),
+        expect.any(AbortSignal),
+      );
+
+      listTemplatesSpy.mockRestore();
     });
   });
 
@@ -391,7 +459,7 @@ describe("AWX Plugin Index", () => {
         },
       ]);
 
-      const result = await listTemplates(client, 30_000, { maxPages: 1 });
+      const result = await listTemplatesModule.listTemplates(client, 30_000, { maxPages: 1 });
       expect(result.count).toBe(2);
       expect(result.results[0]!.name).toBe("A Template");
       expect(result.results[1]!.name).toBe("Z Template");
@@ -418,7 +486,7 @@ describe("AWX Plugin Index", () => {
         },
       ]);
 
-      const result = await listTemplates(client, 30_000, { maxPages: 5 });
+      const result = await listTemplatesModule.listTemplates(client, 30_000, { maxPages: 5 });
       expect(result.count).toBe(4);
       // Results should be sorted by name across all pages
       expect(result.results.map((r) => r.name)).toEqual([
@@ -446,7 +514,7 @@ describe("AWX Plugin Index", () => {
 
       const client = mockClient([makePage(0), makePage(1), makePage(2)]);
 
-      const result = await listTemplates(client, 30_000, { maxPages: 2 });
+      const result = await listTemplatesModule.listTemplates(client, 30_000, { maxPages: 2 });
       expect(result.count).toBe(4); // 2 pages × 2 items
       expect(result.warning).toContain("Page cap of 2 pages reached");
     });
@@ -470,7 +538,7 @@ describe("AWX Plugin Index", () => {
         },
       ]);
 
-      const result = await listTemplates(client, 30_000, { maxPages: 0 });
+      const result = await listTemplatesModule.listTemplates(client, 30_000, { maxPages: 0 });
       expect(result.count).toBe(3);
       expect(result.warning).toBeUndefined();
     });
@@ -484,7 +552,7 @@ describe("AWX Plugin Index", () => {
         },
       ]);
 
-      const result = await listTemplates(client, 30_000);
+      const result = await listTemplatesModule.listTemplates(client, 30_000);
       expect(result.count).toBe(1);
     });
 
@@ -499,8 +567,32 @@ describe("AWX Plugin Index", () => {
       };
 
       await expect(
-        listTemplates(errorClient, 30_000),
+        listTemplatesModule.listTemplates(errorClient, 30_000),
       ).rejects.toThrow("AWX API error: 404 Not Found");
+    });
+
+    it("includes filter params in the initial request URL", async () => {
+      const client = mockClient([
+        {
+          count: 1,
+          results: [{ id: 1, name: "Filtered", description: "" }],
+          next: null,
+        },
+      ]);
+
+      // We need to inspect the path passed to client.request
+      const requestSpy = vi.spyOn(client, "request");
+
+      await listTemplatesModule.listTemplates(client, 30_000, {
+        filters: ["name__icontains=workspace"],
+      });
+
+      expect(requestSpy).toHaveBeenCalledWith(
+        "awx-list-templates",
+        "/api/v2/job_templates/?page_size=50&name__icontains=workspace",
+        undefined,
+        expect.any(AbortSignal),
+      );
     });
   });
 

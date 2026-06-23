@@ -30,7 +30,7 @@ import { createAwxAuthHook, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
 import { createClient, createTimeoutSignal } from "./client.js";
 import type { AwxClient } from "./client.js";
-import { listTemplates } from "./list-templates.js";
+import { listTemplates, type TemplateResult } from "./list-templates.js";
 import { listProjects } from "./list-projects.js";
 import { launchJob } from "./launch.js";
 import { fetchJobStatus } from "./job-status.js";
@@ -57,6 +57,31 @@ function formatErrorResponse(projectId: number, status: number): string {
         `AWX API returned HTTP ${status}.`
       );
   }
+}
+
+/**
+ * Build a Markdown pipe-delimited table from an array of items.
+ * Pipe characters (`|`) in cell values are escaped to `\|`.
+ * The separator row uses `---` alignment (not left/right).
+ */
+function buildPipeTable<T>(
+  items: T[],
+  columns: Array<{ header: string; value: (item: T) => string }>,
+): string {
+  if (items.length === 0) {
+    const headerRow = "| " + columns.map((c) => c.header).join(" | ") + " |";
+    const sepRow = "| " + columns.map(() => "---").join(" | ") + " |";
+    return [headerRow, sepRow].join("\n");
+  }
+  const headerRow = "| " + columns.map((c) => c.header).join(" | ") + " |";
+  const sepRow = "| " + columns.map(() => "---").join(" | ") + " |";
+  const dataRows = items.map(
+    (item) =>
+      "| " +
+      columns.map((c) => String(c.value(item)).replace(/\|/g, "\\|")).join(" | ") +
+      " |",
+  );
+  return [headerRow, sepRow, ...dataRows].join("\n");
 }
 
 /**
@@ -335,7 +360,8 @@ async function server(input: PluginInput): Promise<Hooks> {
           "List AWX job templates with pagination. Fetches templates from",
           "/api/v2/job_templates/, consolidating across pages up to a",
           "configurable cap. Results sorted by name. Supports page size",
-          "override. Returns warning when page cap limits results.",
+          "override, server-side filtering, and configurable timeout.",
+          "Returns warning when page cap limits results.",
         ].join(" "),
         args: {
           pageSize: z
@@ -351,6 +377,17 @@ async function server(input: PluginInput): Promise<Hooks> {
             .min(0)
             .optional()
             .describe("Maximum pages to fetch (0 = no cap, default: 5)"),
+          filter: z
+            .array(z.string())
+            .optional()
+            .describe("Filter templates by field (e.g., --filter name__icontains=workspace)"),
+          timeout: z
+            .number()
+            .int()
+            .min(1_000)
+            .max(300_000)
+            .optional()
+            .describe("Total tool timeout in milliseconds (default: 30000)"),
         },
         async execute(args, context) {
           // Respect the abort signal
@@ -376,16 +413,24 @@ async function server(input: PluginInput): Promise<Hooks> {
           try {
             const result = await listTemplates(
               awxClient,
-              30_000,
+              args.timeout ?? 30_000,
               {
                 pageSize: args.pageSize,
                 maxPages: args.maxPages,
+                filters: args.filter,
               },
               context.abort,
             );
-            const output = `Found ${result.count} template(s).`;
+
+            const table = buildPipeTable(result.results, [
+              { header: "ID", value: (t: TemplateResult) => String(t.id) },
+              { header: "Name", value: (t: TemplateResult) => t.name },
+              { header: "Description", value: (t: TemplateResult) => t.description },
+            ]);
+
+            const output = `Found ${result.count} template(s).\n\n${table}`;
             return {
-              output: result.warning ? `${output} Warning: ${result.warning}` : output,
+              output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
               metadata: result as unknown as Record<string, unknown>,
             };
           } catch (err) {
@@ -419,7 +464,8 @@ async function server(input: PluginInput): Promise<Hooks> {
           "List AWX projects with pagination. Fetches projects from",
           "the AWX /api/v2/projects/ endpoint, consolidating results",
           "across multiple pages up to a configurable page cap.",
-          "Results are sorted alphabetically by name.",
+          "Results are sorted alphabetically by name. Supports",
+          "server-side filtering.",
         ].join(" "),
         args: {
           maxPages: z
@@ -442,6 +488,10 @@ async function server(input: PluginInput): Promise<Hooks> {
             .min(1_000)
             .optional()
             .describe("Total tool timeout in milliseconds (default: 30000)."),
+          filter: z
+            .array(z.string())
+            .optional()
+            .describe("Filter projects by field (e.g., --filter name__icontains=workspace)"),
         },
         async execute(args, context) {
           if (context.abort?.aborted) {
@@ -462,10 +512,19 @@ async function server(input: PluginInput): Promise<Hooks> {
               pageSize: args.pageSize,
               timeout: args.timeout,
               abortSignal: context.abort,
+              filters: args.filter,
             });
 
+            const table = buildPipeTable(result.results, [
+              { header: "ID", value: (p) => String(p.id) },
+              { header: "Name", value: (p) => p.name },
+              { header: "Description", value: (p) => p.description },
+              { header: "SCM", value: (p) => p.scm_type },
+            ]);
+
+            const output = `Found ${result.count} project(s).\n\n${table}`;
             return {
-              output: `Found ${result.count} project(s).`,
+              output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
               metadata: result as unknown as Record<string, unknown>,
             };
           } catch (err: unknown) {
