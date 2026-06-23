@@ -8,8 +8,21 @@
  * Follows TDD: one behavior at a time, minimal implementation per test.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
 import { AwxPlugin } from "../src/index.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/** Load the raw AWX inventory API fixture */
+function loadRawInventoryFixture(): Record<string, unknown> {
+  const path = resolve(__dirname, "fixtures", "raw_awx_inventory.json");
+  const raw = readFileSync(path, "utf-8");
+  return JSON.parse(raw) as Record<string, unknown>;
+}
 
 // ─── Test Helpers ─────────────────────────────────────────────
 
@@ -207,5 +220,52 @@ describe("awx-get-resource tool", () => {
     expect(out).toContain("PAT");
 
     await localHooks.dispose?.();
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 6: Successful inventory detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns inventory details in the standard envelope", async () => {
+    const raw = loadRawInventoryFixture();
+    mockFetchResponse(raw);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "inventory", id: 12 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("inventory");
+    expect(metadata.id).toBe(12);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Production Servers");
+    expect((metadata.data as Record<string, unknown>).kind).toBe("smart");
+    expect((metadata.data as Record<string, unknown>).organization_name).toBe("Default");
+    expect((metadata.data as Record<string, unknown>).host_count).toBe(48);
+    expect((metadata.data as Record<string, unknown>).total_inventory_sources).toBe(2);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 7: Graceful error for unknown inventory ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown inventory ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "inventory", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
   });
 });

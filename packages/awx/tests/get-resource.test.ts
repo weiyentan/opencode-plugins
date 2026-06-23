@@ -2,14 +2,28 @@
  * GetResource Orchestrator Tests
  *
  * Tests for the getResource() function: registry dispatch, error propagation,
- * and end-to-end template resource fetching.
+ * and end-to-end template and inventory resource fetching.
  *
  * Follows TDD: one behavior at a time, minimal implementation per test.
  */
 import { describe, it, expect, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { getResource } from "../src/get-resource.js";
 import type { AwxClient } from "../src/client.js";
 import type { TemplateDetailOutput } from "../src/contracts/template-detail.js";
+import type { InventoryDetailOutput } from "../src/contracts/inventory-detail.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/** Load the raw AWX inventory API fixture */
+function loadRawInventoryFixture(): Record<string, unknown> {
+  const path = resolve(__dirname, "fixtures", "raw_awx_inventory.json");
+  const raw = readFileSync(path, "utf-8");
+  return JSON.parse(raw) as Record<string, unknown>;
+}
 
 // ─── Test Helpers ─────────────────────────────────────────────
 
@@ -96,7 +110,7 @@ describe("getResource()", () => {
     const client = mockClientWithResponse({});
     await expect(getResource(client, "job" as any, 1))
       .rejects.toThrow(/unsupported/i);
-    await expect(getResource(client, "inventory" as any, 1))
+    await expect(getResource(client, "project" as any, 1))
       .rejects.toThrow(/unsupported/i);
   });
 
@@ -140,6 +154,42 @@ describe("getResource()", () => {
     expect(client.request).toHaveBeenCalledWith(
       "awx-get-resource",
       "/api/v2/job_templates/7/",
+      undefined,
+      undefined,
+    );
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 6: Successful inventory resource fetch
+     ══════════════════════════════════════════════════════════════ */
+
+  it("fetches and maps an inventory resource via the registry", async () => {
+    const raw = loadRawInventoryFixture();
+    const client = mockClientWithResponse(raw);
+
+    const result = (await getResource(client, "inventory", 12)) as InventoryDetailOutput;
+
+    expect(result.schema_version).toBe("1.0");
+    expect(result.resource_type).toBe("inventory");
+    expect(result.id).toBe(12);
+    expect(result.data.name).toBe("Production Servers");
+    expect(result.data.kind).toBe("smart");
+    expect(result.data.organization_name).toBe("Default");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 7: Inventory registry endpoint mapping
+     ══════════════════════════════════════════════════════════════ */
+
+  it("calls the correct API endpoint for the inventory resource", async () => {
+    const raw = loadRawInventoryFixture();
+    const client = mockClientWithResponse(raw);
+
+    await getResource(client, "inventory", 12);
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-get-resource",
+      "/api/v2/inventories/12/",
       undefined,
       undefined,
     );
