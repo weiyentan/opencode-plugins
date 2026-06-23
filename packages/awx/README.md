@@ -23,6 +23,21 @@ The AWX plugin delivers these modules:
 
 Tool implementation (Phase 2) is complete — all 8 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
+### Tool Output Formats
+
+| Tool | Output Format | Filter Support |
+|------|--------------|----------------|
+| `awx-list-templates` | Pipe-delimited Markdown table (ID / Name / Description) | `--filter` (e.g., `name__icontains=workspace`) |
+| `awx-list-projects` | Pipe-delimited Markdown table (ID / Name / Description / SCM) | `--filter` (e.g., `name__icontains=workspace`) |
+| `awx-sync-project` | Plain text message + structured metadata | — |
+| `awx-launch-job` | Plain text message + structured metadata | — |
+| `awx-job-status` | Plain text message + `JobDetailOutput` v1.0 metadata | — |
+| `awx-wait-job` | Plain text message + `JobDetailOutput` v1.0 metadata | — |
+| `awx-get-job-events` | Plain text message + structured metadata | — |
+| `awx-debug-env` | JSON string | — |
+
+Both `awx-list-templates` and `awx-list-projects` accept `--timeout` (total tool timeout in ms, default 30000).
+
 ## Prerequisites
 
 - **Node.js** >= 18.0.0 (Node 18 compatibility is handled transparently — the client middleware includes `anyAbortSignal()` and `createTimeoutSignal()` fallbacks)
@@ -79,11 +94,20 @@ The suite `tests/integration/job-lifecycle.test.ts` covers the full AWX job life
 - `awx-wait-job` → non-blocking status check (no polling)
 - `awx-get-job-events` → retrieves job events
 
-#### Prerequisites
+#### Environment Variables
+
+The plugin reads configuration from these environment variables:
 
 | Env Var | Default | Required | Description |
 |---------|---------|----------|-------------|
-| `AWX_TOKEN` | — | **Yes** | Valid AAP Personal Access Token (PAT) |
+| `AWX_BASE_URL` | — | **Yes** | Base URL of the AAP/AWX instance (e.g. `https://example.com`) |
+| `AWX_PAT` | — | No | Personal Access Token fallback (primary: auth hook / `getSecret`). Used when no token is stored in the auth hook. |
+
+#### Test Prerequisites
+
+| Env Var | Default | Required | Description |
+|---------|---------|----------|-------------|
+| `AWX_TOKEN` | — | **Yes** | Valid AAP Personal Access Token (PAT) for integration tests |
 | `AAP_BASE_URL` | `https://example.com` | No | Base URL of the AAP instance |
 | `JOB_TEMPLATE_ID` | `10` | No | Non-production AWX job template ID to launch |
 | `EXTRA_VARS_INVENTORY` | `"test"` | No | Inventory name for extra_vars |
