@@ -59,6 +59,66 @@ npm install
 
 This package is consumed by the OpenCode plugin server as a dependency — no standalone runtime is needed.
 
+## Connecting to AWX
+
+Before using the AWX tools, the plugin needs to know where your AWX instance is and how to authenticate.
+
+### 1. Set the instance URL
+
+The plugin reads `AWX_BASE_URL` from the environment. Set it to the base URL of your AWX or Ansible Automation Platform instance:
+
+```bash
+# Linux/macOS
+export AWX_BASE_URL="https://awx.example.com"
+
+# Windows PowerShell
+$env:AWX_BASE_URL = "https://awx.example.com"
+```
+
+This variable is **required** — the plugin will fail to load without it.
+
+### 2. Authenticate
+
+The plugin needs a Personal Access Token (PAT) to call the AWX API. Generate one in AWX:
+
+1. Go to your **user profile** → **Tokens** → **Add token**
+2. Set the scope (Write scope is needed for launch/update operations; Read scope is sufficient for listing and status checks)
+3. Copy the generated token
+
+There are two ways to provide the token:
+
+**Option A — Auth hook (recommended):** Launch OpenCode and the plugin will prompt you to enter your PAT on first use. The token is stored securely by OpenCode's auth system.
+
+**Option B — Environment variable:** Set `AWX_PAT` in your environment:
+
+```bash
+# Linux/macOS
+export AWX_PAT="your-personal-access-token-here"
+
+# Windows PowerShell
+$env:AWX_PAT = "your-personal-access-token-here"
+```
+
+The plugin checks the auth hook first, then falls back to `AWX_PAT` if no token is stored.
+
+### 3. Verify the connection
+
+Once OpenCode is running, call the `awx-debug-env` tool to confirm the plugin is connected:
+
+```
+awx-debug-env
+```
+
+It will report whether `AWX_BASE_URL` is set and what its value is. You can also call `hello` from the plugin to confirm it loaded correctly.
+
+To test a live API call:
+
+```
+awx-list-projects
+```
+
+This lists all AWX projects your token has access to. If you see project data, the connection is working.
+
 ## Scripts
 
 | Command | Description |
