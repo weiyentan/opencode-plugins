@@ -10,7 +10,7 @@ An OpenCode plugin for [AWX](https://github.com/ansible/awx) / Ansible Automatio
 
 **Status:** ✅ Phase 0 (scaffolding) and Phase 1 (client infrastructure) complete — scaffolding, auth hook, output contract, transforms, client middleware pipeline, and metrics module are implemented. Ready for Phase 2 tool implementation.
 
-**Coverage:** 7 of 22 AWX operations planned for v1 (30%), covering the 80% use case. Full tool-action mapping table documented in the PRD.
+**Coverage:** 8 of 22 AWX operations planned for v1 (36%), covering the 80% use case. Full tool-action mapping table documented in the PRD.
 
 **Key docs:**
 - [Refined PRD](docs/prd/plugin-awx-refined.md) — full product requirements
@@ -32,7 +32,7 @@ docs/
 │   └── plugin-awx-refined.md  # Refined PRD
 └── client-middleware-design.md  # Middleware pipeline design
 packages/
-└── awx/                    # AWX plugin package (auth, contracts, transforms, hello-world + listTemplates tools)
+└── awx/                    # AWX plugin package (auth, contracts, transforms, job lifecycle, resource detail tools)
 ```
 
 ## Development
@@ -49,7 +49,7 @@ The AWX plugin package (`packages/awx/`) is already scaffolded with these module
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers hello-world + listTemplates tools; wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools (list-templates, list-projects, launch-job, job-status, wait-job, get-job-events, sync-project, get-resource, debug-env); wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook |
 | **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | SSH→HTTPS URL conversion, git branch inference, required-var validation |
