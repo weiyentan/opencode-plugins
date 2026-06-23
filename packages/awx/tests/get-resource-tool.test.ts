@@ -179,6 +179,15 @@ describe("awx-get-resource tool", () => {
     expect((metadata.data as Record<string, unknown>).inventory_name).toBe("Production");
     expect((metadata.data as Record<string, unknown>).project_name).toBe("Web Stack Deploy");
     expect((metadata.data as Record<string, unknown>).labels).toEqual(["production", "web", "deploy"]);
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("Template 7: Deploy Web Stack — Production");
+    expect(output).toContain("Job Type:  run");
+    expect(output).toContain("Playbook:  deploy-web-stack.yml");
+    expect(output).toContain("Status:    successful");
+    expect(output).toContain("Inventory: Production");
+    expect(output).toContain("Project:   Web Stack Deploy");
+    expect(output).toContain("Last Run:  2025-06-15T14:32:00Z");
   });
 
   /* ══════════════════════════════════════════════════════════════
@@ -262,6 +271,15 @@ describe("awx-get-resource tool", () => {
     expect((metadata.data as Record<string, unknown>).organization_name).toBe("Default");
     expect((metadata.data as Record<string, unknown>).created_by).toBe("admin");
     expect((metadata.data as Record<string, unknown>).is_successful).toBe(true);
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("Project 5: Web Stack Deploy");
+    expect(output).toContain("SCM Type: git");
+    expect(output).toContain("SCM URL:  https://github.com/example/web-stack-deploy.git");
+    expect(output).toContain("Branch:   main");
+    expect(output).toContain("Status:   successful");
+    expect(output).toContain("Org:      Default");
+    expect(output).toContain("Updated:  2025-06-20T10:15:00Z");
   });
 
   /* ══════════════════════════════════════════════════════════════
@@ -287,6 +305,13 @@ describe("awx-get-resource tool", () => {
     expect((metadata.data as Record<string, unknown>).organization_name).toBe("Default");
     expect((metadata.data as Record<string, unknown>).host_count).toBe(48);
     expect((metadata.data as Record<string, unknown>).total_inventory_sources).toBe(2);
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("Inventory 12: Production Servers");
+    expect(output).toContain("Kind:       smart");
+    expect(output).toContain("Host Count: 48");
+    expect(output).toContain("Groups:     6");
+    expect(output).toContain("Org:        Default");
   });
 
   /* ══════════════════════════════════════════════════════════════

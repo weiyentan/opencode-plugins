@@ -35,6 +35,7 @@ import { listProjects } from "./list-projects.js";
 import { launchJob } from "./launch.js";
 import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
+import type { ResourceDetailOutput } from "./get-resource.js";
 
 /**
  * Format a user-facing error message for HTTP error responses.
@@ -83,6 +84,49 @@ function buildPipeTable<T>(
       " |",
   );
   return [headerRow, sepRow, ...dataRows].join("\n");
+}
+
+/**
+ * Format a structured resource detail into a human-readable multi-line string.
+ * Dispatches on resource type to show the most relevant fields for each kind.
+ */
+function formatResourceOutput(result: ResourceDetailOutput): string {
+  switch (result.resource_type) {
+    case "project": {
+      const d = result.data;
+      return [
+        `Project ${d.id}: ${d.name}`,
+        `  SCM Type: ${d.scm_type}`,
+        `  SCM URL:  ${d.scm_url}`,
+        `  Branch:   ${d.scm_branch || "(none)"}`,
+        `  Status:   ${d.status}`,
+        `  Org:      ${d.organization_name}`,
+        `  Updated:  ${d.last_updated ?? "(never)"}`,
+      ].join("\n");
+    }
+    case "template": {
+      const d = result.data;
+      return [
+        `Template ${d.id}: ${d.name}`,
+        `  Job Type:  ${d.job_type}`,
+        `  Playbook:  ${d.playbook}`,
+        `  Status:    ${d.status}`,
+        `  Inventory: ${d.inventory_name}`,
+        `  Project:   ${d.project_name}`,
+        `  Last Run:  ${d.last_job_run ?? "(never)"}`,
+      ].join("\n");
+    }
+    case "inventory": {
+      const d = result.data;
+      return [
+        `Inventory ${d.id}: ${d.name}`,
+        `  Kind:       ${d.kind || "(normal)"}`,
+        `  Host Count: ${d.host_count}`,
+        `  Groups:     ${d.total_groups}`,
+        `  Org:        ${d.organization_name}`,
+      ].join("\n");
+    }
+  }
 }
 
 /**
@@ -968,10 +1012,8 @@ async function server(input: PluginInput): Promise<Hooks> {
               context.abort,
             );
 
-            const label = args.type.charAt(0).toUpperCase() + args.type.slice(1);
-            const name = (result as any).data?.name || `ID ${args.id}`;
             return {
-              output: `${label} ${args.id}: ${name}`,
+              output: formatResourceOutput(result),
               metadata: result,
             };
           } catch (err: unknown) {

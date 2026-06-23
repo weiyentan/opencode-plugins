@@ -188,9 +188,9 @@ Hot-reload verification is performed structurally (the `tsc --noEmit` / `vitest 
 
 The `package.json` `main`, `types`, and `exports` fields point to the compiled `dist/` output. This is the production-safe configuration — consumers import the compiled JavaScript with type declarations.
 
-#### Local Development (`.opencode/plugins/`)
+#### Local Development (`opencode-plugin-dev/plugins/`)
 
-For local testing without publishing, a re-export wrapper is set up at `.opencode/plugins/awx-plugin.js` which re-exports `AwxPlugin` from the compiled `dist/` output. OpenCode automatically discovers plugins in this directory at startup, making it **the recommended local development approach** — you test exactly the compiled output that would ship, without modifying `package.json`.
+For local testing without publishing, a re-export wrapper is set up at `opencode-plugin-dev/plugins/awx-plugin.js` which re-exports `AwxPlugin` from the compiled `dist/` output. The directory is named without a leading dot to prevent OpenCode from auto-discovering it at startup, keeping development artifacts isolated from the live plugin system.
 
 After making changes:
 
@@ -200,7 +200,7 @@ npm run build          # Recompile to dist/
 # Restart OpenCode server to pick up the new build
 ```
 
-Build outputs are gitignored (`.opencode/plugins/` is in `.gitignore`), so the wrapper is local-only and never committed.
+Build outputs are gitignored (`opencode-plugin-dev/` is in `.gitignore`), so the wrapper is local-only and never committed.
 
 ## CI Requirements
 

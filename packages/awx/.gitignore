@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+packages/awx/node_modules/
 
 # Build output
 dist/
