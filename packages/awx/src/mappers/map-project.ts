@@ -54,6 +54,9 @@ interface RawAwxProject {
  * @returns    A ProjectDetailOutput matching the v1.0 contract
  */
 export function mapProject(raw: unknown): ProjectDetailOutput {
+  if (!raw || typeof raw !== "object" || !("id" in (raw as Record<string, unknown>)) || (raw as Record<string, unknown>).id == null) {
+    throw new Error(`mapProject: raw response is missing or has no id — ${JSON.stringify(raw)}`);
+  }
   const p = raw as RawAwxProject;
   const sf = p.summary_fields ?? {};
 

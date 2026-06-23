@@ -51,6 +51,9 @@ interface RawAwxInventory {
  * @returns    An InventoryDetailOutput matching the v1.0 contract
  */
 export function mapInventory(raw: unknown): InventoryDetailOutput {
+  if (!raw || typeof raw !== "object" || !("id" in (raw as Record<string, unknown>)) || (raw as Record<string, unknown>).id == null) {
+    throw new Error(`mapInventory: raw response is missing or has no id — ${JSON.stringify(raw)}`);
+  }
   const inv = raw as RawAwxInventory;
   const sf = inv.summary_fields ?? {};
 

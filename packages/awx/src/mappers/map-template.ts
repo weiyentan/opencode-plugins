@@ -59,6 +59,9 @@ interface RawAwxTemplate {
  * @returns    A TemplateDetailOutput matching the v1.0 contract
  */
 export function mapTemplate(raw: unknown): TemplateDetailOutput {
+  if (!raw || typeof raw !== "object" || !("id" in (raw as Record<string, unknown>)) || (raw as Record<string, unknown>).id == null) {
+    throw new Error(`mapTemplate: raw response is missing or has no id — ${JSON.stringify(raw)}`);
+  }
   const t = raw as RawAwxTemplate;
   const sf = t.summary_fields ?? {};
 
