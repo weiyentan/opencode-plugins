@@ -84,8 +84,8 @@ describe("AWX Plugin — Lazy Client/Auth Lifecycle", () => {
       // ── Step 2: Without a token, awxListTemplates reports "not available" ──
       const resultNoToken = await awxListTemplates.execute({}, mockToolContext());
       const outNoToken = (resultNoToken as { output: string }).output;
-      expect(outNoToken).toContain("not available");
-      expect(outNoToken).toContain("AWX client");
+      expect(outNoToken).toContain("PAT");
+      expect(outNoToken).toContain("not configured");
 
       // ── Step 3: Token becomes available (no plugin reload) ──────────
       getSecretMock.mockResolvedValue("my-pat-token");

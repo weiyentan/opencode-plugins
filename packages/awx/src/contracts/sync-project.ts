@@ -2,9 +2,6 @@
  * Sync Project Output Contract
  *
  * Canonical schema for the `awx-sync-project` tool's return value.
- * Defines both:
- * - Zod schema for runtime validation
- * - Inferred TypeScript types for static type checking
  *
  * ## Schema Fields
  *
@@ -16,21 +13,14 @@
  * - **scm_type**: SCM type (e.g., "git", "svn")
  * - **last_updated**: Timestamp of last project update
  */
-import { z } from "zod";
-
-// ─── Top-level schema ──────────────────────────────────────
-
-export const ProjectSyncOutputSchema = z.object({
-  project_update_id: z.number().int().positive(),
-  status: z.string(),
-  project_name: z.string(),
-  project_id: z.number().int().positive(),
-  url: z.string(),
-  scm_type: z.string(),
-  last_updated: z.string(),
-});
-
-// ─── Inferred TypeScript types ─────────────────────────────
 
 /** Structured output returned by the awx-sync-project tool */
-export type ProjectSyncOutput = z.infer<typeof ProjectSyncOutputSchema>;
+export interface ProjectSyncOutput {
+  project_update_id: number;
+  status: string;
+  project_name: string;
+  project_id: number;
+  url: string;
+  scm_type: string;
+  last_updated: string;
+}

@@ -74,6 +74,8 @@ async function createHooks(
 ): Promise<Hooks> {
   if (options?.baseUrl) {
     vi.stubEnv("AWX_BASE_URL", options.baseUrl);
+  } else {
+    vi.stubEnv("AWX_BASE_URL", undefined);
   }
   return AwxPlugin(input);
 }
@@ -182,7 +184,7 @@ describe("awx-wait-job tool", () => {
         mockToolContext(),
       );
 
-      expect((result as { output: string }).output).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("AWX_BASE_URL");
     });
 
     it("returns error message when no token stored", async () => {
@@ -195,7 +197,7 @@ describe("awx-wait-job tool", () => {
         mockToolContext(),
       );
 
-      expect((result as { output: string }).output).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("PAT");
     });
   });
 

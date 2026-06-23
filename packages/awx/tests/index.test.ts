@@ -59,6 +59,8 @@ async function createHooks(
 ): Promise<Hooks> {
   if (options?.baseUrl) {
     vi.stubEnv("AWX_BASE_URL", options.baseUrl);
+  } else {
+    vi.stubEnv("AWX_BASE_URL", undefined);
   }
   return AwxPlugin(input);
 }
@@ -102,6 +104,14 @@ describe("AWX Plugin Index", () => {
       expect(hooks.tool!["awx-launch-job"]).toBeDefined();
       expect(typeof hooks.tool!["awx-launch-job"]!.description).toBe("string");
     });
+
+    it('hooks.tool contains "awx-debug-env" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-debug-env"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-debug-env"]!.description).toBe("string");
+      expect(hooks.tool!["awx-debug-env"]!.args).toBeDefined();
+    });
   });
 
   /* ══════════════════════════════════════════════════════════════════
@@ -137,7 +147,7 @@ describe("AWX Plugin Index", () => {
         mockToolContext(),
       );
 
-      expect((result as { output: string }).output).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("AWX_BASE_URL");
     });
 
     it("returns error message when no token stored (getSecret returns null)", async () => {
@@ -152,7 +162,7 @@ describe("AWX Plugin Index", () => {
         mockToolContext(),
       );
 
-      expect((result as { output: string }).output).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("PAT");
     });
 
     it("returns structured output when token and baseUrl are set", async () => {
@@ -199,7 +209,7 @@ describe("AWX Plugin Index", () => {
         mockToolContext(),
       );
 
-      expect((result as { output: string }).output).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("AWX_BASE_URL");
     });
 
     it("returns error message when no token stored", async () => {
@@ -213,7 +223,7 @@ describe("AWX Plugin Index", () => {
         mockToolContext(),
       );
 
-      expect((result as { output: string }).output).toContain("AWX client not available");
+      expect((result as { output: string }).output).toContain("PAT");
     });
 
     it("calls listProjects and returns structured result when client is available", async () => {

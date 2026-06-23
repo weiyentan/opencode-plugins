@@ -24,7 +24,8 @@
  */
 import { tool } from "@opencode-ai/plugin";
 import type { PluginInput, Hooks, Plugin } from "@opencode-ai/plugin";
-import { z } from "zod";
+
+const z = tool.schema;
 import { createAwxAuthHook, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
 import { createClient, createTimeoutSignal } from "./client.js";
@@ -115,11 +116,11 @@ async function server(input: PluginInput): Promise<Hooks> {
   let cachedClient: AwxClient | undefined;
   let cachedToken: string | undefined;
 
-  async function getAwxClient(): Promise<AwxClient | undefined> {
-    if (!baseUrl) return undefined;
+  async function getAwxClient(): Promise<AwxClient> {
+    if (!baseUrl) throw new Error("AWX_BASE_URL not configured. Set the AWX_BASE_URL environment variable to point to your AAP/AWX instance.");
 
-    const token = await input.client.getSecret?.("awx");
-    if (!token) return undefined;
+    const token = await input.client.getSecret?.("awx") ?? process.env.AWX_PAT;
+    if (!token) throw new Error("AWX Personal Access Token (PAT) not configured. Store your PAT via the plugin auth prompt.");
 
     const tokenString = String(token);
 
@@ -137,7 +138,7 @@ async function server(input: PluginInput): Promise<Hooks> {
   // If no baseUrl is configured, skip — the user will configure it later.
   if (baseUrl) {
     try {
-      const storedKey = await input.client.getSecret?.("awx");
+      const storedKey = await input.client.getSecret?.("awx") ?? process.env.AWX_PAT;
       if (storedKey) {
         const { signal, clear } = createTimeoutSignal(10_000);
 
@@ -246,14 +247,12 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
-            return {
-              output:
-                "[awx-sync-project] AWX client not available. " +
-                "Set AWX_BASE_URL and store your " +
-                "Personal Access Token via the plugin auth prompt.",
-            };
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
           }
 
           const toolName = "awx-sync-project";
@@ -359,20 +358,17 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
             return {
-              output:
-                "AWX client not available. Set AWX_BASE_URL " +
-                "and store your Personal Access Token " +
-                "via the plugin auth prompt.",
+              output: message,
               metadata: {
                 count: 0,
                 results: [],
-                warning:
-                  "AWX client not available. Set AWX_BASE_URL " +
-                  "and store your Personal Access Token " +
-                  "via the plugin auth prompt.",
+                warning: message,
               },
             };
           }
@@ -452,14 +448,12 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
-            return {
-              output:
-                "[stub] list-projects: AWX client not available. " +
-                "Set AWX_BASE_URL and store your " +
-                "Personal Access Token via the plugin auth prompt.",
-            };
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
           }
 
           try {
@@ -527,22 +521,18 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
             return {
-              output:
-                "AWX client not available. Set AWX_BASE_URL" +
-                " and store your Personal Access Token" +
-                " via the plugin auth prompt.",
+              output: message,
               metadata: {
                 jobId: 0,
                 jobStatus: "failed",
                 warnings: [],
-                errors: [
-                  "AWX client not available. Set AWX_BASE_URL" +
-                  " and store your Personal Access Token" +
-                  " via the plugin auth prompt.",
-                ],
+                errors: [message],
               },
             };
           }
@@ -613,14 +603,12 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
-            return {
-              output:
-                "awx-job-status: AWX client not available. " +
-                "Set AWX_BASE_URL and store your " +
-                "Personal Access Token via the plugin auth prompt.",
-            };
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
           }
 
           try {
@@ -690,14 +678,12 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
-            return {
-              output:
-                "awx-wait-job: AWX client not available. " +
-                "Set AWX_BASE_URL and store your " +
-                "Personal Access Token via the plugin auth prompt.",
-            };
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
           }
 
           try {
@@ -764,21 +750,18 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
             return {
-              output:
-                "AWX client not available. Set AWX_BASE_URL " +
-                "and store your Personal Access Token " +
-                "via the plugin auth prompt.",
+              output: message,
               metadata: {
                 count: 0,
                 results: [],
                 next_page: null,
-                error:
-                  "AWX client not available. Set AWX_BASE_URL " +
-                  "and store your Personal Access Token " +
-                  "via the plugin auth prompt.",
+                error: message,
               },
             };
           }
@@ -854,6 +837,27 @@ async function server(input: PluginInput): Promise<Hooks> {
               },
             };
           }
+        },
+      }),
+
+      /**
+       * Debug tool that returns current AWX environment configuration.
+       *
+       * Reports whether AWX_BASE_URL is set and what its value is.
+       * Useful for diagnosing configuration issues without making
+       * any API calls.
+       */
+      "awx-debug-env": tool({
+        description: "Debug tool that returns current AWX environment configuration.",
+        args: {},
+        async execute(_args, context) {
+          if (context.abort?.aborted) return { output: "Request was aborted." };
+          return {
+            output: JSON.stringify({
+              AWX_BASE_URL: process.env.AWX_BASE_URL ?? null,
+              hasAwxBaseUrl: Boolean(process.env.AWX_BASE_URL),
+            }),
+          };
         },
       }),
     },
