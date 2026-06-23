@@ -34,6 +34,7 @@ import { listTemplates, type TemplateResult } from "./list-templates.js";
 import { listProjects } from "./list-projects.js";
 import { launchJob } from "./launch.js";
 import { fetchJobStatus } from "./job-status.js";
+import { getResource } from "./get-resource.js";
 
 /**
  * Format a user-facing error message for HTTP error responses.
@@ -894,6 +895,83 @@ async function server(input: PluginInput): Promise<Hooks> {
                 next_page: null,
                 error: message,
               },
+            };
+          }
+        },
+      }),
+
+      /**
+       * Get individual resource detail from AWX.
+       *
+       * Generalized resource detail getter with type→endpoint dispatch.
+       * Currently supports "template" resource type. Fetches the resource
+       * from the AWX API and returns structured output in a standard
+       * envelope: { schema_version, resource_type, id, data }.
+       *
+       * For templates: returns name, description, job_type, resolved
+       * inventory/project/organization names, playbook, verbosity,
+       * boolean launch flags, last_job_run, status, next_schedule,
+       * and labels.
+       */
+      "awx-get-resource": tool({
+        description: [
+          "Get individual resource detail from AWX.",
+          "Generalized resource detail getter with type→endpoint dispatch.",
+          "Supports 'template' resource type. Returns structured output",
+          "in a standard envelope: { schema_version, resource_type, id, data }.",
+          "For templates: name, description, job_type, resolved names,",
+          "playbook, verbosity, launch flags, last_job_run, status,",
+          "next_schedule, and labels.",
+        ].join(" "),
+        args: {
+          type: z
+            .enum(["template"])
+            .describe("Resource type to fetch. Currently supports: template"),
+          id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the resource to fetch."),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            const result = await getResource(
+              awxClient,
+              args.type,
+              args.id,
+              context.abort,
+            );
+
+            return {
+              output: JSON.stringify({
+                schema_version: result.schema_version,
+                resource_type: result.resource_type,
+                id: result.id,
+                data: result.data,
+              }),
+              metadata: result as unknown as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
+            const message =
+              err instanceof Error ? err.message : String(err);
+            return {
+              output: `awx-get-resource error: ${message}`,
             };
           }
         },
