@@ -904,14 +904,20 @@ async function server(input: PluginInput): Promise<Hooks> {
        * Get individual resource detail from AWX.
        *
        * Generalized resource detail getter with type→endpoint dispatch.
-       * Currently supports "template" resource type. Fetches the resource
-       * from the AWX API and returns structured output in a standard
-       * envelope: { schema_version, resource_type, id, data }.
+       * Supports "template", "project", and "inventory" resource types.
+       * Fetches the resource from the AWX API and returns structured
+       * output in a standard envelope: { schema_version, resource_type, id, data }.
        *
        * For templates: returns name, description, job_type, resolved
        * inventory/project/organization names, playbook, verbosity,
        * boolean launch flags, last_job_run, status, next_schedule,
        * and labels.
+       * For projects: returns id, name, scm_type, scm_url, scm_branch,
+       * status, last_updated, organization_name, created_by, derived
+       * success/failure flags.
+       * For inventories: returns id, name, description, kind, host_count,
+       * total_groups, has_inventory_sources, total_inventory_sources,
+       * organization_name, and variables.
        */
       "awx-get-resource": tool({
         description: [
@@ -962,14 +968,11 @@ async function server(input: PluginInput): Promise<Hooks> {
               context.abort,
             );
 
+            const label = args.type.charAt(0).toUpperCase() + args.type.slice(1);
+            const name = (result as any).data?.name || `ID ${args.id}`;
             return {
-              output: JSON.stringify({
-                schema_version: result.schema_version,
-                resource_type: result.resource_type,
-                id: result.id,
-                data: result.data,
-              }),
-              metadata: result as unknown as Record<string, unknown>,
+              output: `${label} ${args.id}: ${name}`,
+              metadata: result,
             };
           } catch (err: unknown) {
             if (err instanceof DOMException && err.name === "AbortError") {

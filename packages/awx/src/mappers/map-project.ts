@@ -60,7 +60,7 @@ export function mapProject(raw: unknown): ProjectDetailOutput {
   const status = p.status ?? "";
 
   const data: ProjectData = {
-    id: p.id,
+    id: p.id ?? 0,
     name: p.name ?? "",
     description: p.description ?? "",
     scm_type: p.scm_type ?? "",
@@ -81,7 +81,7 @@ export function mapProject(raw: unknown): ProjectDetailOutput {
   return {
     schema_version: "1.0",
     resource_type: "project",
-    id: p.id,
+    id: p.id ?? 0,
     data,
   };
 }

@@ -55,7 +55,7 @@ export function mapInventory(raw: unknown): InventoryDetailOutput {
   const sf = inv.summary_fields ?? {};
 
   const data: InventoryData = {
-    id: inv.id,
+    id: inv.id ?? 0,
     name: inv.name ?? "",
     description: inv.description ?? "",
     kind: inv.kind ?? "",
@@ -70,7 +70,7 @@ export function mapInventory(raw: unknown): InventoryDetailOutput {
   return {
     schema_version: "1.0",
     resource_type: "inventory",
-    id: inv.id,
+    id: inv.id ?? 0,
     data,
   };
 }

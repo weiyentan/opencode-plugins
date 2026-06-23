@@ -63,7 +63,7 @@ export function mapTemplate(raw: unknown): TemplateDetailOutput {
   const sf = t.summary_fields ?? {};
 
   const data: TemplateData = {
-    id: t.id,
+    id: t.id ?? 0,
     name: t.name ?? "",
     description: t.description ?? "",
     job_type: t.job_type ?? "",
@@ -88,7 +88,7 @@ export function mapTemplate(raw: unknown): TemplateDetailOutput {
   return {
     schema_version: "1.0",
     resource_type: "template",
-    id: t.id,
+    id: t.id ?? 0,
     data,
   };
 }

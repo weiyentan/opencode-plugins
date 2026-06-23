@@ -35,7 +35,7 @@ Tool implementation (Phase 2) is complete — all 9 AWX tools are implemented an
 | `awx-wait-job` | Plain text message + `JobDetailOutput` v1.0 metadata | — |
 | `awx-get-job-events` | Plain text message + structured metadata | — |
 | `awx-debug-env` | JSON string | — |
-| `awx-get-resource` | JSON object with `{ schema_version, resource_type, id, data }` envelope | `type` (template\|project\|inventory) + `id` |
+| `awx-get-resource` | JSON string + metadata with `{ schema_version, resource_type, id, data }` envelope | `type` (template\|project\|inventory) + `id` |
 
 Both `awx-list-templates` and `awx-list-projects` accept `--timeout` (total tool timeout in ms, default 30000).
 
