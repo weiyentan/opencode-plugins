@@ -14,6 +14,8 @@ import { AwxPlugin } from "../src/index.js";
 // ─── Test Helpers ─────────────────────────────────────────────
 
 const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
+
+
   id: 7,
   name: "Deploy Web Stack — Production",
   description: "Deploy the web application stack to production servers",
@@ -40,6 +42,23 @@ const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
         { id: 3, name: "deploy" },
       ],
     },
+  },
+};
+
+const MOCK_RAW_PROJECT: Record<string, unknown> = {
+  id: 5,
+  name: "Web Stack Deploy",
+  description: "Ansible playbooks for deploying the web application stack",
+  scm_type: "git",
+  scm_url: "https://github.com/example/web-stack-deploy.git",
+  scm_branch: "main",
+  status: "successful",
+  last_updated: "2025-06-20T10:15:00Z",
+  created: "2025-01-10T08:00:00Z",
+  modified: "2025-06-20T10:15:00Z",
+  summary_fields: {
+    organization: { id: 1, name: "Default" },
+    created_by: { id: 1, username: "admin" },
   },
 };
 
@@ -207,5 +226,65 @@ describe("awx-get-resource tool", () => {
     expect(out).toContain("PAT");
 
     await localHooks.dispose?.();
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 6: Successful project detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns project details in the standard envelope", async () => {
+    mockFetchResponse(MOCK_RAW_PROJECT);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "project", id: 5 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("project");
+    expect(metadata.id).toBe(5);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Web Stack Deploy");
+    expect((metadata.data as Record<string, unknown>).organization_name).toBe("Default");
+    expect((metadata.data as Record<string, unknown>).created_by).toBe("admin");
+    expect((metadata.data as Record<string, unknown>).is_successful).toBe(true);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 7: Graceful error for unknown project ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown project ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "project", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 8: Zod schema validation rejects invalid resource types
+     ══════════════════════════════════════════════════════════════ */
+
+  it("rejects 'inventory' as an unsupported resource type", async () => {
+    // The schema validation happens before the tool's execute runs,
+    // so we test via the args schema directly.
+    const schema = hooks.tool!["awx-get-resource"]!.args;
+    const parsed = schema?.safeParse?.({ type: "inventory", id: 1 });
+
+    if (parsed) {
+      expect(parsed.success).toBe(false);
+    }
   });
 });

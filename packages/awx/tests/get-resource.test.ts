@@ -10,6 +10,7 @@ import { describe, it, expect, vi } from "vitest";
 import { getResource } from "../src/get-resource.js";
 import type { AwxClient } from "../src/client.js";
 import type { TemplateDetailOutput } from "../src/contracts/template-detail.js";
+import type { ProjectDetailOutput } from "../src/contracts/project-detail.js";
 
 // ─── Test Helpers ─────────────────────────────────────────────
 
@@ -41,6 +42,24 @@ const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
         { id: 3, name: "deploy" },
       ],
     },
+  },
+};
+
+/** Raw AWX project API response matching the fixture */
+const MOCK_RAW_PROJECT: Record<string, unknown> = {
+  id: 5,
+  name: "Web Stack Deploy",
+  description: "Ansible playbooks for deploying the web application stack",
+  scm_type: "git",
+  scm_url: "https://github.com/example/web-stack-deploy.git",
+  scm_branch: "main",
+  status: "successful",
+  last_updated: "2025-06-20T10:15:00Z",
+  created: "2025-01-10T08:00:00Z",
+  modified: "2025-06-20T10:15:00Z",
+  summary_fields: {
+    organization: { id: 1, name: "Default" },
+    created_by: { id: 1, username: "admin" },
   },
 };
 
@@ -140,6 +159,55 @@ describe("getResource()", () => {
     expect(client.request).toHaveBeenCalledWith(
       "awx-get-resource",
       "/api/v2/job_templates/7/",
+      undefined,
+      undefined,
+    );
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 6: Successful project resource fetch
+     ══════════════════════════════════════════════════════════════ */
+
+  it("fetches and maps a project resource via the registry", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_PROJECT);
+
+    const result = (await getResource(client, "project", 5)) as ProjectDetailOutput;
+
+    expect(result.schema_version).toBe("1.0");
+    expect(result.resource_type).toBe("project");
+    expect(result.id).toBe(5);
+    expect(result.data.name).toBe("Web Stack Deploy");
+    expect(result.data.organization_name).toBe("Default");
+    expect(result.data.created_by).toBe("admin");
+    expect(result.data.is_successful).toBe(true);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 7: Project API error — non-2xx response
+     ══════════════════════════════════════════════════════════════ */
+
+  it("throws with API error details for non-2xx project responses", async () => {
+    const client = mockClientWithResponse(
+      { detail: "Not found." },
+      404,
+    );
+
+    await expect(getResource(client, "project", 99999))
+      .rejects.toThrow(/(?:404|not found)/i);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 8: Registry endpoint mapping for project
+     ══════════════════════════════════════════════════════════════ */
+
+  it("calls the correct API endpoint for the project resource", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_PROJECT);
+
+    await getResource(client, "project", 5);
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-get-resource",
+      "/api/v2/projects/5/",
       undefined,
       undefined,
     );
