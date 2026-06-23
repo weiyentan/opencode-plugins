@@ -24,12 +24,13 @@
  */
 import { tool } from "@opencode-ai/plugin";
 import type { PluginInput, Hooks, Plugin } from "@opencode-ai/plugin";
-import { z } from "zod";
+
+const z = tool.schema;
 import { createAwxAuthHook, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
 import { createClient, createTimeoutSignal } from "./client.js";
 import type { AwxClient } from "./client.js";
-import { listTemplates } from "./list-templates.js";
+import { listTemplates, type TemplateResult } from "./list-templates.js";
 import { listProjects } from "./list-projects.js";
 import { launchJob } from "./launch.js";
 import { fetchJobStatus } from "./job-status.js";
@@ -56,6 +57,31 @@ function formatErrorResponse(projectId: number, status: number): string {
         `AWX API returned HTTP ${status}.`
       );
   }
+}
+
+/**
+ * Build a Markdown pipe-delimited table from an array of items.
+ * Pipe characters (`|`) in cell values are escaped to `\|`.
+ * The separator row uses `---` alignment (not left/right).
+ */
+function buildPipeTable<T>(
+  items: T[],
+  columns: Array<{ header: string; value: (item: T) => string }>,
+): string {
+  if (items.length === 0) {
+    const headerRow = "| " + columns.map((c) => c.header).join(" | ") + " |";
+    const sepRow = "| " + columns.map(() => "---").join(" | ") + " |";
+    return [headerRow, sepRow].join("\n");
+  }
+  const headerRow = "| " + columns.map((c) => c.header).join(" | ") + " |";
+  const sepRow = "| " + columns.map(() => "---").join(" | ") + " |";
+  const dataRows = items.map(
+    (item) =>
+      "| " +
+      columns.map((c) => String(c.value(item)).replace(/\|/g, "\\|")).join(" | ") +
+      " |",
+  );
+  return [headerRow, sepRow, ...dataRows].join("\n");
 }
 
 /**
@@ -115,11 +141,11 @@ async function server(input: PluginInput): Promise<Hooks> {
   let cachedClient: AwxClient | undefined;
   let cachedToken: string | undefined;
 
-  async function getAwxClient(): Promise<AwxClient | undefined> {
-    if (!baseUrl) return undefined;
+  async function getAwxClient(): Promise<AwxClient> {
+    if (!baseUrl) throw new Error("AWX_BASE_URL not configured. Set the AWX_BASE_URL environment variable to point to your AAP/AWX instance.");
 
-    const token = await input.client.getSecret?.("awx");
-    if (!token) return undefined;
+    const token = await input.client.getSecret?.("awx") ?? process.env.AWX_PAT;
+    if (!token) throw new Error("AWX Personal Access Token (PAT) not configured. Store your PAT via the plugin auth prompt.");
 
     const tokenString = String(token);
 
@@ -137,7 +163,7 @@ async function server(input: PluginInput): Promise<Hooks> {
   // If no baseUrl is configured, skip — the user will configure it later.
   if (baseUrl) {
     try {
-      const storedKey = await input.client.getSecret?.("awx");
+      const storedKey = await input.client.getSecret?.("awx") ?? process.env.AWX_PAT;
       if (storedKey) {
         const { signal, clear } = createTimeoutSignal(10_000);
 
@@ -246,14 +272,12 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
-            return {
-              output:
-                "[awx-sync-project] AWX client not available. " +
-                "Set AWX_BASE_URL and store your " +
-                "Personal Access Token via the plugin auth prompt.",
-            };
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
           }
 
           const toolName = "awx-sync-project";
@@ -336,7 +360,8 @@ async function server(input: PluginInput): Promise<Hooks> {
           "List AWX job templates with pagination. Fetches templates from",
           "/api/v2/job_templates/, consolidating across pages up to a",
           "configurable cap. Results sorted by name. Supports page size",
-          "override. Returns warning when page cap limits results.",
+          "override, server-side filtering, and configurable timeout.",
+          "Returns warning when page cap limits results.",
         ].join(" "),
         args: {
           pageSize: z
@@ -352,6 +377,17 @@ async function server(input: PluginInput): Promise<Hooks> {
             .min(0)
             .optional()
             .describe("Maximum pages to fetch (0 = no cap, default: 5)"),
+          filter: z
+            .array(z.string())
+            .optional()
+            .describe("Filter templates by field (e.g., --filter name__icontains=workspace)"),
+          timeout: z
+            .number()
+            .int()
+            .min(1_000)
+            .max(300_000)
+            .optional()
+            .describe("Total tool timeout in milliseconds (default: 30000)"),
         },
         async execute(args, context) {
           // Respect the abort signal
@@ -359,20 +395,17 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
             return {
-              output:
-                "AWX client not available. Set AWX_BASE_URL " +
-                "and store your Personal Access Token " +
-                "via the plugin auth prompt.",
+              output: message,
               metadata: {
                 count: 0,
                 results: [],
-                warning:
-                  "AWX client not available. Set AWX_BASE_URL " +
-                  "and store your Personal Access Token " +
-                  "via the plugin auth prompt.",
+                warning: message,
               },
             };
           }
@@ -380,16 +413,24 @@ async function server(input: PluginInput): Promise<Hooks> {
           try {
             const result = await listTemplates(
               awxClient,
-              30_000,
+              args.timeout ?? 30_000,
               {
                 pageSize: args.pageSize,
                 maxPages: args.maxPages,
+                filters: args.filter,
               },
               context.abort,
             );
-            const output = `Found ${result.count} template(s).`;
+
+            const table = buildPipeTable(result.results, [
+              { header: "ID", value: (t: TemplateResult) => String(t.id) },
+              { header: "Name", value: (t: TemplateResult) => t.name },
+              { header: "Description", value: (t: TemplateResult) => t.description },
+            ]);
+
+            const output = `Found ${result.count} template(s).\n\n${table}`;
             return {
-              output: result.warning ? `${output} Warning: ${result.warning}` : output,
+              output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
               metadata: result as unknown as Record<string, unknown>,
             };
           } catch (err) {
@@ -423,7 +464,8 @@ async function server(input: PluginInput): Promise<Hooks> {
           "List AWX projects with pagination. Fetches projects from",
           "the AWX /api/v2/projects/ endpoint, consolidating results",
           "across multiple pages up to a configurable page cap.",
-          "Results are sorted alphabetically by name.",
+          "Results are sorted alphabetically by name. Supports",
+          "server-side filtering.",
         ].join(" "),
         args: {
           maxPages: z
@@ -446,20 +488,22 @@ async function server(input: PluginInput): Promise<Hooks> {
             .min(1_000)
             .optional()
             .describe("Total tool timeout in milliseconds (default: 30000)."),
+          filter: z
+            .array(z.string())
+            .optional()
+            .describe("Filter projects by field (e.g., --filter name__icontains=workspace)"),
         },
         async execute(args, context) {
           if (context.abort?.aborted) {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
-            return {
-              output:
-                "[stub] list-projects: AWX client not available. " +
-                "Set AWX_BASE_URL and store your " +
-                "Personal Access Token via the plugin auth prompt.",
-            };
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
           }
 
           try {
@@ -468,10 +512,19 @@ async function server(input: PluginInput): Promise<Hooks> {
               pageSize: args.pageSize,
               timeout: args.timeout,
               abortSignal: context.abort,
+              filters: args.filter,
             });
 
+            const table = buildPipeTable(result.results, [
+              { header: "ID", value: (p) => String(p.id) },
+              { header: "Name", value: (p) => p.name },
+              { header: "Description", value: (p) => p.description },
+              { header: "SCM", value: (p) => p.scm_type },
+            ]);
+
+            const output = `Found ${result.count} project(s).\n\n${table}`;
             return {
-              output: `Found ${result.count} project(s).`,
+              output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
               metadata: result as unknown as Record<string, unknown>,
             };
           } catch (err: unknown) {
@@ -527,22 +580,18 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
             return {
-              output:
-                "AWX client not available. Set AWX_BASE_URL" +
-                " and store your Personal Access Token" +
-                " via the plugin auth prompt.",
+              output: message,
               metadata: {
                 jobId: 0,
                 jobStatus: "failed",
                 warnings: [],
-                errors: [
-                  "AWX client not available. Set AWX_BASE_URL" +
-                  " and store your Personal Access Token" +
-                  " via the plugin auth prompt.",
-                ],
+                errors: [message],
               },
             };
           }
@@ -613,14 +662,12 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
-            return {
-              output:
-                "awx-job-status: AWX client not available. " +
-                "Set AWX_BASE_URL and store your " +
-                "Personal Access Token via the plugin auth prompt.",
-            };
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
           }
 
           try {
@@ -690,14 +737,12 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
-            return {
-              output:
-                "awx-wait-job: AWX client not available. " +
-                "Set AWX_BASE_URL and store your " +
-                "Personal Access Token via the plugin auth prompt.",
-            };
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
           }
 
           try {
@@ -764,21 +809,18 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Request was aborted." };
           }
 
-          const awxClient = await getAwxClient();
-          if (!awxClient) {
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
             return {
-              output:
-                "AWX client not available. Set AWX_BASE_URL " +
-                "and store your Personal Access Token " +
-                "via the plugin auth prompt.",
+              output: message,
               metadata: {
                 count: 0,
                 results: [],
                 next_page: null,
-                error:
-                  "AWX client not available. Set AWX_BASE_URL " +
-                  "and store your Personal Access Token " +
-                  "via the plugin auth prompt.",
+                error: message,
               },
             };
           }
@@ -856,6 +898,27 @@ async function server(input: PluginInput): Promise<Hooks> {
           }
         },
       }),
+
+      /**
+       * Debug tool that returns current AWX environment configuration.
+       *
+       * Reports whether AWX_BASE_URL is set and what its value is.
+       * Useful for diagnosing configuration issues without making
+       * any API calls.
+       */
+      "awx-debug-env": tool({
+        description: "Debug tool that returns current AWX environment configuration.",
+        args: {},
+        async execute(_args, context) {
+          if (context.abort?.aborted) return { output: "Request was aborted." };
+          return {
+            output: JSON.stringify({
+              AWX_BASE_URL: process.env.AWX_BASE_URL ?? null,
+              hasAwxBaseUrl: Boolean(process.env.AWX_BASE_URL),
+            }),
+          };
+        },
+      }),
     },
   };
 }
@@ -872,3 +935,4 @@ async function server(input: PluginInput): Promise<Hooks> {
  * - `AWX_BASE_URL`: Base URL of the AAP/AWX instance (e.g. "https://example.com")
  */
 export const AwxPlugin: Plugin = server;
+export default AwxPlugin;

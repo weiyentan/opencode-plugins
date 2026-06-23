@@ -493,4 +493,65 @@ describe("listProjects", () => {
 
     vi.useRealTimers();
   });
+
+  /* ══════════════════════════════════════════════════════════════════
+     Filter Parameter — server-side filtering via query params
+     ══════════════════════════════════════════════════════════════════ */
+
+  it("passes filter params in the request URL", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      createMockResponse({
+        data: { count: 0, results: [], next: null },
+      }),
+    );
+
+    await listProjects(client, { filters: ["name__icontains=workspace"] });
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-list-projects",
+      "/api/v2/projects/?page=1&page_size=50&name__icontains=workspace",
+      expect.any(Object),
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("supports multiple filter params", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      createMockResponse({
+        data: { count: 0, results: [], next: null },
+      }),
+    );
+
+    await listProjects(client, {
+      filters: ["name__icontains=test", "description__icontains=foo"],
+    });
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-list-projects",
+      "/api/v2/projects/?page=1&page_size=50&name__icontains=test&description__icontains=foo",
+      expect.any(Object),
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("works without filters (backward compatibility)", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      createMockResponse({
+        data: { count: 1, results: [createMockProject()], next: null },
+      }),
+    );
+
+    const result = await listProjects(client);
+
+    expect(result.count).toBe(1);
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-list-projects",
+      "/api/v2/projects/?page=1&page_size=50",
+      expect.any(Object),
+      expect.any(AbortSignal),
+    );
+  });
 });

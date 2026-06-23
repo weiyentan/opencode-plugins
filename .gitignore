@@ -13,3 +13,6 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local OpenCode plugin builds (auto-discovered)
+.opencode/plugins/

@@ -44,6 +44,13 @@ export interface ListProjectsOptions {
   pageSize?: number;
   timeout?: number;
   abortSignal?: AbortSignal;
+  /**
+   * Optional filter strings for server-side filtering.
+   * Each string should be in the format "field__operator=value"
+   * (e.g., "name__icontains=workspace"). These are passed as
+   * query parameters to the AWX API.
+   */
+  filters?: string[];
 }
 
 /* ── Timeout budget ─────────────────────────────────────────────── */
@@ -63,6 +70,27 @@ export function calcPageBudget(totalTimeout: number, maxPages: number): number {
   return Math.floor(totalTimeout / (maxPages + 1));
 }
 
+/* ── URL builder ────────────────────────────────────────────────── */
+
+/**
+ * Build the request URL with pagination parameters and optional filters.
+ * Filter strings are split on the first `=` to form query parameters.
+ */
+function buildProjectsUrl(page: number, pageSize: number, filters?: string[]): string {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("page_size", String(pageSize));
+  if (filters) {
+    for (const f of filters) {
+      const eqIdx = f.indexOf("=");
+      if (eqIdx > 0) {
+        params.set(f.slice(0, eqIdx), f.slice(eqIdx + 1));
+      }
+    }
+  }
+  return `/api/v2/projects/?${params.toString()}`;
+}
+
 /* ── Pagination logic ───────────────────────────────────────────── */
 
 /**
@@ -70,7 +98,7 @@ export function calcPageBudget(totalTimeout: number, maxPages: number): number {
  * and return them sorted by name.
  *
  * @param client   The AWX HTTP client
- * @param options  Pagination and timeout options
+ * @param options  Pagination, timeout, and filter options
  * @returns Consolidated, sorted list of projects
  */
 export async function listProjects(
@@ -111,8 +139,8 @@ export async function listProjects(
     }
 
     try {
-      // Build request path with pagination parameters
-      const path = `/api/v2/projects/?page=${page}&page_size=${pageSize}`;
+      // Build request path with pagination parameters and optional filters
+      const path = buildProjectsUrl(page, pageSize, options?.filters);
 
       const response = await client.request(
         "awx-list-projects",

@@ -54,6 +54,8 @@ async function createHooks(
 ): Promise<Hooks> {
   if (options?.baseUrl) {
     vi.stubEnv("AWX_BASE_URL", options.baseUrl);
+  } else {
+    vi.stubEnv("AWX_BASE_URL", undefined);
   }
   return AwxPlugin(input);
 }
@@ -244,7 +246,7 @@ describe("AWX Get Job Events Tool", () => {
     expect(parsed.count).toBe(0);
     expect(parsed.results).toHaveLength(0);
     expect(parsed.next_page).toBeNull();
-    expect(parsed.error).toContain("AWX client not available");
+    expect(parsed.error).toContain("AWX_BASE_URL");
   });
 
   it("returns error when AWX client is not available (no token)", async () => {
@@ -263,7 +265,7 @@ describe("AWX Get Job Events Tool", () => {
     expect(parsed.count).toBe(0);
     expect(parsed.results).toHaveLength(0);
     expect(parsed.next_page).toBeNull();
-    expect(parsed.error).toContain("AWX client not available");
+    expect(parsed.error).toContain("PAT");
   });
 
   it("returns error when API returns non-OK status", async () => {

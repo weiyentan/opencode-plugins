@@ -12,16 +12,31 @@ The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-debug-env) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
-| **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
+| **Output contract** | `src/contracts/job-detail.ts` | TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | Pure functions: SSH→HTTPS URL conversion, git branch inference, required-var validation |
 | **Client middleware** | `src/client.ts` | HTTP middleware pipeline: circuit breaker, retry/backoff, timeout via native `fetch` |
 | **Metrics** | `src/metrics.ts` | Per-tool counters with file-backed durability for operational visibility |
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) is complete — all 7 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
+Tool implementation (Phase 2) is complete — all 8 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
+
+### Tool Output Formats
+
+| Tool | Output Format | Filter Support |
+|------|--------------|----------------|
+| `awx-list-templates` | Pipe-delimited Markdown table (ID / Name / Description) | `--filter` (e.g., `name__icontains=workspace`) |
+| `awx-list-projects` | Pipe-delimited Markdown table (ID / Name / Description / SCM) | `--filter` (e.g., `name__icontains=workspace`) |
+| `awx-sync-project` | Plain text message + structured metadata | — |
+| `awx-launch-job` | Plain text message + structured metadata | — |
+| `awx-job-status` | Plain text message + `JobDetailOutput` v1.0 metadata | — |
+| `awx-wait-job` | Plain text message + `JobDetailOutput` v1.0 metadata | — |
+| `awx-get-job-events` | Plain text message + structured metadata | — |
+| `awx-debug-env` | JSON string | — |
+
+Both `awx-list-templates` and `awx-list-projects` accept `--timeout` (total tool timeout in ms, default 30000).
 
 ## Prerequisites
 
@@ -79,11 +94,20 @@ The suite `tests/integration/job-lifecycle.test.ts` covers the full AWX job life
 - `awx-wait-job` → non-blocking status check (no polling)
 - `awx-get-job-events` → retrieves job events
 
-#### Prerequisites
+#### Environment Variables
+
+The plugin reads configuration from these environment variables:
 
 | Env Var | Default | Required | Description |
 |---------|---------|----------|-------------|
-| `AWX_TOKEN` | — | **Yes** | Valid AAP Personal Access Token (PAT) |
+| `AWX_BASE_URL` | — | **Yes** | Base URL of the AAP/AWX instance (e.g. `https://example.com`) |
+| `AWX_PAT` | — | No | Personal Access Token fallback (primary: auth hook / `getSecret`). Used when no token is stored in the auth hook. |
+
+#### Test Prerequisites
+
+| Env Var | Default | Required | Description |
+|---------|---------|----------|-------------|
+| `AWX_TOKEN` | — | **Yes** | Valid AAP Personal Access Token (PAT) for integration tests |
 | `AAP_BASE_URL` | `https://example.com` | No | Base URL of the AAP instance |
 | `JOB_TEMPLATE_ID` | `10` | No | Non-production AWX job template ID to launch |
 | `EXTRA_VARS_INVENTORY` | `"test"` | No | Inventory name for extra_vars |
@@ -163,7 +187,19 @@ Hot-reload verification is performed structurally (the `tsc --noEmit` / `vitest 
 
 The `package.json` `main`, `types`, and `exports` fields point to the compiled `dist/` output. This is the production-safe configuration — consumers import the compiled JavaScript with type declarations.
 
-For local development, the OpenCode plugin server can consume TypeScript source directly by overriding the entry point (e.g., changing `main` to `./src/index.ts`). The server watches source files and reloads automatically on change — no server restart required.
+#### Local Development (`.opencode/plugins/`)
+
+For local testing without publishing, a re-export wrapper is set up at `.opencode/plugins/awx-plugin.js` which re-exports `AwxPlugin` from the compiled `dist/` output. OpenCode automatically discovers plugins in this directory at startup, making it **the recommended local development approach** — you test exactly the compiled output that would ship, without modifying `package.json`.
+
+After making changes:
+
+```bash
+cd packages/awx
+npm run build          # Recompile to dist/
+# Restart OpenCode server to pick up the new build
+```
+
+Build outputs are gitignored (`.opencode/plugins/` is in `.gitignore`), so the wrapper is local-only and never committed.
 
 ## CI Requirements
 

@@ -4,12 +4,6 @@
  * Canonical TypeScript representation of the `awx_job_detail.py` v1.0 output schema.
  * Every job-related tool MUST return output matching this contract.
  *
- * This file provides **both**:
- * - Zod schemas for runtime validation (e.g., API response parsing)
- * - Inferred TypeScript types for static type checking
- *
- * The contract has been verified against fixture snapshots in `tests/contracts/__snapshots__/`.
- *
  * ## Schema Fields
  *
  * - **schema_version**: Always "1.0"
@@ -27,96 +21,63 @@
  * - Use `derived` — NOT `extra_vars_summary`
  * - `related` fields are resolved names, not raw URLs
  * - `job.limit` is the AWX job limit (host pattern), not a pagination value
- *
- * ## Snapshot Testing
- *
- * Fixture JSON files in `tests/fixtures/` serve as contract snapshots.
- * When the Python `awx_job_detail.py` v1.0 output contract changes,
- * regenerate the fixtures (see README.md for instructions) and re-run
- * tests to verify schema compatibility.
- *
- * ## Regeneration
- *
- * To regenerate the contract snapshots after fixture changes:
- * ```bash
- * python3 scripts/generate-snapshots.py
- * ```
  */
 
-import { z } from "zod";
+// ─── Sub-types ─────────────────────────────────────────────
 
-// ─── Sub-schemas ───────────────────────────────────────────
+export interface JobCore {
+  id: number;
+  name: string;
+  status: string;
+  failed: boolean;
+  job_type: string;
+  playbook: string;
+  created: string;
+  started: string | null;
+  finished: string | null;
+  elapsed: number | null;
+  execution_node: string;
+  controller_node: string;
+  scm_branch: string;
+  verbosity: number;
+  forks: number | null;
+  limit: string;
+}
 
-export const JobCoreSchema = z.object({
-  id: z.number().int().positive(),
-  name: z.string(),
-  status: z.string(),
-  failed: z.boolean(),
-  job_type: z.string(),
-  playbook: z.string(),
-  created: z.string(),
-  started: z.string().nullable(),
-  finished: z.string().nullable(),
-  elapsed: z.number().nullable(),
-  execution_node: z.string(),
-  controller_node: z.string(),
-  scm_branch: z.string(),
-  verbosity: z.number().int().min(0),
-  forks: z.number().int().min(0).nullable(),
-  limit: z.string(),
-});
+export interface Related {
+  inventory_name: string;
+  project_name: string;
+  job_template_name: string;
+  instance_group_name: string;
+  created_by: string;
+  credential_names: string[];
+  label_names: string[];
+}
 
-export const RelatedSchema = z.object({
-  inventory_name: z.string(),
-  project_name: z.string(),
-  job_template_name: z.string(),
-  instance_group_name: z.string(),
-  created_by: z.string(),
-  credential_names: z.array(z.string()),
-  label_names: z.array(z.string()),
-});
+export interface HostStatusCounts {
+  ok: number;
+  failed: number;
+  skipped: number;
+  changed: number;
+  unreachable: number;
+}
 
-export const HostStatusCountsSchema = z.object({
-  ok: z.number().int().min(0),
-  failed: z.number().int().min(0),
-  skipped: z.number().int().min(0),
-  changed: z.number().int().min(0),
-  unreachable: z.number().int().min(0),
-});
+export interface Derived {
+  is_successful: boolean;
+  is_failed: boolean;
+  has_unreachable_hosts: boolean;
+}
 
-export const DerivedSchema = z.object({
-  is_successful: z.boolean(),
-  is_failed: z.boolean(),
-  has_unreachable_hosts: z.boolean(),
-});
+// ─── Top-level contract type ───────────────────────────────
 
-// ─── Top-level schema ──────────────────────────────────────
-
-export const JobDetailOutputSchema = z.object({
-  schema_version: z.literal("1.0"),
-  job: JobCoreSchema,
-  related: RelatedSchema,
-  host_status_counts: HostStatusCountsSchema,
-  derived: DerivedSchema,
-  warnings: z.array(z.string()),
-  errors: z.array(z.string()),
-  stdout: z.string().optional(),
-  raw_events: z.array(z.unknown()).optional(),
-});
-
-// ─── Inferred TypeScript types ─────────────────────────────
-
-/** Core job metadata fields */
-export type JobCore = z.infer<typeof JobCoreSchema>;
-
-/** Resolved names for related AWX resources */
-export type Related = z.infer<typeof RelatedSchema>;
-
-/** Count of hosts in each Ansible state */
-export type HostStatusCounts = z.infer<typeof HostStatusCountsSchema>;
-
-/** Computed boolean flags */
-export type Derived = z.infer<typeof DerivedSchema>;
-
-/** Top-level JobDetailOutput contract (v1.0) */
-export type JobDetailOutput = z.infer<typeof JobDetailOutputSchema>;
+export interface JobDetailOutput {
+  schema_version: "1.0";
+  job: JobCore;
+  related: Related;
+  host_status_counts: HostStatusCounts;
+  derived: Derived;
+  warnings: string[];
+  errors: string[];
+  stdout?: string;
+  raw_events?: unknown[];
+}

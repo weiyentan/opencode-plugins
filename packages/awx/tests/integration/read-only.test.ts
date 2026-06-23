@@ -113,7 +113,7 @@ describe("Read-Only Tools — Configuration Errors", () => {
       const parsed = getMetadata(result);
       expect(parsed.count).toBe(0);
       expect(parsed.results).toEqual([]);
-      expect(parsed.warning).toContain("AWX client not available");
+      expect(parsed.warning).toContain("PAT");
     } finally {
       await hooks.dispose?.();
     }
@@ -129,7 +129,7 @@ describe("Read-Only Tools — Configuration Errors", () => {
       );
 
       const out = (result as { output: string }).output;
-      expect(out).toContain("AWX client not available");
+      expect(out).toContain("PAT");
     } finally {
       await hooks.dispose?.();
     }

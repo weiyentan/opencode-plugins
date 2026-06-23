@@ -45,6 +45,13 @@ export interface ListTemplatesOptions {
    * Default: 5 (5 pages × 50 items = 250 max).
    */
   maxPages?: number;
+  /**
+   * Optional filter strings for server-side filtering.
+   * Each string should be in the format "field__operator=value"
+   * (e.g., "name__icontains=workspace"). These are passed as
+   * query parameters to the AWX API.
+   */
+  filters?: string[];
 }
 
 // ── Internal AWX API types ───────────────────────────────────────
@@ -125,6 +132,24 @@ function mapTemplate(item: AwxTemplateItem): TemplateResult {
   };
 }
 
+/**
+ * Build the request URL with page size and optional server-side filters.
+ * Filter strings are split on the first `=` to form query parameters.
+ */
+function buildTemplatesUrl(pageSize: number, filters?: string[]): string {
+  const params = new URLSearchParams();
+  params.set("page_size", String(pageSize));
+  if (filters) {
+    for (const f of filters) {
+      const eqIdx = f.indexOf("=");
+      if (eqIdx > 0) {
+        params.set(f.slice(0, eqIdx), f.slice(eqIdx + 1));
+      }
+    }
+  }
+  return `/api/v2/job_templates/?${params.toString()}`;
+}
+
 // ── Core Logic ────────────────────────────────────────────────────
 
 /**
@@ -138,7 +163,7 @@ function mapTemplate(item: AwxTemplateItem): TemplateResult {
  *
  * @param client        The AWX HTTP client
  * @param toolTimeoutMs Tool-level timeout in ms (used for per-page budget)
- * @param options       Optional: pageSize, maxPages
+ * @param options       Optional: pageSize, maxPages, filters
  * @param abortSignal   Optional tool context abort signal for cancellation
  * @returns Consolidated, sorted template list with count and optional warning
  */
@@ -154,7 +179,7 @@ export async function listTemplates(
   // Per-page timeout budget: divide tool timeout by (maxPages + 1).
   // The +1 provides a safety margin for tool overhead after the last page.
   const effectiveMaxPages = Math.max(1, maxPages);
-  const perPageBudget = Math.floor(toolTimeoutMs / (effectiveMaxPages + 1));
+  const perPageBudget = Math.floor((toolTimeoutMs || 30_000) / ((effectiveMaxPages || 5) + 1));
 
   const allResults: TemplateResult[] = [];
   let nextPage: string | null = null;
@@ -163,13 +188,13 @@ export async function listTemplates(
   do {
     pagesFetched++;
 
-    // Build URL for current page
+    // Build URL for current page (with optional filters on first request)
     const path = nextPage
       ? extractPath(nextPage)
-      : `/api/v2/job_templates/?page_size=${pageSize}`;
+      : buildTemplatesUrl(pageSize, options?.filters);
 
     // Fetch this page with per-page timeout
-    const { signal: pageSignal, clear: clearTimeout_ } = createTimeoutSignal(perPageBudget);
+    const { signal: pageSignal, clear: clearTimeout_ } = createTimeoutSignal(Math.max(1, perPageBudget || 1000));
     const combinedSignal = abortSignal
       ? anyAbortSignal([abortSignal, pageSignal])
       : pageSignal;
