@@ -779,5 +779,12 @@ describe("AWX Plugin Index", () => {
       expect(AwxPlugin).toBeDefined();
       expect(typeof AwxPlugin).toBe("function");
     });
+
+    it("export surface contains only AwxPlugin and default", async () => {
+      // Dynamic import to get the raw module export surface
+      const importedModule = await import("../src/index.js");
+      const keys = Object.keys(importedModule).sort();
+      expect(keys).toEqual(["AwxPlugin", "default"].sort());
+    });
   });
 });

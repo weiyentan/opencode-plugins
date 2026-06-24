@@ -18,14 +18,14 @@ export const AwxPlugin: Plugin = server;
 export default AwxPlugin;
 ```
 
-All other exports, configuration stores, and utility functions that are consumed internally MUST live in separate source modules (e.g., `src/config.ts`, `src/client.ts`, `src/auth.ts`), and MUST NOT be re-exported through `src/index.ts`.
+All other exports, configuration stores, and utility functions that are consumed internally MUST live in separate source modules (e.g., `src/runtime-config.ts`, `src/client.ts`, `src/auth.ts`), and MUST NOT be re-exported through `src/index.ts`.
 
 If tests or external consumers need access to internal utilities, they must import from the specific sub-module, NOT from the entry point.
 
 ## Consequences
 
-- `setCustomConfig` and `getCustomConfig` were extracted into `src/config.ts`, which `index.ts` imports internally without re-exporting.
-- Test files that need `setCustomConfig` import it from `../src/config.js` directly.
+- `setCustomConfig` and `getCustomConfig` were extracted into `src/runtime-config.ts`, which `index.ts` imports internally without re-exporting.
+- Test files that need `setCustomConfig` import it from `../src/runtime-config.js` directly.
 - The npm package's `exports` field maps only `"."` to `"./dist/index.js"`, so the sub-module is unreachable via bare package imports — reinforcing the barrier.
 - Future tool implementations, helper functions, and config stores must follow this pattern from the start.
 

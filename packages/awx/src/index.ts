@@ -39,7 +39,7 @@ import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
 import type { ResourceDetailOutput } from "./get-resource.js";
 
-import { getCustomConfig, setCustomConfig } from "./config.js";
+import { getCustomConfig, setCustomConfig } from "./runtime-config.js";
 
 /**
  * Format a user-facing error message for HTTP error responses.
