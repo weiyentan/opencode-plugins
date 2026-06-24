@@ -364,7 +364,7 @@ describe("getAwxClient() — H1 probe: setCustomConfig bypasses getSecret", () =
     );
     // Verify fetch was called with the customConfig token as the Authorization header
     // Use the last fetch call (tool execution) — earlier calls may include
-    // init-time validation with the real AWX_PAT env var
+    // init-time validation with the real AWX_TOKEN env var
     const fetchMock = vi.mocked(globalThis.fetch);
     expect(fetchMock).toHaveBeenCalled();
     const lastCall = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];

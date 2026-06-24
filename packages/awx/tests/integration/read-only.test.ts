@@ -82,8 +82,8 @@ async function createPlugin(
   };
 
   vi.stubEnv("AWX_BASE_URL", resolvedBaseUrl);
-  // Ensure AWX_PAT is not set so the test relies solely on getSecret
-  vi.stubEnv("AWX_PAT", undefined);
+  // Ensure AWX_TOKEN is not set so the test relies solely on getSecret
+  vi.stubEnv("AWX_TOKEN", undefined);
   return AwxPlugin(input);
 }
 

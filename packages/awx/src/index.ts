@@ -222,7 +222,7 @@ async function server(input: PluginInput): Promise<Hooks> {
   // If no baseUrl is configured, skip — the user will configure it later.
   if (baseUrl) {
     try {
-      const storedKey = await input.client.getSecret?.("awx") ?? process.env.AWX_PAT;
+      const storedKey = await input.client.getSecret?.("awx") ?? process.env.AWX_TOKEN;
       if (storedKey) {
         const { signal, clear } = createTimeoutSignal(10_000);
 
@@ -1201,10 +1201,13 @@ async function server(input: PluginInput): Promise<Hooks> {
             return { output: "Provide at least one of: baseUrl, token" };
           }
 
-          const config: { baseUrl?: string; token?: string } = {};
-          if (args.baseUrl) config.baseUrl = args.baseUrl;
-          if (args.token) config.token = args.token;
-          setCustomConfig(config);
+          // Merge with existing config so partial updates don't clear previously set values
+          const merged: { baseUrl?: string; token?: string } = {
+            ...(customConfig ?? {}),
+            ...(args.baseUrl ? { baseUrl: args.baseUrl } : {}),
+            ...(args.token ? { token: args.token } : {}),
+          };
+          setCustomConfig(Object.keys(merged).length > 0 ? merged : undefined);
 
           if (args.baseUrl && args.token) {
             return { output: "AWX client configured and ready." };

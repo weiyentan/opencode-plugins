@@ -63,9 +63,9 @@ async function createHooks(
   } else {
     vi.stubEnv("AWX_BASE_URL", undefined);
   }
-  // Ensure AWX_PAT is not set in the environment so tests don't accidentally
+  // Ensure AWX_TOKEN is not set in the environment so tests don't accidentally
   // pick up a real credential and attempt HTTP connections that hang.
-  vi.stubEnv("AWX_PAT", undefined);
+  vi.stubEnv("AWX_TOKEN", undefined);
   return AwxPlugin(input);
 }
 
