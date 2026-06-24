@@ -32,10 +32,19 @@ import { createClient, createTimeoutSignal } from "./client.js";
 import type { AwxClient } from "./client.js";
 import { listTemplates, type TemplateResult } from "./list-templates.js";
 import { listProjects } from "./list-projects.js";
+import { listJobs } from "./list-jobs.js";
+import type { JobResult } from "./list-jobs.js";
 import { launchJob } from "./launch.js";
 import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
 import type { ResourceDetailOutput } from "./get-resource.js";
+
+/* ── Module-level config store for awx-configure tool ─────────── */
+let customConfig: { baseUrl?: string; token?: string } | undefined;
+
+export function setCustomConfig(config: { baseUrl?: string; token?: string } | undefined): void {
+  customConfig = config;
+}
 
 /**
  * Format a user-facing error message for HTTP error responses.
@@ -185,18 +194,23 @@ async function server(input: PluginInput): Promise<Hooks> {
   /* ── AWX HTTP client — lazy resolver, created on first tool call ── */
   let cachedClient: AwxClient | undefined;
   let cachedToken: string | undefined;
+  let cachedBaseUrl: string | undefined;
 
   async function getAwxClient(): Promise<AwxClient> {
-    if (!baseUrl) throw new Error("AWX_BASE_URL not configured. Set the AWX_BASE_URL environment variable to point to your AAP/AWX instance.");
+    const resolvedBaseUrl = customConfig?.baseUrl ?? (process.env.AWX_BASE_URL || undefined);
+    if (!resolvedBaseUrl) throw new Error("AWX_BASE_URL not configured. Set the AWX_BASE_URL environment variable to point to your AAP/AWX instance.");
 
-    const token = await input.client.getSecret?.("awx") ?? process.env.AWX_PAT;
+    const token = customConfig?.token
+      ?? await input.client.getSecret?.("awx")
+      ?? process.env.AWX_TOKEN;
     if (!token) throw new Error("AWX Personal Access Token (PAT) not configured. Store your PAT via the plugin auth prompt.");
 
     const tokenString = String(token);
 
-    if (!cachedClient || cachedToken !== tokenString) {
+    if (!cachedClient || cachedToken !== tokenString || cachedBaseUrl !== resolvedBaseUrl) {
       cachedToken = tokenString;
-      cachedClient = createClient(baseUrl, tokenString, { metricsStore });
+      cachedBaseUrl = resolvedBaseUrl;
+      cachedClient = createClient(resolvedBaseUrl, tokenString, { metricsStore });
     }
 
     return cachedClient;
@@ -208,7 +222,7 @@ async function server(input: PluginInput): Promise<Hooks> {
   // If no baseUrl is configured, skip — the user will configure it later.
   if (baseUrl) {
     try {
-      const storedKey = await input.client.getSecret?.("awx") ?? process.env.AWX_PAT;
+      const storedKey = await input.client.getSecret?.("awx") ?? process.env.AWX_TOKEN;
       if (storedKey) {
         const { signal, clear } = createTimeoutSignal(10_000);
 
@@ -583,6 +597,120 @@ async function server(input: PluginInput): Promise<Hooks> {
       }),
 
       /**
+       * List AWX jobs with pagination.
+       *
+       * Fetches jobs from the AWX /api/v2/jobs/ endpoint,
+       * consolidating results across pages up to a configurable page cap.
+       * Results are sorted by created descending (newest first).
+       * Supports per-page size override, server-side filtering, and
+       * configurable timeout. Returns a warning when page cap limits results.
+       *
+       * The per-page timeout budget is derived from the tool-level timeout
+       * divided by (maxPages + 1).
+       */
+      "awx-list-jobs": tool({
+        description: [
+          "List AWX jobs with pagination. Fetches jobs from",
+          "/api/v2/jobs/, consolidating across pages up to a",
+          "configurable cap. Results sorted by created descending",
+          "(newest first). Supports page size override, server-side",
+          "filtering, and configurable timeout. Returns warning when",
+          "page cap limits results.",
+        ].join(" "),
+        args: {
+          pageSize: z
+            .number()
+            .int()
+            .min(1)
+            .max(200)
+            .optional()
+            .describe("Items per page (1-200, default: 50)"),
+          maxPages: z
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .describe("Maximum pages to fetch (0 = no cap, default: 5)"),
+          filter: z
+            .array(z.string())
+            .optional()
+            .describe("Filter jobs by field (e.g., --filter name__icontains=workspace)"),
+          timeout: z
+            .number()
+            .int()
+            .min(1_000)
+            .max(300_000)
+            .optional()
+            .describe("Total tool timeout in milliseconds (default: 30000)"),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: message,
+              metadata: {
+                schema_version: "1.0",
+                total_jobs: 0,
+                results: [],
+                pages_fetched: 0,
+                warning: message,
+              },
+            };
+          }
+
+          try {
+            const result = await listJobs(
+              awxClient,
+              args.timeout ?? 30_000,
+              {
+                pageSize: args.pageSize,
+                maxPages: args.maxPages,
+                filters: args.filter,
+              },
+              context.abort,
+            );
+
+            const table = buildPipeTable(result.results, [
+              { header: "ID", value: (j: JobResult) => String(j.id) },
+              { header: "Name", value: (j: JobResult) => j.name },
+              { header: "Job Type", value: (j: JobResult) => j.job_type },
+              { header: "Status", value: (j: JobResult) => j.status },
+              { header: "Created", value: (j: JobResult) => j.created },
+              { header: "Started", value: (j: JobResult) => j.started ?? "" },
+              { header: "Finished", value: (j: JobResult) => j.finished ?? "" },
+              { header: "Launched By", value: (j: JobResult) => j.launched_by ?? "" },
+            ]);
+
+            const output = `Found ${result.total_jobs} job(s).\n\n${table}`;
+            return {
+              output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
+              metadata: result as unknown as Record<string, unknown>,
+            };
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to fetch jobs: ${message}`,
+              metadata: {
+                schema_version: "1.0",
+                total_jobs: 0,
+                results: [],
+                pages_fetched: 0,
+                warning: `Failed to fetch jobs: ${message}`,
+              },
+            };
+          }
+        },
+      }),
+
+      /**
        * Launch an AWX job template with extra-vars transforms.
        *
        * Runs the transforms pipeline (SCM URL normalization, git branch
@@ -723,9 +851,8 @@ async function server(input: PluginInput): Promise<Hooks> {
               context.abort,
             );
 
-            const status = result?.job?.status ?? "unknown";
             return {
-              output: `Job ${args.job_id} status: ${status}`,
+              output: JSON.stringify(result),
               metadata: result as unknown as Record<string, unknown>,
             };
           } catch (err: unknown) {
@@ -800,7 +927,7 @@ async function server(input: PluginInput): Promise<Hooks> {
             );
 
             return {
-              output: `Job ${args.job_id} status: ${result.job.status}`,
+              output: JSON.stringify(result),
               metadata: result as unknown as Record<string, unknown>,
             };
           } catch (err: unknown) {
@@ -911,10 +1038,19 @@ async function server(input: PluginInput): Promise<Hooks> {
             // Extract next_page from the `next` URL if present
             let nextPage: number | null = null;
             if (data.next) {
-              const nextUrl = new URL(data.next);
-              const pageParam = nextUrl.searchParams.get("page");
-              if (pageParam) {
-                nextPage = Number.parseInt(pageParam, 10);
+              try {
+                const nextUrl = new URL(data.next);
+                const pageParam = nextUrl.searchParams.get("page");
+                if (pageParam) {
+                  nextPage = Number.parseInt(pageParam, 10);
+                }
+              } catch {
+                // Handle relative URLs (e.g., /api/v2/jobs/42/job_events/?page=2)
+                const qs = data.next.includes("?") ? data.next.split("?")[1] ?? "" : "";
+                const pageParam = new URLSearchParams(qs).get("page");
+                if (pageParam) {
+                  nextPage = Number.parseInt(pageParam, 10);
+                }
               }
             }
 
@@ -1047,6 +1183,37 @@ async function server(input: PluginInput): Promise<Hooks> {
               hasAwxBaseUrl: Boolean(process.env.AWX_BASE_URL),
             }),
           };
+        },
+      }),
+
+      "awx-configure": tool({
+        description: "Configure AWX connection settings (base URL and/or PAT token).",
+        args: {
+          baseUrl: z.string().optional().describe("AWX/AAP base URL"),
+          token: z.string().optional().describe("AWX Personal Access Token (PAT)"),
+        },
+        async execute(args, context) {
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          if (!args.baseUrl && !args.token) {
+            return { output: "Provide at least one of: baseUrl, token" };
+          }
+
+          // Merge with existing config so partial updates don't clear previously set values
+          const merged: { baseUrl?: string; token?: string } = {
+            ...(customConfig ?? {}),
+            ...(args.baseUrl ? { baseUrl: args.baseUrl } : {}),
+            ...(args.token ? { token: args.token } : {}),
+          };
+          setCustomConfig(Object.keys(merged).length > 0 ? merged : undefined);
+
+          if (args.baseUrl && args.token) {
+            return { output: "AWX client configured and ready." };
+          }
+
+          return { output: "Configuration stored." };
         },
       }),
     },

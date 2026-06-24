@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-23T22:34:01.498Z",
+  "updatedAt": "2026-06-24T11:25:52.444Z",
   "tools": {
     "awx-list-templates": {
-      "callCount": 14,
+      "callCount": 17,
       "errorCount": 0,
-      "totalLatencyMs": 8857,
+      "totalLatencyMs": 10317,
       "tokenExpiryEvents": 0,
       "psFallbackCount": 0
     },
@@ -20,6 +20,20 @@
       "callCount": 1,
       "errorCount": 1,
       "totalLatencyMs": 154,
+      "tokenExpiryEvents": 0,
+      "psFallbackCount": 0
+    },
+    "awx-get-resource": {
+      "callCount": 4,
+      "errorCount": 0,
+      "totalLatencyMs": 1008,
+      "tokenExpiryEvents": 0,
+      "psFallbackCount": 0
+    },
+    "awx-launch-job": {
+      "callCount": 2,
+      "errorCount": 1,
+      "totalLatencyMs": 647,
       "tokenExpiryEvents": 0,
       "psFallbackCount": 0
     }

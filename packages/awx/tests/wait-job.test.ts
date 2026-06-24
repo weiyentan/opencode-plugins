@@ -239,6 +239,11 @@ describe("awx-wait-job tool", () => {
       expect(result).toHaveProperty("output");
       const parsed = (result as { metadata: Record<string, unknown> }).metadata;
       expect(parsed.schema_version).toBe("1.0");
+
+      // Assert: output field also contains the full contract as JSON
+      const outputStr = (result as { output: string }).output;
+      const outputParsed = JSON.parse(outputStr);
+      expect(outputParsed.schema_version).toBe("1.0");
     });
 
     it("returns job core metadata including id, name, status", async () => {

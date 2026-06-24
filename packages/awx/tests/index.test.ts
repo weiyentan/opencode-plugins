@@ -12,6 +12,7 @@ import { AwxPlugin } from "../src/index.js";
 import * as clientModule from "../src/client.js";
 import * as listTemplatesModule from "../src/list-templates.js";
 import * as listProjectsModule from "../src/list-projects.js";
+import * as listJobsModule from "../src/list-jobs.js";
 
 /** Minimal mock of ToolContext for tool execute tests */
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
@@ -62,6 +63,9 @@ async function createHooks(
   } else {
     vi.stubEnv("AWX_BASE_URL", undefined);
   }
+  // Ensure AWX_TOKEN is not set in the environment so tests don't accidentally
+  // pick up a real credential and attempt HTTP connections that hang.
+  vi.stubEnv("AWX_TOKEN", undefined);
   return AwxPlugin(input);
 }
 
@@ -96,6 +100,13 @@ describe("AWX Plugin Index", () => {
 
       expect(hooks.tool!["awx-list-projects"]).toBeDefined();
       expect(typeof hooks.tool!["awx-list-projects"]!.description).toBe("string");
+    });
+
+    it('hooks.tool contains "awx-list-jobs" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-list-jobs"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-list-jobs"]!.description).toBe("string");
     });
 
     it('hooks.tool contains "awx-launch-job" tool', async () => {
@@ -171,27 +182,27 @@ describe("AWX Plugin Index", () => {
         .fn()
         .mockResolvedValue("my-test-token");
 
-      // Prevent actual fetch from being called — the tool will try to
-      // make an HTTP request when a client is created. Instead, make the
-      // request pass through with mock data.
+      // Spy on listTemplates to avoid real HTTP request
+      const listTemplatesSpy = vi.spyOn(listTemplatesModule, "listTemplates")
+        .mockResolvedValue({
+          count: 0,
+          results: [],
+        });
+
       const hooks = await createHooks(input, {
         baseUrl: "https://aap.example.com",
       });
 
-      // The tool calls client.request() which calls fetch internally.
-      // We need to mock the response. The tool returns { output, metadata }
-      // with metadata containing count and results.
       const result = await hooks.tool!["awx-list-templates"]!.execute(
         {},
         mockToolContext(),
       );
 
-      // Without a mocked fetch, the request will fail with a network error.
-      // The tool should handle this gracefully and return { output, metadata }
-      // with count and results in metadata.
       const obj = result as { output: string; metadata: Record<string, unknown> };
       expect(obj.metadata).toHaveProperty("count");
       expect(obj.metadata).toHaveProperty("results");
+
+      listTemplatesSpy.mockRestore();
     });
   });
 
@@ -370,12 +381,174 @@ describe("AWX Plugin Index", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════════
+     listJobs Tool — Resolution & Execution
+     ══════════════════════════════════════════════════════════════════ */
+
+  describe('"awx-list-jobs" tool execution', () => {
+    it("returns error message when no baseUrl configured", async () => {
+      const input = mockPluginInput();
+      const hooks = await createHooks(input);
+
+      const result = await hooks.tool!["awx-list-jobs"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      expect((result as { output: string }).output).toContain("AWX_BASE_URL");
+    });
+
+    it("returns error message when no token stored", async () => {
+      const input = mockPluginInput();
+      const hooks = await createHooks(input, {
+        baseUrl: "https://aap.example.com",
+      });
+
+      const result = await hooks.tool!["awx-list-jobs"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      expect((result as { output: string }).output).toContain("PAT");
+    });
+
+    it("calls listJobs and returns structured result when client is available", async () => {
+      // Spy on listJobs to verify it's called
+      const listJobsSpy = vi.spyOn(listJobsModule, "listJobs")
+        .mockResolvedValue({
+          schema_version: "1.0",
+          total_jobs: 2,
+          results: [
+            { id: 1, name: "job-alpha", job_type: "run", status: "successful", created: "2024-06-01T00:00:00Z", started: "2024-06-01T00:00:05Z", finished: "2024-06-01T00:30:00Z", launched_by: "admin", job_template_id: 10, job_template_name: "job-alpha" },
+            { id: 2, name: "job-beta", job_type: "check", status: "failed", created: "2024-05-01T00:00:00Z", started: "2024-05-01T00:00:05Z", finished: "2024-05-01T00:15:00Z", launched_by: "operator", job_template_id: 11, job_template_name: "job-beta" },
+          ],
+          pages_fetched: 1,
+        });
+
+      const input = mockPluginInput();
+      (input.client as any).getSecret = vi.fn().mockResolvedValue("my-test-token");
+
+      const hooks = await createHooks(input, {
+        baseUrl: "https://aap.example.com",
+      });
+
+      const result = await hooks.tool!["awx-list-jobs"]!.execute(
+        { maxPages: 3, pageSize: 25, timeout: 15_000 },
+        mockToolContext(),
+      );
+
+      // Verify listJobs was called with the right args
+      expect(listJobsSpy).toHaveBeenCalledTimes(1);
+      expect(listJobsSpy).toHaveBeenCalledWith(
+        expect.any(Object), // AwxClient
+        15_000,
+        expect.objectContaining({
+          maxPages: 3,
+          pageSize: 25,
+          filters: undefined,
+        }),
+        expect.any(AbortSignal),
+      );
+
+      // Verify structured output with pipe-table format
+      const expectedTable = [
+        "| ID | Name | Job Type | Status | Created | Started | Finished | Launched By |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| 1 | job-alpha | run | successful | 2024-06-01T00:00:00Z | 2024-06-01T00:00:05Z | 2024-06-01T00:30:00Z | admin |",
+        "| 2 | job-beta | check | failed | 2024-05-01T00:00:00Z | 2024-05-01T00:00:05Z | 2024-05-01T00:15:00Z | operator |",
+      ].join("\n");
+      expect(result).toEqual({
+        output: `Found 2 job(s).\n\n${expectedTable}`,
+        metadata: {
+          schema_version: "1.0",
+          total_jobs: 2,
+          results: expect.arrayContaining([
+            expect.objectContaining({ name: "job-alpha" }),
+            expect.objectContaining({ name: "job-beta" }),
+          ]),
+          pages_fetched: 1,
+        },
+      });
+
+      listJobsSpy.mockRestore();
+    });
+
+    it("handles error from listJobs and returns error metadata", async () => {
+      const listJobsSpy = vi.spyOn(listJobsModule, "listJobs")
+        .mockRejectedValue(new Error("API connection refused"));
+
+      const input = mockPluginInput();
+      (input.client as any).getSecret = vi.fn().mockResolvedValue("my-test-token");
+
+      const hooks = await createHooks(input, {
+        baseUrl: "https://aap.example.com",
+      });
+
+      const result = await hooks.tool!["awx-list-jobs"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      expect(result).toEqual({
+        output: "Failed to fetch jobs: API connection refused",
+        metadata: {
+          schema_version: "1.0",
+          total_jobs: 0,
+          results: [],
+          pages_fetched: 0,
+          warning: "Failed to fetch jobs: API connection refused",
+        },
+      });
+
+      listJobsSpy.mockRestore();
+    });
+
+    it("passes filter arg through to listJobs", async () => {
+      const listJobsSpy = vi.spyOn(listJobsModule, "listJobs")
+        .mockResolvedValue({
+          schema_version: "1.0",
+          total_jobs: 0,
+          results: [],
+          pages_fetched: 0,
+        });
+
+      const input = mockPluginInput();
+      (input.client as any).getSecret = vi.fn().mockResolvedValue("my-test-token");
+
+      const hooks = await createHooks(input, {
+        baseUrl: "https://aap.example.com",
+      });
+
+      await hooks.tool!["awx-list-jobs"]!.execute(
+        { filter: ["name__icontains=workspace"] },
+        mockToolContext(),
+      );
+
+      expect(listJobsSpy).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.any(Number),
+        expect.objectContaining({
+          filters: ["name__icontains=workspace"],
+        }),
+        expect.any(AbortSignal),
+      );
+
+      listJobsSpy.mockRestore();
+    });
+  });
+
+  /* ══════════════════════════════════════════════════════════════════
      Cached Client Reuse
      ══════════════════════════════════════════════════════════════════ */
 
   describe("cached client reuse", () => {
     it("reuses the same AwxClient when token is unchanged", async () => {
       const createClientSpy = vi.spyOn(clientModule, "createClient");
+      // Spy on listTemplates to avoid real HTTP request hanging
+      const listTemplatesSpy = vi.spyOn(listTemplatesModule, "listTemplates")
+        .mockResolvedValue({
+          count: 0,
+          results: [],
+        });
 
       const input = mockPluginInput();
       (input.client as any).getSecret = vi
@@ -394,6 +567,7 @@ describe("AWX Plugin Index", () => {
       await hooks.tool!["awx-list-templates"]!.execute({}, mockToolContext());
       expect(createClientSpy).toHaveBeenCalledTimes(1); // still 1, not 2
 
+      listTemplatesSpy.mockRestore();
       createClientSpy.mockRestore();
     });
   });

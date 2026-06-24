@@ -254,14 +254,22 @@ export async function fetchJobStatus(
     const stdoutResponse = await client.request(
       toolName,
       `/api/v2/jobs/${jobId}/stdout/?format=txt`,
-      undefined,
+      { headers: { Accept: "text/plain" } },  // Override default Accept: application/json for text endpoint
       abortSignal,
     );
 
     if (stdoutResponse.ok) {
       stdout = await stdoutResponse.text();
     }
+    // FIX 2: don't throw on failure — stdout is optional, warning added below
   }
 
-  return mapAwxJobToContract(awxJob, stdout);
+  const result = mapAwxJobToContract(awxJob, stdout);
+
+  // If stdout was requested but could not be fetched, add a diagnostic warning
+  if (includeStdout && stdout === undefined) {
+    result.warnings = [...(result.warnings || []), "Requested stdout but AWX returned no output."];
+  }
+
+  return result;
 }

@@ -1,0 +1,9 @@
+{
+  // Project-level OpenCode config for opencode-plugins.
+  // Merged with global config at ~/.config/opencode/opencode.json
+  "$schema": "https://opencode.ai/config.jsonc",
+  "plugin": [
+    "opencode-browser",
+    ["./packages/awx", { "baseUrl": "https://aap.tanscloud-internal.com" }]
+  ]
+}
