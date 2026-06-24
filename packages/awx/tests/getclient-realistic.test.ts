@@ -109,9 +109,7 @@ describe("getAwxClient() — realistic client (no getSecret)", () => {
       mockToolContext(),
     );
 
-    expect((result as { output: string }).output).toContain(
-      "AWX client not available",
-    );
+    expect((result as { output: string }).output).toContain("PAT");
   });
 
   it("awx-list-projects: returns 'AWX client not available' because getSecret is missing from the real client", async () => {
@@ -126,7 +124,7 @@ describe("getAwxClient() — realistic client (no getSecret)", () => {
     );
 
     expect((result as { output: string }).output).toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 
@@ -142,7 +140,7 @@ describe("getAwxClient() — realistic client (no getSecret)", () => {
     );
 
     expect((result as { output: string }).output).toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 
@@ -158,7 +156,7 @@ describe("getAwxClient() — realistic client (no getSecret)", () => {
     );
 
     expect((result as { output: string }).output).toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 
@@ -174,7 +172,7 @@ describe("getAwxClient() — realistic client (no getSecret)", () => {
     );
 
     expect((result as { output: string }).output).toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 
@@ -190,7 +188,7 @@ describe("getAwxClient() — realistic client (no getSecret)", () => {
     );
 
     expect((result as { output: string }).output).toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 
@@ -206,7 +204,7 @@ describe("getAwxClient() — realistic client (no getSecret)", () => {
     );
 
     expect((result as { output: string }).output).toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 });
@@ -247,7 +245,7 @@ describe("getAwxClient() — H4 probe: AWX_TOKEN env var fallback", () => {
 
     // Client was created — output should NOT contain the "not available" error
     expect((result as { output: string }).output).not.toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 });
@@ -291,7 +289,7 @@ describe("getAwxClient() — H1 probe: setCustomConfig bypasses getSecret", () =
 
     // Client was created via customConfig → output should NOT contain the error
     expect((result as { output: string }).output).not.toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 
@@ -311,7 +309,7 @@ describe("getAwxClient() — H1 probe: setCustomConfig bypasses getSecret", () =
 
     // All sources are empty — expect the "not available" error
     expect((result as { output: string }).output).toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 
@@ -332,7 +330,7 @@ describe("getAwxClient() — H1 probe: setCustomConfig bypasses getSecret", () =
 
     // Config was cleared — expect the "not available" error
     expect((result as { output: string }).output).toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 
@@ -362,13 +360,15 @@ describe("getAwxClient() — H1 probe: setCustomConfig bypasses getSecret", () =
 
     // Client was created — output should NOT contain the error
     expect((result as { output: string }).output).not.toContain(
-      "AWX client not available",
+      "PAT",
     );
     // Verify fetch was called with the customConfig token as the Authorization header
+    // Use the last fetch call (tool execution) — earlier calls may include
+    // init-time validation with the real AWX_PAT env var
     const fetchMock = vi.mocked(globalThis.fetch);
     expect(fetchMock).toHaveBeenCalled();
-    const callArgs = fetchMock.mock.calls[0];
-    const headers = (callArgs[1] as RequestInit)?.headers as Record<string, string> | undefined;
+    const lastCall = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
+    const headers = (lastCall[1] as RequestInit)?.headers as Record<string, string> | undefined;
     expect(headers?.Authorization).toBe("Bearer custom-wins");
   });
 });
@@ -408,7 +408,7 @@ describe("getAwxClient() — 3-tier fallback with setCustomConfig", () => {
 
     // Client created via customConfig token — output should NOT contain the error
     expect((result as { output: string }).output).not.toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 
@@ -446,7 +446,7 @@ describe("getAwxClient() — 3-tier fallback with setCustomConfig", () => {
 
     // Client should be created (no "not available" error)
     expect((result as { output: string }).output).not.toContain(
-      "AWX client not available",
+      "PAT",
     );
 
     // The API call should go to custom.example.com, NOT env-default.example.com
@@ -472,7 +472,7 @@ describe("getAwxClient() — 3-tier fallback with setCustomConfig", () => {
 
     // Config was cleared — expect the "not available" error
     expect((result as { output: string }).output).toContain(
-      "AWX client not available",
+      "PAT",
     );
   });
 });

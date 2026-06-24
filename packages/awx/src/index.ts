@@ -39,6 +39,13 @@ import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
 import type { ResourceDetailOutput } from "./get-resource.js";
 
+/* ── Module-level config store for awx-configure tool ─────────── */
+let customConfig: { baseUrl?: string; token?: string } | undefined;
+
+export function setCustomConfig(config: { baseUrl?: string; token?: string } | undefined): void {
+  customConfig = config;
+}
+
 /**
  * Format a user-facing error message for HTTP error responses.
  *
@@ -187,18 +194,23 @@ async function server(input: PluginInput): Promise<Hooks> {
   /* ── AWX HTTP client — lazy resolver, created on first tool call ── */
   let cachedClient: AwxClient | undefined;
   let cachedToken: string | undefined;
+  let cachedBaseUrl: string | undefined;
 
   async function getAwxClient(): Promise<AwxClient> {
-    if (!baseUrl) throw new Error("AWX_BASE_URL not configured. Set the AWX_BASE_URL environment variable to point to your AAP/AWX instance.");
+    const resolvedBaseUrl = customConfig?.baseUrl ?? (process.env.AWX_BASE_URL || undefined);
+    if (!resolvedBaseUrl) throw new Error("AWX_BASE_URL not configured. Set the AWX_BASE_URL environment variable to point to your AAP/AWX instance.");
 
-    const token = await input.client.getSecret?.("awx") ?? process.env.AWX_PAT;
+    const token = customConfig?.token
+      ?? await input.client.getSecret?.("awx")
+      ?? process.env.AWX_TOKEN;
     if (!token) throw new Error("AWX Personal Access Token (PAT) not configured. Store your PAT via the plugin auth prompt.");
 
     const tokenString = String(token);
 
-    if (!cachedClient || cachedToken !== tokenString) {
+    if (!cachedClient || cachedToken !== tokenString || cachedBaseUrl !== resolvedBaseUrl) {
       cachedToken = tokenString;
-      cachedClient = createClient(baseUrl, tokenString, { metricsStore });
+      cachedBaseUrl = resolvedBaseUrl;
+      cachedClient = createClient(resolvedBaseUrl, tokenString, { metricsStore });
     }
 
     return cachedClient;
@@ -1171,6 +1183,34 @@ async function server(input: PluginInput): Promise<Hooks> {
               hasAwxBaseUrl: Boolean(process.env.AWX_BASE_URL),
             }),
           };
+        },
+      }),
+
+      "awx-configure": tool({
+        description: "Configure AWX connection settings (base URL and/or PAT token).",
+        args: {
+          baseUrl: z.string().optional().describe("AWX/AAP base URL"),
+          token: z.string().optional().describe("AWX Personal Access Token (PAT)"),
+        },
+        async execute(args, context) {
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          if (!args.baseUrl && !args.token) {
+            return { output: "Provide at least one of: baseUrl, token" };
+          }
+
+          const config: { baseUrl?: string; token?: string } = {};
+          if (args.baseUrl) config.baseUrl = args.baseUrl;
+          if (args.token) config.token = args.token;
+          setCustomConfig(config);
+
+          if (args.baseUrl && args.token) {
+            return { output: "AWX client configured and ready." };
+          }
+
+          return { output: "Configuration stored." };
         },
       }),
     },
