@@ -25,7 +25,8 @@
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
-import { AwxPlugin, setCustomConfig } from "../src/index.js";
+import { AwxPlugin } from "../src/index.js";
+import { setCustomConfig } from "../src/config.js";
 
 /* ── Minimal ToolContext mock ────────────────────────────────────── */
 
