@@ -194,6 +194,14 @@ describe("awx-job-status tool", () => {
     expect(metadata.derived.is_successful).toBe(true);
     expect(metadata.derived.is_failed).toBe(false);
     expect(metadata.derived.has_unreachable_hosts).toBe(false);
+
+    // Assert: output field also contains the full contract as JSON
+    const outputStr = (result as { output: string; metadata: JobDetailOutput }).output;
+    const outputParsed = JSON.parse(outputStr);
+    expect(outputParsed.schema_version).toBe("1.0");
+    expect(outputParsed.job.id).toBe(142);
+    expect(outputParsed.job.status).toBe("successful");
+    expect(outputParsed.related.inventory_name).toBe("Production");
   });
 
   it("reports tool is registered in hooks.tool", async () => {
@@ -233,6 +241,13 @@ describe("awx-job-status tool", () => {
     expect(metadata.stdout).toBeDefined();
     expect(typeof metadata.stdout).toBe("string");
     expect(metadata.stdout as string).toContain("PLAY [Deploy Web Stack]");
+
+    // Assert: output field also contains the full contract with stdout
+    const outputStr = (result as { output: string; metadata: Record<string, unknown> }).output;
+    const outputParsed = JSON.parse(outputStr);
+    expect(outputParsed.stdout).toBeDefined();
+    expect(typeof outputParsed.stdout).toBe("string");
+    expect(outputParsed.stdout as string).toContain("PLAY [Deploy Web Stack]");
   });
 
   it("omits stdout when include_stdout is false or not provided", async () => {
@@ -381,6 +396,12 @@ describe("awx-job-status tool", () => {
     expect(metadata.derived.is_failed).toBe(false);
     expect(metadata.derived.is_successful).toBe(true);
     expect(metadata.errors.length).toBeGreaterThan(0);
+
+    // Assert: output field also contains the full contract
+    const outputStr = (result as { output: string; metadata: JobDetailOutput }).output;
+    const outputParsed = JSON.parse(outputStr);
+    expect(outputParsed.host_status_counts.unreachable).toBe(3);
+    expect(outputParsed.derived.has_unreachable_hosts).toBe(true);
   });
 
   it("returns failed job status with errors", async () => {
@@ -426,5 +447,11 @@ describe("awx-job-status tool", () => {
     expect(metadata.derived.is_failed).toBe(true);
     expect(metadata.derived.is_successful).toBe(false);
     expect(metadata.errors.length).toBeGreaterThan(0);
+
+    // Assert: output field also contains the full contract
+    const outputStr = (result as { output: string; metadata: JobDetailOutput }).output;
+    const outputParsed = JSON.parse(outputStr);
+    expect(outputParsed.derived.is_failed).toBe(true);
+    expect(outputParsed.derived.is_successful).toBe(false);
   });
 });

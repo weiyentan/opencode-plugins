@@ -12,7 +12,7 @@ The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-get-resource, awx-debug-env) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-list-jobs, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-get-resource, awx-debug-env) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | Pure functions: SSH→HTTPS URL conversion, git branch inference, required-var validation |
@@ -21,7 +21,7 @@ The AWX plugin delivers these modules:
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) is complete — all 9 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
+Tool implementation (Phase 2) is complete — all 10 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
 ### Tool Output Formats
 
@@ -29,10 +29,11 @@ Tool implementation (Phase 2) is complete — all 9 AWX tools are implemented an
 |------|--------------|----------------|
 | `awx-list-templates` | Pipe-delimited Markdown table (ID / Name / Description) | `--filter` (e.g., `name__icontains=workspace`) |
 | `awx-list-projects` | Pipe-delimited Markdown table (ID / Name / Description / SCM) | `--filter` (e.g., `name__icontains=workspace`) |
+| `awx-list-jobs` | Pipe-delimited Markdown table (ID / Name / Job Type / Status / Created / Started / Finished / Launched By) | `--filter` (e.g., `name__icontains=workspace`) |
 | `awx-sync-project` | Plain text message + structured metadata | — |
 | `awx-launch-job` | Plain text message + structured metadata | — |
-| `awx-job-status` | Plain text message + `JobDetailOutput` v1.0 metadata | — |
-| `awx-wait-job` | Plain text message + `JobDetailOutput` v1.0 metadata | — |
+| `awx-job-status` | JSON-serialized `JobDetailOutput` v1.0 contract | — |
+| `awx-wait-job` | JSON-serialized `JobDetailOutput` v1.0 contract | — |
 | `awx-get-job-events` | Plain text message + structured metadata | — |
 | `awx-debug-env` | JSON string | — |
 | `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope | `type` (template\|project\|inventory) + `id` |
@@ -84,7 +85,7 @@ Integration tests in `tests/integration/` exercise the plugin's tools against a 
 
 #### Read-Only Tools
 
-The suite `tests/integration/read-only.test.ts` covers `awx-list-templates` and `awx-list-projects`.
+The suite `tests/integration/read-only.test.ts` covers `awx-list-templates`, `awx-list-projects`, and `awx-list-jobs`.
 
 #### Job Lifecycle Tools
 

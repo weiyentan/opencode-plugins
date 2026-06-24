@@ -187,6 +187,43 @@ describe("AWX Get Job Events Tool", () => {
     expect(parsed.next_page).toBe(2);
   });
 
+  it("handles relative next URL gracefully (e.g., /api/v2/jobs/42/job_events/?page=2)", async () => {
+    const mockClient = mockAwxClient();
+    (mockClient.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse({
+        count: 100,
+        next: "/api/v2/jobs/42/job_events/?page=2", // relative URL
+        previous: null,
+        results: Array.from({ length: 50 }, (_, i) => ({
+          id: i + 1,
+          event: "runner_on_ok",
+          job: 42,
+        })),
+      }),
+    );
+
+    vi.spyOn(clientModule, "createClient").mockReturnValue(mockClient);
+
+    const input = mockPluginInput();
+    (input.client as any).getSecret = vi
+      .fn()
+      .mockResolvedValue("test-token");
+
+    const hooks = await createHooks(input, {
+      baseUrl: "https://aap.example.com",
+    });
+
+    const result = await hooks.tool!["awx-get-job-events"]!.execute(
+      { job_id: 42 },
+      mockToolContext(),
+    );
+
+    const parsed = getMetadata(result);
+    expect(parsed.count).toBe(100);
+    expect(parsed.results).toHaveLength(50);
+    expect(parsed.next_page).toBe(2); // Should still extract page from relative URL
+  });
+
   it("passes page parameter to the API", async () => {
     const mockClient = mockAwxClient();
     (mockClient.request as ReturnType<typeof vi.fn>).mockResolvedValue(

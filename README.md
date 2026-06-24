@@ -8,9 +8,9 @@ A monorepo of [OpenCode](https://opencode.ai) server plugins that extend the Ope
 
 An OpenCode plugin for [AWX](https://github.com/ansible/awx) / Ansible Automation Platform (AAP). Provides native tool access to job templates, projects, and job lifecycle operations — replacing brittle PowerShell scripts with a portable, testable TypeScript plugin.
 
-**Status:** ✅ Phase 0 (scaffolding), Phase 1 (client infrastructure), and Phase 2 core tools complete — 9 tools implemented covering project lookup, template detail, inventory detail, job lifecycle, and environment debugging.
+**Status:** ✅ Phase 0 (scaffolding), Phase 1 (client infrastructure), and Phase 2 core tools complete — 10 tools implemented covering project lookup, template detail, inventory detail, job lifecycle, and environment debugging.
 
-**Coverage:** 9 of 22 AWX operations planned for v1 (41%), covering the 80% use case. Full tool-action mapping table documented in the PRD.
+**Coverage:** 10 of 22 AWX operations planned for v1 (45%), covering the 80% use case. Full tool-action mapping table documented in the PRD.
 
 **Key docs:**
 - [Refined PRD](docs/prd/plugin-awx-refined.md) — full product requirements
@@ -49,7 +49,7 @@ The AWX plugin package (`packages/awx/`) is already scaffolded with these module
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers all AWX tools (list-templates, list-projects, launch-job, job-status, wait-job, get-job-events, sync-project, get-resource, debug-env); wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools (list-templates, list-projects, list-jobs, launch-job, job-status, wait-job, get-job-events, sync-project, get-resource, debug-env); wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook |
 | **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | SSH→HTTPS URL conversion, git branch inference, required-var validation |
