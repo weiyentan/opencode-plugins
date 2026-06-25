@@ -1214,7 +1214,7 @@ async function server(input: PluginInput): Promise<Hooks> {
         ].join(" "),
         args: {
           name: z
-            .string()
+            .string().min(1)
             .describe("Project name"),
           organization_id: z
             .number()
