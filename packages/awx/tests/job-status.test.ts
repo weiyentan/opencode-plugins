@@ -509,4 +509,23 @@ describe("awx-job-status tool", () => {
     const outputParsed = JSON.parse(outputStr);
     expect(outputParsed.job.extra_vars).toBeUndefined();
   });
+
+  it("omits extra_vars when parsed JSON is null", async () => {
+    const jobWithNullVars = mockAwxApiJobResponse({
+      extra_vars: "null",
+    });
+    mockFetchResponse(jobWithNullVars);
+
+    const result = await hooks.tool!["awx-job-status"]!.execute(
+      { job_id: 142 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: JobDetailOutput }).metadata;
+    expect(metadata.job.extra_vars).toBeUndefined();
+
+    const outputStr = (result as { output: string; metadata: JobDetailOutput }).output;
+    const outputParsed = JSON.parse(outputStr);
+    expect(outputParsed.job.extra_vars).toBeUndefined();
+  });
 });

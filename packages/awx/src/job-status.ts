@@ -197,7 +197,10 @@ export function mapAwxJobToContract(
   // Parse extra_vars from AWX's JSON string representation
   if (awxJob.extra_vars) {
     try {
-      job.extra_vars = JSON.parse(awxJob.extra_vars);
+      const parsed = JSON.parse(awxJob.extra_vars);
+      if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+        job.extra_vars = parsed as Record<string, unknown>;
+      }
     } catch {
       // Parse failure — omit the field rather than sending raw string or {}
     }
