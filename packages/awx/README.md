@@ -12,7 +12,7 @@ The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-list-jobs, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-get-resource, awx-debug-env, awx-configure) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-list-jobs, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-get-resource, awx-debug-env, awx-configure, awx-create-project, awx-create-template, awx-create-inventory, awx-update-project, awx-update-template, awx-update-inventory, awx-delete-project, awx-delete-template, awx-delete-inventory) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Transforms** | `src/transforms.ts` | Pure functions: SSH→HTTPS URL conversion, git branch inference, required-var validation |
@@ -21,7 +21,7 @@ The AWX plugin delivers these modules:
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) is complete — all 12 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
+Tool implementation (Phase 2) is complete — all 20 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
 ### Tool Output Formats
 
@@ -38,6 +38,15 @@ Tool implementation (Phase 2) is complete — all 12 AWX tools are implemented a
 | `awx-configure` | Plain text confirmation message | — |
 | `awx-debug-env` | JSON string | — |
 | `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope | `type` (template\|project\|inventory) + `id` |
+| `awx-create-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-create-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-create-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 
 Both `awx-list-templates` and `awx-list-projects` accept `--timeout` (total tool timeout in ms, default 30000).
 
@@ -251,10 +260,12 @@ packages/awx/
 │   ├── auth.ts               # Bearer token auth hook (type: "api")
 │   ├── client.ts             # HTTP middleware pipeline (circuit breaker, retry, timeout)
 │   ├── get-resource.ts       # Shared resource detail orchestrator — type→endpoint registry, fetch, map dispatch
+│   ├── crud.ts               # CRUD endpoint registry — type→{create,update,delete} dispatch with per-type mappers
 │   ├── metrics.ts            # Per-tool counters with file-backed durability
 │   ├── node-shim.d.ts        # Minimal Node.js declarations (fs/promises, path)
 │   ├── contracts/
 │   │   ├── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
+│   │   ├── resource-mutation.ts # ResourceMutationOutput v1.0 contract (schema_version, action, resource_type, id, data)
 │   │   ├── template-detail.ts # TemplateDetailOutput contract (schema_version, resource_type, id, data)
 │   │   ├── project-detail.ts  # ProjectDetailOutput contract
 │   │   └── inventory-detail.ts # InventoryDetailOutput contract
@@ -268,6 +279,9 @@ packages/awx/
 │   ├── lifecycle.test.ts         # Lazy client/auth lifecycle tests (no-token → token → client-created)
 │   ├── metrics.test.ts           # MetricsStore persistence & counter tests incl. concurrent serialization
 │   ├── plugin-init-timeout.test.ts  # Init-time timeout cleanup tests (clear() called after validation)
+│   ├── crud-project.test.ts      # CRUD create/update/delete integration tests for projects
+│   ├── crud-template.test.ts     # CRUD create/update/delete integration tests for templates
+│   ├── crud-inventory.test.ts    # CRUD create/update/delete integration tests for inventories
 │   ├── get-resource.test.ts      # getResource orchestrator unit tests (dispatch, error handling, registry)
 │   ├── get-resource-tool.test.ts # awx-get-resource tool integration tests (via plugin tool registration)
 │   ├── map-template.test.ts      # mapTemplate mapper unit tests

@@ -170,6 +170,8 @@ describe("init-time timeout cleanup", () => {
   });
 
   it("does not call createTimeoutSignal when baseUrl is not configured", async () => {
+    // Explicitly clear the env var because the real environment may have it set
+    vi.stubEnv("AWX_BASE_URL", "");
     const hooks: Hooks = await AwxPlugin(
       mockPluginInputWithToken(),
       // No baseUrl → init validation skipped entirely
