@@ -113,7 +113,7 @@ The plugin reads configuration from these environment variables:
 | Env Var | Default | Required | Description |
 |---------|---------|----------|-------------|
 | `AWX_BASE_URL` | — | **Yes** | Base URL of the AAP/AWX instance (e.g. `https://example.com`) |
-| `AWX_PAT` | — | No | Personal Access Token fallback (primary: auth hook / `getSecret`). Used when no token is stored in the auth hook. |
+| `AWX_TOKEN` | — | No | Personal Access Token fallback (primary: auth hook / `getSecret`). Used when no token is stored in the auth hook. |
 
 #### Test Prerequisites
 
