@@ -42,6 +42,7 @@ import { executeCrud } from "./crud.js";
 import type { ResourceMutationOutput } from "./contracts/resource-mutation.js";
 
 import { getCustomConfig, setCustomConfig } from "./runtime-config.js";
+import { executeCrud } from "./crud.js";
 
 /**
  * Format a user-facing error message for HTTP error responses.
@@ -1197,6 +1198,8 @@ async function server(input: PluginInput): Promise<Hooks> {
       }),
 
       /**
+
+      /**
        * Create a new AWX project.
        *
        * Creates a project in AWX with the specified name and organization.
@@ -1377,6 +1380,117 @@ async function server(input: PluginInput): Promise<Hooks> {
                 schema_version: "1.0",
                 action: "created",
                 resource_type: "template",
+                id: 0,
+                data: null,
+                warnings: [],
+                errors: [message],
+              },
+            };
+          }
+        },
+      }),
+
+      /**
+       * Create a new AWX inventory.
+       *
+       * Creates an inventory resource in AWX via POST /api/v2/inventories/.
+       * Requires name and organization_id. The organization_id must be a
+       * pre-resolved AWX organization ID (no internal name-to-ID resolution).
+       * Optional description field is supported.
+       *
+       * Returns a ResourceMutationOutput envelope containing the created
+       * inventory detail (mapped via mapInventory).
+       */
+      "awx-create-inventory": tool({
+        description: [
+          "Create a new AWX inventory.",
+          "Requires name and organization_id (resolved organization ID).",
+          "Optional description is supported.",
+          "Returns created inventory detail in a standard mutation envelope.",
+        ].join(" "),
+        args: {
+          name: z
+            .string()
+            .min(1)
+            .describe("The name of the new inventory."),
+          organization_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The resolved AWX organization ID to assign this inventory to."),
+          description: z
+            .string()
+            .optional()
+            .describe("Optional description for the inventory."),
+        },
+        async execute(args, context) {
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: message,
+              metadata: {
+                schema_version: "1.0",
+                action: "created",
+                resource_type: "inventory",
+                id: 0,
+                data: null,
+                warnings: [],
+                errors: [message],
+              },
+            };
+          }
+
+          try {
+            const body: Record<string, unknown> = {
+              name: args.name,
+              organization: args.organization_id,
+            };
+            if (args.description !== undefined) {
+              body.description = args.description;
+            }
+
+            const result = await executeCrud(
+              awxClient,
+              "inventory",
+              "create",
+              undefined,
+              body,
+              context.abort,
+            );
+
+            // extract the inner inventory data from the mapper envelope
+            const inventoryData = result.data
+              ? (result.data as Record<string, unknown>).data ?? result.data
+              : null;
+
+            return {
+              output: `Inventory "${args.name}" created (ID ${result.id}).`,
+              metadata: {
+                schema_version: "1.0",
+                action: result.action,
+                resource_type: result.resource_type,
+                id: result.id,
+                data: inventoryData,
+                warnings: [],
+                errors: [],
+              },
+            };
+          } catch (err: unknown) {
+            const message =
+              err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to create inventory: ${message}`,
+              metadata: {
+                schema_version: "1.0",
+                action: "created",
+                resource_type: "inventory",
                 id: 0,
                 data: null,
                 warnings: [],
@@ -1581,6 +1695,125 @@ async function server(input: PluginInput): Promise<Hooks> {
       }),
 
       /**
+       * Update an existing AWX inventory.
+       *
+       * Modifies an inventory resource in AWX via PATCH /api/v2/inventories/<id>/.
+       * Requires the inventory ID; name, description, and organization_id
+       * are optional partial-update fields.
+       *
+       * Returns a ResourceMutationOutput envelope containing the updated
+       * inventory detail (mapped via mapInventory).
+       */
+      "awx-update-inventory": tool({
+        description: [
+          "Update an existing AWX inventory by ID.",
+          "Accepts partial fields (name, description, organization_id).",
+          "Returns updated inventory detail in a standard mutation envelope.",
+        ].join(" "),
+        args: {
+          id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the inventory to update."),
+          name: z
+            .string()
+            .min(1)
+            .optional()
+            .describe("New name for the inventory."),
+          description: z
+            .string()
+            .optional()
+            .describe("New description for the inventory."),
+          organization_id: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe("New resolved organization ID for the inventory."),
+        },
+        async execute(args, context) {
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: message,
+              metadata: {
+                schema_version: "1.0",
+                action: "updated",
+                resource_type: "inventory",
+                id: args.id,
+                data: null,
+                warnings: [],
+                errors: [message],
+              },
+            };
+          }
+
+          try {
+            const body: Record<string, unknown> = {};
+            if (args.name !== undefined) {
+              body.name = args.name;
+            }
+            if (args.description !== undefined) {
+              body.description = args.description;
+            }
+            if (args.organization_id !== undefined) {
+              body.organization = args.organization_id;
+            }
+
+            const result = await executeCrud(
+              awxClient,
+              "inventory",
+              "update",
+              args.id,
+              body,
+              context.abort,
+            );
+
+            // extract the inner inventory data from the mapper envelope
+            const inventoryData = result.data
+              ? (result.data as Record<string, unknown>).data ?? result.data
+              : null;
+
+            return {
+              output: `Inventory ${args.id} updated.`,
+              metadata: {
+                schema_version: "1.0",
+                action: result.action,
+                resource_type: result.resource_type,
+                id: result.id,
+                data: inventoryData,
+                warnings: [],
+                errors: [],
+              },
+            };
+          } catch (err: unknown) {
+            const message =
+              err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to update inventory ${args.id}: ${message}`,
+              metadata: {
+                schema_version: "1.0",
+                action: "updated",
+                resource_type: "inventory",
+                id: args.id,
+                data: null,
+                warnings: [],
+                errors: [message],
+              },
+            };
+          }
+        },
+      }),
+
+      /**
        * Delete an AWX project.
        *
        * Deletes a project by ID from AWX. This action is irreversible.
@@ -1717,6 +1950,91 @@ async function server(input: PluginInput): Promise<Hooks> {
                 schema_version: "1.0",
                 action: "deleted",
                 resource_type: "template",
+                id: args.id,
+                data: null,
+                warnings: [],
+                errors: [message],
+              },
+            };
+          }
+        },
+      }),
+
+      /**
+       * Delete an AWX inventory.
+       *
+       * Removes an inventory resource from AWX via DELETE /api/v2/inventories/<id>/.
+       * Requires the inventory ID. Returns a ResourceMutationOutput envelope
+       * with data set to null.
+       */
+      "awx-delete-inventory": tool({
+        description: [
+          "Delete an AWX inventory by ID.",
+          "Removes the inventory from AWX via DELETE /api/v2/inventories/<id>/.",
+          "Returns a standard mutation envelope with data set to null.",
+        ].join(" "),
+        args: {
+          id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the inventory to delete."),
+        },
+        async execute(args, context) {
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: message,
+              metadata: {
+                schema_version: "1.0",
+                action: "deleted",
+                resource_type: "inventory",
+                id: args.id,
+                data: null,
+                warnings: [],
+                errors: [message],
+              },
+            };
+          }
+
+          try {
+            const result = await executeCrud(
+              awxClient,
+              "inventory",
+              "delete",
+              args.id,
+              undefined,
+              context.abort,
+            );
+
+            return {
+              output: `Inventory ${args.id} deleted.`,
+              metadata: {
+                schema_version: "1.0",
+                action: result.action,
+                resource_type: result.resource_type,
+                id: result.id,
+                data: null,
+                warnings: [],
+                errors: [],
+              },
+            };
+          } catch (err: unknown) {
+            const message =
+              err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to delete inventory ${args.id}: ${message}`,
+              metadata: {
+                schema_version: "1.0",
+                action: "deleted",
+                resource_type: "inventory",
                 id: args.id,
                 data: null,
                 warnings: [],
