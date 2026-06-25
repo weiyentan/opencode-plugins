@@ -742,26 +742,18 @@ async function server(input: PluginInput): Promise<Hooks> {
       }),
 
       /**
-       * Launch an AWX job template with extra-vars transforms.
+       * Launch an AWX job template by ID.
        *
-       * Runs the transforms pipeline (SCM URL normalization, git branch
-       * inference, required vars validation) before calling the AWX launch
-       * API. If any transform fails, the launch is aborted with actionable
-       * error messages.
-       *
-       * Returns a JSON string with:
-       * - jobId: The AWX job ID (0 if transforms failed)
-       * - jobStatus: The AWX job status ("failed" if transforms failed)
-       * - warnings: Non-fatal transforms warnings
-       * - errors: Fatal transforms errors (empty on success)
+       * Passes raw extra_vars directly to POST
+       * /api/v2/job_templates/{id}/launch/ and returns the raw AWX
+       * API response.
        */
       "awx-launch-job": tool({
         description: [
-          "Launch an AWX job template by ID with extra-vars transforms.",
-          "Transforms SCM URLs (SSH→HTTPS), infers git branches from",
-          "refs/heads/ refs, and validates required variables before",
-          "calling the AWX launch API. If any transform fails, the",
-          "launch is aborted and an error is returned.",
+          "Launch an AWX job template by ID with extra-vars.",
+          "Passes extra_vars directly to POST",
+          "/api/v2/job_templates/{id}/launch/ and returns",
+          "the raw AWX API response body.",
         ].join(" "),
         args: {
           template_id: z
@@ -773,9 +765,7 @@ async function server(input: PluginInput): Promise<Hooks> {
             .record(z.string(), z.unknown())
             .optional()
             .describe(
-              "Extra variables to pass to the job template. Transforms:" +
-              " scm_url (SSH→HTTPS), scm_branch (refs/heads/→short name)," +
-              " plus required vars validation (inventory, scm_url, scm_branch).",
+              "Extra variables to pass to the job template as a key-value object.",
             ),
         },
         async execute(args, context) {
@@ -789,15 +779,7 @@ async function server(input: PluginInput): Promise<Hooks> {
             awxClient = await getAwxClient();
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
-            return {
-              output: message,
-              metadata: {
-                jobId: 0,
-                jobStatus: "failed",
-                warnings: [],
-                errors: [message],
-              },
-            };
+            return { output: message };
           }
 
           try {
@@ -805,27 +787,18 @@ async function server(input: PluginInput): Promise<Hooks> {
               awxClient,
               args.template_id,
               args.extra_vars,
-              { abortSignal: context.abort },
+              context.abort,
             );
 
-            const output = result.jobId > 0
-              ? `Job ${result.jobId} launched (${result.jobStatus}).`
-              : "Launch aborted due to transform errors.";
             return {
-              output,
-              metadata: result as unknown as Record<string, unknown>,
+              output: JSON.stringify(result),
+              metadata: result as Record<string, unknown>,
             };
           } catch (err) {
             const message =
               err instanceof Error ? err.message : String(err);
             return {
               output: `Failed to launch job: ${message}`,
-              metadata: {
-                jobId: 0,
-                jobStatus: "failed",
-                warnings: [],
-                errors: [message],
-              },
             };
           }
         },

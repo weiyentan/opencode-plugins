@@ -15,7 +15,6 @@ The AWX plugin delivers these modules:
 | **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-list-jobs, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-get-resource, awx-debug-env, awx-configure, awx-create-project, awx-create-template, awx-create-inventory, awx-update-project, awx-update-template, awx-update-inventory, awx-delete-project, awx-delete-template, awx-delete-inventory) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
-| **Transforms** | `src/transforms.ts` | Pure functions: SSH→HTTPS URL conversion, git branch inference, required-var validation |
 | **Client middleware** | `src/client.ts` | HTTP middleware pipeline: circuit breaker, retry/backoff, timeout via native `fetch` |
 | **Metrics** | `src/metrics.ts` | Per-tool counters with file-backed durability for operational visibility |
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
@@ -31,7 +30,7 @@ Tool implementation (Phase 2) is complete — all 20 AWX tools are implemented a
 | `awx-list-projects` | Pipe-delimited Markdown table (ID / Name / Description / SCM) | `--filter` (e.g., `name__icontains=workspace`) |
 | `awx-list-jobs` | Pipe-delimited Markdown table (ID / Name / Job Type / Status / Created / Started / Finished / Launched By) | `--filter` (e.g., `name__icontains=workspace`) |
 | `awx-sync-project` | Plain text message + structured metadata | — |
-| `awx-launch-job` | Plain text message + structured metadata | — |
+| `awx-launch-job` | Raw AWX API response JSON (thin proxy — no transforms or structured envelope) | — |
 | `awx-job-status` | JSON-serialized `JobDetailOutput` v1.0 contract | — |
 | `awx-wait-job` | JSON-serialized `JobDetailOutput` v1.0 contract | — |
 | `awx-get-job-events` | Plain text message + structured metadata | — |
@@ -126,7 +125,7 @@ The plugin reads configuration from these environment variables:
 | `EXTRA_VARS_SCM_URL` | `"https://github.com/example/repo.git"` | No | SCM URL for extra_vars |
 | `EXTRA_VARS_SCM_BRANCH` | `"main"` | No | SCM branch for extra_vars |
 
-> **Important:** Use a non-production job template. The launch tool starts a real job on AAP. The plugin's transforms pipeline requires `inventory`, `scm_url`, and `scm_branch` in extra_vars — configure them via env vars to match your template's expectations.
+> **Important:** Use a non-production job template. The launch tool starts a real job on AAP. The plugin now passes extra_vars verbatim — no SSH→HTTPS conversion, no branch inference, no required-var validation. Your job template must accept whatever extra_vars you pass.
 
 #### Run Command
 
@@ -263,6 +262,7 @@ packages/awx/
 │   ├── crud.ts               # CRUD endpoint registry — type→{create,update,delete} dispatch with per-type mappers
 │   ├── metrics.ts            # Per-tool counters with file-backed durability
 │   ├── node-shim.d.ts        # Minimal Node.js declarations (fs/promises, path)
+│   ├── launch.ts             # awx-launch-job orchestration (thin proxy — passes extra_vars verbatim to AWX API)
 │   ├── contracts/
 │   │   ├── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
 │   │   ├── resource-mutation.ts # ResourceMutationOutput v1.0 contract (schema_version, action, resource_type, id, data)
@@ -323,7 +323,7 @@ See the [Architecture Decision Records](../../docs/adr/) in the monorepo for des
 - **ADR 0002**: Output contract schema
 - **ADR 0003**: Resilience patterns (retry, timeout, circuit breaker)
 - **ADR 0004**: Agent-side polling (job lifecycle)
-- **ADR 0005**: Extra-variable transforms (SSH→HTTPS, branch inference)
+- **ADR 0005**: Extra-variable transforms (Superseded — transforms removed; `awx-launch-job` now passes `extra_vars` verbatim)
 - **ADR 0006**: Error taxonomy and structured error reporting
 
 ## License
