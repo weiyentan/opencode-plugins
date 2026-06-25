@@ -1,13 +1,13 @@
 /**
  * Launch Job Tool Tests
  *
- * Validates the transforms pipeline and launch-job tool:
- * - runTransformsPipeline runs transforms in order and returns warnings/errors
- * - launchJob aborts on transforms failure
- * - launchJob returns job ID on success
+ * Validates the launchJob thin-proxy behavior:
+ * - extra_vars are forwarded verbatim to the AWX API
+ * - raw AWX response body is returned as-is
+ * - HTTP errors are surfaced correctly
  */
 import { describe, it, expect, vi } from "vitest";
-import { runTransformsPipeline, launchJob } from "../src/launch.js";
+import { launchJob } from "../src/launch.js";
 import type { AwxClient } from "../src/client.js";
 
 /** Create a minimal mock AWX client */
@@ -18,97 +18,11 @@ function mockClient(): AwxClient {
 }
 
 // ============================================================================
-// runTransformsPipeline — Pure pipeline function
-// ============================================================================
-
-describe("runTransformsPipeline", () => {
-  it("reports missing required vars when extraVars is undefined", () => {
-    const result = runTransformsPipeline(undefined);
-
-    expect(result).toHaveProperty("extraVars");
-    expect(result).toHaveProperty("warnings");
-    expect(result).toHaveProperty("errors");
-    expect(result.extraVars).toEqual({});
-    expect(result.warnings).toEqual([]);
-    expect(result.errors).toEqual([
-      'Missing required variable: "inventory"',
-      'Missing required variable: "scm_url"',
-      'Missing required variable: "scm_branch"',
-    ]);
-  });
-
-  it("normalizes scm_url from SSH to HTTPS and produces a warning", () => {
-    const result = runTransformsPipeline({
-      inventory: "prod",
-      scm_url: "git@github.com:org/repo.git",
-    });
-
-    expect(result.extraVars.scm_url).toBe("https://github.com/org/repo");
-    expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain("SCM URL transformed");
-  });
-
-  it("infers git branch from refs/heads/ prefix and produces a warning", () => {
-    const result = runTransformsPipeline({
-      inventory: "prod",
-      scm_url: "https://github.com/org/repo",
-      scm_branch: "refs/heads/main",
-    });
-
-    expect(result.extraVars.scm_branch).toBe("main");
-    expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain("Git branch inferred");
-  });
-
-  it("passes through an already-short branch name without warning", () => {
-    const result = runTransformsPipeline({
-      inventory: "prod",
-      scm_url: "https://github.com/org/repo",
-      scm_branch: "main",
-    });
-
-    expect(result.extraVars.scm_branch).toBe("main");
-    expect(result.warnings).toEqual([]);
-  });
-
-  it("pipeline order: errors from validateRequiredVars appear despite URL/branch success", () => {
-    // Provide scm_url and scm_branch but omit inventory
-    const result = runTransformsPipeline({
-      scm_url: "git@github.com:org/repo.git",
-      scm_branch: "refs/heads/develop",
-    });
-
-    // URL and branch should be transformed
-    expect(result.extraVars.scm_url).toBe("https://github.com/org/repo");
-    expect(result.extraVars.scm_branch).toBe("develop");
-    // Warnings from both transforms
-    expect(result.warnings).toHaveLength(2);
-    // But inventory is still missing
-    expect(result.errors).toEqual([
-      'Missing required variable: "inventory"',
-    ]);
-  });
-});
-
-// ============================================================================
-// launchJob — Orchestrator with transforms + API call
+// launchJob — Thin proxy that passes extra_vars through to AWX
 // ============================================================================
 
 describe("launchJob", () => {
-  it("aborts launch when transforms pipeline has errors (no API call)", async () => {
-    const client = mockClient();
-
-    // Missing all required vars should cause pipeline failure
-    const result = await launchJob(client, 42, {});
-
-    // Should return immediately with errors, no API call
-    expect(result.jobId).toBe(0);
-    expect(result.jobStatus).toBe("failed");
-    expect(result.errors.length).toBeGreaterThan(0);
-    expect(client.request).not.toHaveBeenCalled();
-  });
-
-  it("calls launch API and returns job ID on success", async () => {
+  it("passes extra_vars verbatim to the AWX API", async () => {
     const client = mockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
@@ -117,13 +31,16 @@ describe("launchJob", () => {
       text: () => Promise.resolve(JSON.stringify({ id: 123, status: "pending" })),
     } as Response);
 
-    const result = await launchJob(client, 10, {
+    const rawVars = {
       inventory: "prod",
       scm_url: "git@github.com:org/playbooks.git",
       scm_branch: "refs/heads/main",
-    });
+      custom_flag: true,
+    };
 
-    // Should have called the launch API
+    await launchJob(client, 10, rawVars);
+
+    // Verify extra_vars were forwarded verbatim (no transforms applied)
     expect(client.request).toHaveBeenCalledTimes(1);
     expect(client.request).toHaveBeenCalledWith(
       "awx-launch-job",
@@ -131,22 +48,99 @@ describe("launchJob", () => {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          extra_vars: {
-            inventory: "prod",
-            scm_url: "https://github.com/org/playbooks",
-            scm_branch: "main",
-          },
-        }),
+        body: JSON.stringify({ extra_vars: rawVars }),
       },
       undefined,
     );
-    // Should return the job ID and status
-    expect(result.jobId).toBe(123);
-    expect(result.jobStatus).toBe("pending");
-    // Transforms warnings should be propagated
-    expect(result.warnings.length).toBeGreaterThan(0);
-    expect(result.errors).toEqual([]);
+  });
+
+  it("returns raw AWX response body", async () => {
+    const client = mockClient();
+    const awxResponse = {
+      id: 456,
+      status: "pending",
+      type: "job",
+      url: "/api/v2/jobs/456/",
+      related: {},
+      summary_fields: {},
+      created: "2024-01-01T00:00:00Z",
+      name: "test-job",
+    };
+
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      statusText: "Created",
+      text: () => Promise.resolve(JSON.stringify(awxResponse)),
+    } as Response);
+
+    const result = await launchJob(client, 10, { inventory: "prod" });
+
+    // Should return the full AWX response body as-is
+    expect(result).toEqual(awxResponse);
+  });
+
+  it("omits extra_vars from request body when none provided", async () => {
+    const client = mockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      statusText: "Created",
+      text: () => Promise.resolve(JSON.stringify({ id: 789, status: "pending" })),
+    } as Response);
+
+    await launchJob(client, 10, undefined);
+
+    expect(client.request).toHaveBeenCalledTimes(1);
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-launch-job",
+      "/api/v2/job_templates/10/launch/",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      },
+      undefined,
+    );
+  });
+
+  it("omits extra_vars from request body when empty object provided", async () => {
+    const client = mockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      statusText: "Created",
+      text: () => Promise.resolve(JSON.stringify({ id: 790, status: "pending" })),
+    } as Response);
+
+    await launchJob(client, 10, {});
+
+    expect(client.request).toHaveBeenCalledTimes(1);
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-launch-job",
+      "/api/v2/job_templates/10/launch/",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      },
+      undefined,
+    );
+  });
+
+  it("returns empty object when AWX response body is empty", async () => {
+    const client = mockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      statusText: "Created",
+      text: () => Promise.resolve(""),
+    } as Response);
+
+    const result = await launchJob(client, 10, { inventory: "prod" });
+
+    expect(result).toEqual({});
+    expect(client.request).toHaveBeenCalledTimes(1);
   });
 
   it("throws error on 404 from invalid template_id", async () => {
@@ -159,60 +153,11 @@ describe("launchJob", () => {
     } as Response);
 
     await expect(
-      launchJob(client, 99999, {
-        inventory: "prod",
-        scm_url: "https://github.com/org/repo",
-        scm_branch: "main",
-      }),
+      launchJob(client, 99999, { inventory: "prod" }),
     ).rejects.toThrow("Not found.");
 
     // Only one API call should have been made (no retry on 4xx)
     expect(client.request).toHaveBeenCalledTimes(1);
-  });
-
-  it("aborts launch when required var is null (no API call)", async () => {
-    const client = mockClient();
-
-    const result = await launchJob(client, 42, {
-      inventory: null as unknown as string,
-      scm_url: "https://github.com/org/repo",
-      scm_branch: "main",
-    });
-
-    expect(result.jobId).toBe(0);
-    expect(result.jobStatus).toBe("failed");
-    expect(result.errors).toContain('Missing required variable: "inventory"');
-    expect(client.request).not.toHaveBeenCalled();
-  });
-
-  it("aborts launch when required var is undefined (no API call)", async () => {
-    const client = mockClient();
-
-    const result = await launchJob(client, 42, {
-      inventory: undefined as unknown as string,
-      scm_url: "https://github.com/org/repo",
-      scm_branch: "main",
-    });
-
-    expect(result.jobId).toBe(0);
-    expect(result.jobStatus).toBe("failed");
-    expect(result.errors).toContain('Missing required variable: "inventory"');
-    expect(client.request).not.toHaveBeenCalled();
-  });
-
-  it("aborts launch when required var is blank string (no API call)", async () => {
-    const client = mockClient();
-
-    const result = await launchJob(client, 42, {
-      inventory: "",
-      scm_url: "https://github.com/org/repo",
-      scm_branch: "main",
-    });
-
-    expect(result.jobId).toBe(0);
-    expect(result.jobStatus).toBe("failed");
-    expect(result.errors).toContain('Missing required variable: "inventory"');
-    expect(client.request).not.toHaveBeenCalled();
   });
 
   it("throws clear error on HTTP error with non-JSON empty response", async () => {
@@ -225,11 +170,7 @@ describe("launchJob", () => {
     } as Response);
 
     await expect(
-      launchJob(client, 10, {
-        inventory: "prod",
-        scm_url: "https://github.com/org/repo",
-        scm_branch: "main",
-      }),
+      launchJob(client, 10, { inventory: "prod" }),
     ).rejects.toThrow("AWX launch failed: HTTP 500: Internal Server Error");
 
     expect(client.request).toHaveBeenCalledTimes(1);
@@ -245,13 +186,29 @@ describe("launchJob", () => {
     } as Response);
 
     await expect(
-      launchJob(client, 10, {
-        inventory: "prod",
-        scm_url: "https://github.com/org/repo",
-        scm_branch: "main",
-      }),
+      launchJob(client, 10, { inventory: "prod" }),
     ).rejects.toThrow("AWX launch failed: HTTP 502: <html>Bad Gateway</html>");
 
     expect(client.request).toHaveBeenCalledTimes(1);
+  });
+
+  it("forwards AbortSignal to the HTTP client", async () => {
+    const client = mockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      statusText: "Created",
+      text: () => Promise.resolve(JSON.stringify({ id: 1, status: "pending" })),
+    } as Response);
+
+    const controller = new AbortController();
+    await launchJob(client, 10, { inventory: "prod" }, controller.signal);
+
+    expect(client.request).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.any(Object),
+      controller.signal,
+    );
   });
 });

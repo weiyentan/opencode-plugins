@@ -1,7 +1,8 @@
 # ADR 0005: Extra-Var Transformations in Plugin `transforms.ts`
 
-**Status:** Accepted  
-**Date:** 2026-06-20  
+**Status:** Superseded  
+**Date:** 2026-06-20 (Accepted) → 2026-06-26 (Superseded)  
+**Superseded by:** Removal of `transforms.ts` — `awx-launch-job` now passes `extra_vars` verbatim with no transformations (see commit stripping transforms from awx-launch-job)  
 **Council Session:** `awx-plugin-prd-20260620-135410`
 
 ## Context
