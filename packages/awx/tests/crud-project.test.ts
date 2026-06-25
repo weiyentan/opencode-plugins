@@ -193,10 +193,9 @@ describe("awx-create-project", () => {
     expect(metadata.resource_type).toBe("project");
     expect(metadata.id).toBe(42);
 
-    // Verify mapped project data (mapProject returns ProjectDetailOutput
-    // with an inner `data` field containing the actual project fields)
-    const projectDetail = metadata.data as Record<string, unknown>;
-    const projectData = projectDetail.data as Record<string, unknown>;
+    // Verify mapped project data (wrapMutationResult extracts the inner
+    // ProjectData payload from the ProjectDetailOutput envelope)
+    const projectData = metadata.data as Record<string, unknown>;
     expect(projectData.name).toBe("New Web Project");
     expect(projectData.organization_name).toBe("Default");
     expect(projectData.is_successful).toBe(true);
@@ -340,10 +339,9 @@ describe("awx-update-project", () => {
     expect(metadata.resource_type).toBe("project");
     expect(metadata.id).toBe(5);
 
-    // Verify mapped project data (mapProject returns ProjectDetailOutput
-    // with an inner `data` field containing the actual project fields)
-    const projectDetail = metadata.data as Record<string, unknown>;
-    const projectData = projectDetail.data as Record<string, unknown>;
+    // Verify mapped project data (wrapMutationResult extracts the inner
+    // ProjectData payload from the ProjectDetailOutput envelope)
+    const projectData = metadata.data as Record<string, unknown>;
     expect(projectData.name).toBe("Updated Project Name");
     expect(projectData.organization_name).toBe("Default");
 

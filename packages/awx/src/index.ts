@@ -42,7 +42,6 @@ import { executeCrud } from "./crud.js";
 import type { ResourceMutationOutput } from "./contracts/resource-mutation.js";
 
 import { getCustomConfig, setCustomConfig } from "./runtime-config.js";
-import { executeCrud } from "./crud.js";
 
 /**
  * Format a user-facing error message for HTTP error responses.
@@ -1198,9 +1197,7 @@ async function server(input: PluginInput): Promise<Hooks> {
       }),
 
       /**
-
-      /**
-       * Create a new AWX project.
+        * Create a new AWX project.
        *
        * Creates a project in AWX with the specified name and organization.
        * The organization_id must be a resolved numeric ID (not a name).
@@ -1269,20 +1266,13 @@ async function server(input: PluginInput): Promise<Hooks> {
               context.abort,
             );
 
-            const output: ResourceMutationOutput = {
-              schema_version: "1.0",
-              action: "created",
-              resource_type: "project",
-              id: result.id,
-              data: result.data,
-            };
-
-            const projectDetail = result.data as Record<string, unknown> | null;
-            const projectData = (projectDetail?.data ?? {}) as Record<string, unknown>;
-            const projectName = (projectData.name as string) ?? "";
+            const mutationOutput = wrapMutationResult(result);
+            const projectName = mutationOutput.data
+              ? (mutationOutput.data as Record<string, unknown>).name as string ?? ""
+              : "";
             return {
               output: `Project ${result.id} created successfully. Name: ${projectName}`,
-              metadata: output as unknown as Record<string, unknown>,
+              metadata: mutationOutput as unknown as Record<string, unknown>,
             };
           } catch (err: unknown) {
             if (err instanceof DOMException && err.name === "AbortError") {
@@ -1297,6 +1287,7 @@ async function server(input: PluginInput): Promise<Hooks> {
                 resource_type: "project",
                 id: 0,
                 data: null,
+                warnings: [],
                 errors: [message],
               } as unknown as Record<string, unknown>,
             };
@@ -1577,17 +1568,10 @@ async function server(input: PluginInput): Promise<Hooks> {
               context.abort,
             );
 
-            const output: ResourceMutationOutput = {
-              schema_version: "1.0",
-              action: "updated",
-              resource_type: "project",
-              id: result.id,
-              data: result.data,
-            };
-
+            const mutationOutput = wrapMutationResult(result);
             return {
               output: `Project ${result.id} updated successfully.`,
-              metadata: output as unknown as Record<string, unknown>,
+              metadata: mutationOutput as unknown as Record<string, unknown>,
             };
           } catch (err: unknown) {
             if (err instanceof DOMException && err.name === "AbortError") {
@@ -1602,6 +1586,7 @@ async function server(input: PluginInput): Promise<Hooks> {
                 resource_type: "project",
                 id: args.id,
                 data: null,
+                warnings: [],
                 errors: [message],
               } as unknown as Record<string, unknown>,
             };
@@ -1859,17 +1844,10 @@ async function server(input: PluginInput): Promise<Hooks> {
               context.abort,
             );
 
-            const output: ResourceMutationOutput = {
-              schema_version: "1.0",
-              action: "deleted",
-              resource_type: "project",
-              id: result.id,
-              data: null,
-            };
-
+            const mutationOutput = wrapMutationResult(result);
             return {
               output: `Project ${result.id} deleted successfully.`,
-              metadata: output as unknown as Record<string, unknown>,
+              metadata: mutationOutput as unknown as Record<string, unknown>,
             };
           } catch (err: unknown) {
             if (err instanceof DOMException && err.name === "AbortError") {
@@ -1884,6 +1862,7 @@ async function server(input: PluginInput): Promise<Hooks> {
                 resource_type: "project",
                 id: args.id,
                 data: null,
+                warnings: [],
                 errors: [message],
               } as unknown as Record<string, unknown>,
             };
