@@ -227,7 +227,7 @@ describe("awx-create-project", () => {
     const parsed = schema?.safeParse?.({
       name: "Test",
       organization_id: 1,
-      scm_type: "svn",
+      scm_type: "mercurial",
     });
     if (parsed) {
       expect(parsed.success).toBe(false);

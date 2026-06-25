@@ -1209,7 +1209,7 @@ async function server(input: PluginInput): Promise<Hooks> {
         description: [
           "Create a new AWX project with the specified name and organization.",
           "The organization_id must be a resolved numeric ID (not a name).",
-          "Optionally configure SCM type (git/manual), SCM URL, and description.",
+          "Optionally configure SCM type with optional SCM source (git, svn, archive, insights, or manual), SCM URL, and description.",
           "Returns the created project detail in the standard mutation envelope.",
         ].join(" "),
         args: {
@@ -1222,9 +1222,9 @@ async function server(input: PluginInput): Promise<Hooks> {
             .positive()
             .describe("Resolved organization ID"),
           scm_type: z
-            .enum(["git", "manual"])
+            .enum(["", "git", "svn", "archive", "insights"])
             .optional()
-            .describe("SCM type (git or manual)"),
+            .describe("SCM type (git, svn, archive, insights, or empty for manual)"),
           scm_url: z
             .string()
             .optional()
@@ -1456,24 +1456,15 @@ async function server(input: PluginInput): Promise<Hooks> {
               context.abort,
             );
 
-            // extract the inner inventory data from the mapper envelope
-            const inventoryData = result.data
-              ? (result.data as Record<string, unknown>).data ?? result.data
-              : null;
-
+            const mutationOutput = wrapMutationResult(result);
             return {
               output: `Inventory "${args.name}" created (ID ${result.id}).`,
-              metadata: {
-                schema_version: "1.0",
-                action: result.action,
-                resource_type: result.resource_type,
-                id: result.id,
-                data: inventoryData,
-                warnings: [],
-                errors: [],
-              },
+              metadata: mutationOutput as unknown as Record<string, unknown>,
             };
           } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
             const message =
               err instanceof Error ? err.message : String(err);
             return {
@@ -1486,7 +1477,7 @@ async function server(input: PluginInput): Promise<Hooks> {
                 data: null,
                 warnings: [],
                 errors: [message],
-              },
+              } as unknown as Record<string, unknown>,
             };
           }
         },
@@ -1505,7 +1496,7 @@ async function server(input: PluginInput): Promise<Hooks> {
         description: [
           "Update an existing AWX project by ID. Partial update — only",
           "provided fields are modified. Supports updating name,",
-          "organization_id, scm_type, scm_url, and description.",
+          "organization_id, scm_type (git, svn, archive, insights, or manual), scm_url, and description.",
           "Returns the updated project detail in the standard mutation envelope.",
         ].join(" "),
         args: {
@@ -1525,9 +1516,9 @@ async function server(input: PluginInput): Promise<Hooks> {
             .optional()
             .describe("Resolved organization ID"),
           scm_type: z
-            .enum(["git", "manual"])
+            .enum(["", "git", "svn", "archive", "insights"])
             .optional()
-            .describe("SCM type (git or manual)"),
+            .describe("SCM type (git, svn, archive, insights, or empty for manual)"),
           scm_url: z
             .string()
             .optional()
@@ -1762,24 +1753,15 @@ async function server(input: PluginInput): Promise<Hooks> {
               context.abort,
             );
 
-            // extract the inner inventory data from the mapper envelope
-            const inventoryData = result.data
-              ? (result.data as Record<string, unknown>).data ?? result.data
-              : null;
-
+            const mutationOutput = wrapMutationResult(result);
             return {
               output: `Inventory ${args.id} updated.`,
-              metadata: {
-                schema_version: "1.0",
-                action: result.action,
-                resource_type: result.resource_type,
-                id: result.id,
-                data: inventoryData,
-                warnings: [],
-                errors: [],
-              },
+              metadata: mutationOutput as unknown as Record<string, unknown>,
             };
           } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
             const message =
               err instanceof Error ? err.message : String(err);
             return {
@@ -1792,7 +1774,7 @@ async function server(input: PluginInput): Promise<Hooks> {
                 data: null,
                 warnings: [],
                 errors: [message],
-              },
+              } as unknown as Record<string, unknown>,
             };
           }
         },
@@ -1993,19 +1975,15 @@ async function server(input: PluginInput): Promise<Hooks> {
               context.abort,
             );
 
+            const mutationOutput = wrapMutationResult(result);
             return {
               output: `Inventory ${args.id} deleted.`,
-              metadata: {
-                schema_version: "1.0",
-                action: result.action,
-                resource_type: result.resource_type,
-                id: result.id,
-                data: null,
-                warnings: [],
-                errors: [],
-              },
+              metadata: mutationOutput as unknown as Record<string, unknown>,
             };
           } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
             const message =
               err instanceof Error ? err.message : String(err);
             return {
@@ -2018,7 +1996,7 @@ async function server(input: PluginInput): Promise<Hooks> {
                 data: null,
                 warnings: [],
                 errors: [message],
-              },
+              } as unknown as Record<string, unknown>,
             };
           }
         },
