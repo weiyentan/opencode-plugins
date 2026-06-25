@@ -34,6 +34,7 @@ interface JobDetailOutput {
     verbosity: number;
     forks: number | null;
     limit: string;
+    extra_vars?: Record<string, unknown>;
   };
   related: {
     inventory_name: string;
