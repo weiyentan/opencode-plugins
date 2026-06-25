@@ -10,6 +10,9 @@ dist/
 # Git worktrees (managed by scripts/worktree-manager.sh)
 .worktrees/
 
+# Metrics store (survives plugin reloads)
+.metrics/
+
 # OS files
 .DS_Store
 Thumbs.db
