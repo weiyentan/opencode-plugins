@@ -42,6 +42,7 @@ export interface JobCore {
   verbosity: number;
   forks: number | null;
   limit: string;
+  extra_vars?: Record<string, unknown>;
 }
 
 export interface Related {

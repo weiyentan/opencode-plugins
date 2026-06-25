@@ -75,6 +75,7 @@ export interface RawAwxJob {
     unreachable?: number;
     skipped?: number;
   };
+  extra_vars?: string;
 }
 
 // ─── Mapping Functions ─────────────────────────────────────────
@@ -192,6 +193,15 @@ export function mapAwxJobToContract(
     forks: awxJob.forks,
     limit: awxJob.limit,
   };
+
+  // Parse extra_vars from AWX's JSON string representation
+  if (awxJob.extra_vars) {
+    try {
+      job.extra_vars = JSON.parse(awxJob.extra_vars);
+    } catch {
+      // Parse failure — omit the field rather than sending raw string or {}
+    }
+  }
 
   const output: JobDetailOutput = {
     schema_version: "1.0",
