@@ -454,4 +454,98 @@ describe("awx-job-status tool", () => {
     expect(outputParsed.derived.is_failed).toBe(true);
     expect(outputParsed.derived.is_successful).toBe(false);
   });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 5: extra_vars Parsing
+     ══════════════════════════════════════════════════════════════ */
+
+  it("parses extra_vars JSON string into a Record on JobCore", async () => {
+    // Arrange: override extra_vars with valid JSON string
+    const jobWithJSONVars = mockAwxApiJobResponse({
+      extra_vars: '{"app_version":"v2.1.0","environment":"production"}',
+    });
+    mockFetchResponse(jobWithJSONVars);
+
+    // Act
+    const result = await hooks.tool!["awx-job-status"]!.execute(
+      { job_id: 142 },
+      mockToolContext(),
+    );
+
+    // Assert: extra_vars exists on job core as a parsed Record
+    const metadata = (result as { output: string; metadata: JobDetailOutput }).metadata;
+    expect(metadata.job.extra_vars).toBeDefined();
+    expect(metadata.job.extra_vars).toEqual({
+      app_version: "v2.1.0",
+      environment: "production",
+    });
+
+    // Assert: output field also includes parsed extra_vars
+    const outputStr = (result as { output: string; metadata: JobDetailOutput }).output;
+    const outputParsed = JSON.parse(outputStr);
+    expect(outputParsed.job.extra_vars).toBeDefined();
+    expect(outputParsed.job.extra_vars).toEqual({
+      app_version: "v2.1.0",
+      environment: "production",
+    });
+  });
+
+  it("omits extra_vars when JSON parsing fails (YAML / non-JSON string)", async () => {
+    // Arrange: default mock has YAML-format extra_vars (not valid JSON)
+    mockFetchResponse(mockAwxApiJobResponse());
+
+    // Act
+    const result = await hooks.tool!["awx-job-status"]!.execute(
+      { job_id: 142 },
+      mockToolContext(),
+    );
+
+    // Assert: extra_vars is omitted on parse failure, not set to {}
+    const metadata = (result as { output: string; metadata: JobDetailOutput }).metadata;
+    expect(metadata.job.extra_vars).toBeUndefined();
+
+    // Assert: output field also omits extra_vars
+    const outputStr = (result as { output: string; metadata: JobDetailOutput }).output;
+    const outputParsed = JSON.parse(outputStr);
+    expect(outputParsed.job.extra_vars).toBeUndefined();
+  });
+
+  it("omits extra_vars when parsed JSON is null", async () => {
+    const jobWithNullVars = mockAwxApiJobResponse({
+      extra_vars: "null",
+    });
+    mockFetchResponse(jobWithNullVars);
+
+    const result = await hooks.tool!["awx-job-status"]!.execute(
+      { job_id: 142 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: JobDetailOutput }).metadata;
+    expect(metadata.job.extra_vars).toBeUndefined();
+
+    const outputStr = (result as { output: string; metadata: JobDetailOutput }).output;
+    const outputParsed = JSON.parse(outputStr);
+    expect(outputParsed.job.extra_vars).toBeUndefined();
+  });
+
+  it("omits extra_vars when parsed JSON is an empty object", async () => {
+    const jobWithEmptyVars = mockAwxApiJobResponse({
+      extra_vars: "{}",
+    });
+
+    mockFetchResponse(jobWithEmptyVars);
+
+    const result = await hooks.tool!["awx-job-status"]!.execute(
+      { job_id: 142 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: JobDetailOutput }).metadata;
+    expect(metadata.job.extra_vars).toBeUndefined();
+
+    const outputStr = (result as { output: string; metadata: JobDetailOutput }).output;
+    const outputParsed = JSON.parse(outputStr);
+    expect(outputParsed.job.extra_vars).toBeUndefined();
+  });
 });

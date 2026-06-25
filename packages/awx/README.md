@@ -316,6 +316,7 @@ All job-related tools return output matching the `JobDetailOutput` interface (se
 - Use `host_status_counts` — NOT `host_summary`
 - Use `derived` — NOT `extra_vars_summary`
 - `related` fields are resolved names, not raw URLs
+- `job.extra_vars` — Parsed from the AWX API JSON string into a `Record<string, unknown>` when valid JSON; omitted if parsing fails (the AWX API may return YAML)
 
 See the [Architecture Decision Records](../../docs/adr/) in the monorepo for design rationale:
 
