@@ -39,12 +39,7 @@ import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
 import type { ResourceDetailOutput } from "./get-resource.js";
 
-/* ── Module-level config store for awx-configure tool ─────────── */
-let customConfig: { baseUrl?: string; token?: string } | undefined;
-
-export function setCustomConfig(config: { baseUrl?: string; token?: string } | undefined): void {
-  customConfig = config;
-}
+import { getCustomConfig, setCustomConfig } from "./runtime-config.js";
 
 /**
  * Format a user-facing error message for HTTP error responses.
@@ -197,10 +192,10 @@ async function server(input: PluginInput): Promise<Hooks> {
   let cachedBaseUrl: string | undefined;
 
   async function getAwxClient(): Promise<AwxClient> {
-    const resolvedBaseUrl = customConfig?.baseUrl ?? (process.env.AWX_BASE_URL || undefined);
+    const resolvedBaseUrl = getCustomConfig()?.baseUrl ?? (process.env.AWX_BASE_URL || undefined);
     if (!resolvedBaseUrl) throw new Error("AWX_BASE_URL not configured. Set the AWX_BASE_URL environment variable to point to your AAP/AWX instance.");
 
-    const token = customConfig?.token
+    const token = getCustomConfig()?.token
       ?? await input.client.getSecret?.("awx")
       ?? process.env.AWX_TOKEN;
     if (!token) throw new Error("AWX Personal Access Token (PAT) not configured. Store your PAT via the plugin auth prompt.");
@@ -1203,7 +1198,7 @@ async function server(input: PluginInput): Promise<Hooks> {
 
           // Merge with existing config so partial updates don't clear previously set values
           const merged: { baseUrl?: string; token?: string } = {
-            ...(customConfig ?? {}),
+            ...(getCustomConfig() ?? {}),
             ...(args.baseUrl ? { baseUrl: args.baseUrl } : {}),
             ...(args.token ? { token: args.token } : {}),
           };
