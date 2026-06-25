@@ -198,7 +198,12 @@ export function mapAwxJobToContract(
   if (awxJob.extra_vars) {
     try {
       const parsed = JSON.parse(awxJob.extra_vars);
-      if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        !Array.isArray(parsed) &&
+        Object.keys(parsed).length > 0
+      ) {
         job.extra_vars = parsed as Record<string, unknown>;
       }
     } catch {
