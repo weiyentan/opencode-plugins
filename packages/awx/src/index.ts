@@ -38,6 +38,8 @@ import { launchJob } from "./launch.js";
 import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
 import type { ResourceDetailOutput } from "./get-resource.js";
+import { executeCrud } from "./crud.js";
+import type { ResourceMutationOutput } from "./contracts/resource-mutation.js";
 
 import { getCustomConfig, setCustomConfig } from "./runtime-config.js";
 
@@ -1155,6 +1157,297 @@ async function server(input: PluginInput): Promise<Hooks> {
               err instanceof Error ? err.message : String(err);
             return {
               output: `awx-get-resource error: ${message}`,
+            };
+          }
+        },
+      }),
+
+      /**
+       * Create a new AWX project.
+       *
+       * Creates a project in AWX with the specified name and organization.
+       * The organization_id must be a resolved numeric ID (not a name).
+       * Optionally configure SCM type, URL, and description.
+       * Delegates to crud.ts for the HTTP dispatch and mapProject for the response.
+       * Returns the created project detail in the standard mutation envelope.
+       */
+      "awx-create-project": tool({
+        description: [
+          "Create a new AWX project with the specified name and organization.",
+          "The organization_id must be a resolved numeric ID (not a name).",
+          "Optionally configure SCM type (git/manual), SCM URL, and description.",
+          "Returns the created project detail in the standard mutation envelope.",
+        ].join(" "),
+        args: {
+          name: z
+            .string()
+            .describe("Project name"),
+          organization_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("Resolved organization ID"),
+          scm_type: z
+            .enum(["git", "manual"])
+            .optional()
+            .describe("SCM type (git or manual)"),
+          scm_url: z
+            .string()
+            .optional()
+            .describe("SCM URL (required if scm_type=git)"),
+          description: z
+            .string()
+            .optional()
+            .describe("Project description"),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            const body: Record<string, unknown> = {
+              name: args.name,
+              organization: args.organization_id,
+            };
+            if (args.scm_type !== undefined) body.scm_type = args.scm_type;
+            if (args.scm_url !== undefined) body.scm_url = args.scm_url;
+            if (args.description !== undefined) body.description = args.description;
+
+            const result = await executeCrud(
+              awxClient,
+              "project",
+              "create",
+              undefined,
+              body,
+              context.abort,
+            );
+
+            const output: ResourceMutationOutput = {
+              schema_version: "1.0",
+              action: "created",
+              resource_type: "project",
+              id: result.id,
+              data: result.data,
+            };
+
+            const projectDetail = result.data as Record<string, unknown> | null;
+            const projectData = (projectDetail?.data ?? {}) as Record<string, unknown>;
+            const projectName = (projectData.name as string) ?? "";
+            return {
+              output: `Project ${result.id} created successfully. Name: ${projectName}`,
+              metadata: output as unknown as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to create project: ${message}`,
+              metadata: {
+                schema_version: "1.0",
+                action: "created",
+                resource_type: "project",
+                id: 0,
+                data: null,
+                errors: [message],
+              } as unknown as Record<string, unknown>,
+            };
+          }
+        },
+      }),
+
+      /**
+       * Update an existing AWX project.
+       *
+       * Modifies an existing project by PATCHing the specified fields.
+       * Only provided fields are updated (partial update semantics).
+       * The organization_id must be a resolved numeric ID (not a name).
+       * Delegates to crud.ts for the HTTP dispatch and mapProject for the response.
+       * Returns the updated project detail in the standard mutation envelope.
+       */
+      "awx-update-project": tool({
+        description: [
+          "Update an existing AWX project by ID. Partial update — only",
+          "provided fields are modified. Supports updating name,",
+          "organization_id, scm_type, scm_url, and description.",
+          "Returns the updated project detail in the standard mutation envelope.",
+        ].join(" "),
+        args: {
+          id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the AWX project to update."),
+          name: z
+            .string()
+            .optional()
+            .describe("New project name"),
+          organization_id: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe("Resolved organization ID"),
+          scm_type: z
+            .enum(["git", "manual"])
+            .optional()
+            .describe("SCM type (git or manual)"),
+          scm_url: z
+            .string()
+            .optional()
+            .describe("SCM URL"),
+          description: z
+            .string()
+            .optional()
+            .describe("Project description"),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            const body: Record<string, unknown> = {};
+            if (args.name !== undefined) body.name = args.name;
+            if (args.organization_id !== undefined) body.organization = args.organization_id;
+            if (args.scm_type !== undefined) body.scm_type = args.scm_type;
+            if (args.scm_url !== undefined) body.scm_url = args.scm_url;
+            if (args.description !== undefined) body.description = args.description;
+
+            const result = await executeCrud(
+              awxClient,
+              "project",
+              "update",
+              args.id,
+              body,
+              context.abort,
+            );
+
+            const output: ResourceMutationOutput = {
+              schema_version: "1.0",
+              action: "updated",
+              resource_type: "project",
+              id: result.id,
+              data: result.data,
+            };
+
+            return {
+              output: `Project ${result.id} updated successfully.`,
+              metadata: output as unknown as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to update project ${args.id}: ${message}`,
+              metadata: {
+                schema_version: "1.0",
+                action: "updated",
+                resource_type: "project",
+                id: args.id,
+                data: null,
+                errors: [message],
+              } as unknown as Record<string, unknown>,
+            };
+          }
+        },
+      }),
+
+      /**
+       * Delete an AWX project.
+       *
+       * Deletes a project by ID from AWX. This action is irreversible.
+       * The project must exist and the user must have sufficient permissions.
+       * Delegates to crud.ts for the HTTP dispatch.
+       * Returns the standard mutation envelope with data: null on success.
+       */
+      "awx-delete-project": tool({
+        description: [
+          "Delete an AWX project by ID. This action is irreversible.",
+          "The project must exist and the user must have sufficient",
+          "permissions to delete it. Returns the standard mutation",
+          "envelope with data: null on success.",
+        ].join(" "),
+        args: {
+          id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the AWX project to delete."),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            const result = await executeCrud(
+              awxClient,
+              "project",
+              "delete",
+              args.id,
+              undefined,
+              context.abort,
+            );
+
+            const output: ResourceMutationOutput = {
+              schema_version: "1.0",
+              action: "deleted",
+              resource_type: "project",
+              id: result.id,
+              data: null,
+            };
+
+            return {
+              output: `Project ${result.id} deleted successfully.`,
+              metadata: output as unknown as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to delete project ${args.id}: ${message}`,
+              metadata: {
+                schema_version: "1.0",
+                action: "deleted",
+                resource_type: "project",
+                id: args.id,
+                data: null,
+                errors: [message],
+              } as unknown as Record<string, unknown>,
             };
           }
         },
