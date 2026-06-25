@@ -38,6 +38,8 @@ import { launchJob } from "./launch.js";
 import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
 import type { ResourceDetailOutput } from "./get-resource.js";
+import { executeCrud } from "./crud.js";
+import type { ResourceMutationOutput } from "./contracts/resource-mutation.js";
 
 import { getCustomConfig, setCustomConfig } from "./runtime-config.js";
 
@@ -63,6 +65,40 @@ function formatErrorResponse(projectId: number, status: number): string {
         `AWX API returned HTTP ${status}.`
       );
   }
+}
+
+/**
+ * Wrap a CrudResult into the standard ResourceMutationOutput envelope.
+ *
+ * The CrudResult.data contains the full mapper output (e.g., TemplateDetailOutput
+ * which has schema_version, resource_type, id, data). For the mutation output,
+ * we extract just the inner data payload (e.g., TemplateData) so consumers
+ * can access fields like name, job_type, etc. directly via `data.name`.
+ */
+function wrapMutationResult(result: {
+  action: "created" | "updated" | "deleted";
+  resource_type: string;
+  id: number;
+  data: unknown | null;
+}): ResourceMutationOutput {
+  // The mapper output nests the payload inside a `data` field.
+  // Extract it so consumers can access `result.data.name` directly.
+  const innerData =
+    result.data &&
+    typeof result.data === "object" &&
+    "data" in (result.data as Record<string, unknown>)
+      ? (result.data as Record<string, unknown>).data
+      : result.data;
+
+  return {
+    schema_version: "1.0",
+    action: result.action,
+    resource_type: result.resource_type as ResourceMutationOutput["resource_type"],
+    id: result.id,
+    data: innerData,
+    warnings: [],
+    errors: [],
+  };
 }
 
 /**
@@ -1155,6 +1191,246 @@ async function server(input: PluginInput): Promise<Hooks> {
               err instanceof Error ? err.message : String(err);
             return {
               output: `awx-get-resource error: ${message}`,
+            };
+          }
+        },
+      }),
+
+      /**
+       * Create a new AWX job template.
+       *
+       * Accepts template fields including name, job_type, project_id,
+       * inventory_id, and playbook. The agent provides resolved IDs
+       * (no internal name-to-ID resolution). Delegates to the shared
+       * CRUD registry which maps to POST /api/v2/job_templates/.
+       * Returns the created template detail wrapped in the standard
+       * ResourceMutationOutput envelope.
+       */
+      "awx-create-template": tool({
+        description: [
+          "Create a new AWX job template. Accepts template fields",
+          "including name, job_type, project_id, inventory_id,",
+          "and playbook. Provide resolved IDs (not names).",
+          "Returns the created template detail in the standard",
+          "ResourceMutationOutput envelope.",
+        ].join(" "),
+        args: {
+          name: z.string().min(1).describe("Template name"),
+          job_type: z.enum(["run", "check", "scan"]).describe("Template job type"),
+          project_id: z.number().int().positive().describe("Resolved AWX project ID"),
+          inventory_id: z.number().int().positive().describe("Resolved AWX inventory ID"),
+          playbook: z.string().min(1).describe("Playbook filename (e.g., site.yml)"),
+          description: z.string().optional().describe("Optional template description"),
+        },
+        async execute(args, context) {
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            const body: Record<string, unknown> = {
+              name: args.name,
+              job_type: args.job_type,
+              project: args.project_id,
+              inventory: args.inventory_id,
+              playbook: args.playbook,
+            };
+            if (args.description !== undefined) {
+              body.description = args.description;
+            }
+
+            const crudResult = await executeCrud(
+              awxClient,
+              "template",
+              "create",
+              undefined,
+              body,
+              context.abort,
+            );
+
+            const mutationOutput = wrapMutationResult(crudResult);
+            return {
+              output: `Template ${crudResult.id} created.`,
+              metadata: mutationOutput as unknown as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: `awx-create-template error: ${message}`,
+              metadata: {
+                schema_version: "1.0",
+                action: "created",
+                resource_type: "template",
+                id: 0,
+                data: null,
+                warnings: [],
+                errors: [message],
+              },
+            };
+          }
+        },
+      }),
+
+      /**
+       * Update an existing AWX job template.
+       *
+       * Accepts partial template fields (only the fields to change).
+       * The id parameter is required to identify the template.
+       * Delegates to the shared CRUD registry which maps to
+       * PATCH /api/v2/job_templates/{id}/.
+       * Returns the updated template detail in the standard
+       * ResourceMutationOutput envelope.
+       */
+      "awx-update-template": tool({
+        description: [
+          "Update an existing AWX job template. Accepts partial",
+          "template fields. The id parameter identifies the template.",
+          "Provide resolved IDs (project_id, inventory_id) for any",
+          "lookup fields being changed. Returns the updated template",
+          "detail in the standard ResourceMutationOutput envelope.",
+        ].join(" "),
+        args: {
+          id: z.number().int().positive().describe("The numeric ID of the template to update"),
+          name: z.string().min(1).optional().describe("Template name"),
+          job_type: z.enum(["run", "check", "scan"]).optional().describe("Template job type"),
+          project_id: z.number().int().positive().optional().describe("Resolved AWX project ID"),
+          inventory_id: z.number().int().positive().optional().describe("Resolved AWX inventory ID"),
+          playbook: z.string().min(1).optional().describe("Playbook filename (e.g., site.yml)"),
+          description: z.string().optional().describe("Optional template description"),
+        },
+        async execute(args, context) {
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            // Build body from only the fields that were provided (excluding id)
+            const body: Record<string, unknown> = {};
+            if (args.name !== undefined) body.name = args.name;
+            if (args.job_type !== undefined) body.job_type = args.job_type;
+            if (args.project_id !== undefined) body.project = args.project_id;
+            if (args.inventory_id !== undefined) body.inventory = args.inventory_id;
+            if (args.playbook !== undefined) body.playbook = args.playbook;
+            if (args.description !== undefined) body.description = args.description;
+
+            const crudResult = await executeCrud(
+              awxClient,
+              "template",
+              "update",
+              args.id,
+              body,
+              context.abort,
+            );
+
+            const mutationOutput = wrapMutationResult(crudResult);
+            return {
+              output: `Template ${crudResult.id} updated.`,
+              metadata: mutationOutput as unknown as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: `awx-update-template error: ${message}`,
+              metadata: {
+                schema_version: "1.0",
+                action: "updated",
+                resource_type: "template",
+                id: args.id ?? 0,
+                data: null,
+                warnings: [],
+                errors: [message],
+              },
+            };
+          }
+        },
+      }),
+
+      /**
+       * Delete an AWX job template.
+       *
+       * Accepts a template id and removes it from AWX.
+       * Delegates to the shared CRUD registry which maps to
+       * DELETE /api/v2/job_templates/{id}/.
+       * Returns the standard ResourceMutationOutput envelope with
+       * action "deleted" and data set to null.
+       */
+      "awx-delete-template": tool({
+        description: [
+          "Delete an AWX job template by ID. Delegates to the",
+          "shared CRUD registry which maps to",
+          "DELETE /api/v2/job_templates/{id}/.",
+          "Returns the standard ResourceMutationOutput envelope",
+          "with action 'deleted' and data set to null.",
+        ].join(" "),
+        args: {
+          id: z.number().int().positive().describe("The numeric ID of the template to delete"),
+        },
+        async execute(args, context) {
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            const crudResult = await executeCrud(
+              awxClient,
+              "template",
+              "delete",
+              args.id,
+              undefined,
+              context.abort,
+            );
+
+            const mutationOutput = wrapMutationResult(crudResult);
+            return {
+              output: `Template ${args.id} deleted.`,
+              metadata: mutationOutput as unknown as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: `awx-delete-template error: ${message}`,
+              metadata: {
+                schema_version: "1.0",
+                action: "deleted",
+                resource_type: "template",
+                id: args.id,
+                data: null,
+                warnings: [],
+                errors: [message],
+              },
             };
           }
         },
