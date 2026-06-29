@@ -153,6 +153,22 @@ cmd_clean() {
 
     # Delete the tmp/ branch if it exists
     if git -C "$REPO_ROOT" show-ref --verify --quiet "refs/heads/$branch"; then
+        # Check for commits relative to master -- push recovery branch if work exists
+        local commit_count
+        commit_count=$(git -C "$REPO_ROOT" rev-list --count master.."$branch" 2>/dev/null || echo "0")
+        if [[ "$commit_count" -gt 0 ]]; then
+            echo "Branch '$branch' has $commit_count commit(s) relative to master. Pushing recovery branch..."
+            if git -C "$REPO_ROOT" push origin "$branch:refs/heads/review-blocked/issue-${n}-${slug}" 2>/dev/null; then
+                local remote_url
+                remote_url=$(git -C "$REPO_ROOT" config --get remote.origin.url 2>/dev/null || echo "origin")
+                # Convert SCP-style git URLs to HTTPS for display
+                local display_url
+                display_url=$(echo "$remote_url" | sed 's|^git@\(.*\):|https://\1/|; s|\.git$||')
+                echo "Recovery branch pushed: ${display_url}/-/tree/review-blocked/issue-${n}-${slug}"
+            else
+                echo "Warning: Failed to push recovery branch for issue #${n} -- continuing with local cleanup."
+            fi
+        fi
         echo "Deleting branch '$branch'..."
         git -C "$REPO_ROOT" branch -D "$branch"
     fi
