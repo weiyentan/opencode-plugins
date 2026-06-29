@@ -244,6 +244,25 @@ function cmd_clean {
     # Delete the tmp/ branch if it exists
     $null = git -C $REPO_ROOT show-ref --verify --quiet "refs/heads/$branch" 2>&1
     if ($LASTEXITCODE -eq 0) {
+        # Check for commits relative to master -- push recovery branch if work exists
+        $countOutput = git -C $REPO_ROOT rev-list --count "master..$branch" 2>&1
+        $commitCount = 0
+        if ($LASTEXITCODE -eq 0) {
+            $commitCount = [int]($countOutput.Trim())
+        }
+        if ($commitCount -gt 0) {
+            Write-Host "Branch '$branch' has $commitCount commit(s) relative to master. Pushing recovery branch..."
+            $null = git -C $REPO_ROOT push origin "${branch}:refs/heads/review-blocked/issue-${n}-${slug}" 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                $remoteUrl = git -C $REPO_ROOT config --get remote.origin.url 2>&1
+                if ($LASTEXITCODE -ne 0) { $remoteUrl = "origin" }
+                # Convert SCP-style git URLs to HTTPS for display
+                $displayUrl = $remoteUrl.Trim() -replace '^git@(.*):', 'https://$1/' -replace '\.git$', ''
+                Write-Host "Recovery branch pushed: ${displayUrl}/-/tree/review-blocked/issue-${n}-${slug}"
+            } else {
+                Write-Host "Warning: Failed to push recovery branch for issue #${n} -- continuing with local cleanup."
+            }
+        }
         Write-Host "Deleting branch '$branch'..."
         $null = git -C $REPO_ROOT branch -D $branch 2>&1
     }
