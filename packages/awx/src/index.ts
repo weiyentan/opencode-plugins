@@ -35,6 +35,7 @@ import { listProjects } from "./list-projects.js";
 import { listJobs } from "./list-jobs.js";
 import type { JobResult } from "./list-jobs.js";
 import { launchJob } from "./launch.js";
+import { attachCredentials } from "./attach-credential.js";
 import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
 import type { ResourceDetailOutput } from "./get-resource.js";
@@ -1966,6 +1967,80 @@ async function server(input: PluginInput): Promise<Hooks> {
                 action: "deleted",
                 resource_type: "inventory",
                 id: args.id,
+                data: null,
+                warnings: [],
+                errors: [message],
+              } as unknown as Record<string, unknown>,
+            };
+          }
+        },
+      }),
+
+      /**
+       * Attach credentials to an AWX job template.
+       *
+       * Calls POST /api/v2/job_templates/{id}/credentials/ to
+       * associate one or more credentials with a job template.
+       * Accepts a job template ID and an array of credential IDs.
+       * Returns a ResourceMutationOutput-like response confirming
+       * the association.
+       */
+      "awx-attach-credential": tool({
+        description: [
+          "Attach one or more credentials to an AWX job template.",
+          "Calls POST /api/v2/job_templates/{id}/credentials/ to",
+          "associate credentials with a job template. Accepts a",
+          "job_template_id and an array of credential_ids.",
+          "Returns a structured response confirming the association.",
+        ].join(" "),
+        args: {
+          job_template_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The AWX job template ID to attach credentials to."),
+          credential_ids: z
+            .array(z.number().int().positive())
+            .min(1)
+            .max(50)
+            .describe("One or more credential IDs to attach to the template (max 50)."),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            const result = await attachCredentials(
+              awxClient,
+              args.job_template_id,
+              args.credential_ids,
+              context.abort,
+            );
+
+            return {
+              output: JSON.stringify(result),
+              metadata: result as Record<string, unknown>,
+            };
+          } catch (err) {
+            const message =
+              err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to attach credentials: ${message}`,
+              metadata: {
+                schema_version: "1.0",
+                action: "attach",
+                resource_type: "credential",
+                id: args.job_template_id,
                 data: null,
                 warnings: [],
                 errors: [message],
