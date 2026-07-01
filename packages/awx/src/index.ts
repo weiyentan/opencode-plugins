@@ -2002,7 +2002,8 @@ async function server(input: PluginInput): Promise<Hooks> {
           credential_ids: z
             .array(z.number().int().positive())
             .min(1)
-            .describe("One or more credential IDs to attach to the template."),
+            .max(50)
+            .describe("One or more credential IDs to attach to the template (max 50)."),
         },
         async execute(args, context) {
           // Respect the abort signal
@@ -2037,7 +2038,7 @@ async function server(input: PluginInput): Promise<Hooks> {
               output: `Failed to attach credentials: ${message}`,
               metadata: {
                 schema_version: "1.0",
-                action: "created",
+                action: "attach",
                 resource_type: "credential",
                 id: args.job_template_id,
                 data: null,

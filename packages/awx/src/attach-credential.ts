@@ -52,17 +52,26 @@ export async function attachCredentials(
   const text = await response.text();
   let responseBody: Record<string, unknown> | undefined;
   try {
-    responseBody = text ? (JSON.parse(text) as Record<string, unknown>) : undefined;
+    const parsed: unknown = text ? JSON.parse(text) : undefined;
+    responseBody = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
   } catch {
     responseBody = undefined;
   }
 
   // ── Handle error responses ────────────────────────────────────
   if (!response.ok) {
+    const detailRaw =
+      responseBody && typeof responseBody === "object" && "detail" in responseBody
+        ? (responseBody as { detail: unknown }).detail
+        : undefined;
     const detail =
-      typeof responseBody === "object" && responseBody && "detail" in responseBody
-        ? String((responseBody as { detail: unknown }).detail)
-        : text || response.statusText;
+      typeof detailRaw === "string"
+        ? detailRaw
+        : detailRaw
+          ? JSON.stringify(detailRaw)
+          : text || response.statusText;
     throw new Error(`AWX attach credential failed: HTTP ${response.status}: ${detail}`);
   }
 

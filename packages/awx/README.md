@@ -286,7 +286,7 @@ packages/awx/
 │   ├── crud-inventory.test.ts    # CRUD create/update/delete integration tests for inventories
 │   ├── get-resource.test.ts      # getResource orchestrator unit tests (dispatch, error handling, registry)
 │   ├── get-resource-tool.test.ts # awx-get-resource tool integration tests (via plugin tool registration)
-│   ├── attach-credential.test.ts # awx-attach-credential tool unit tests (16+ test cases)
+│   ├── attach-credential.test.ts # awx-attach-credential tool unit tests (13 test cases)
 │   ├── map-template.test.ts      # mapTemplate mapper unit tests
 │   ├── map-project.test.ts       # mapProject mapper unit tests
 │   ├── map-inventory.test.ts     # mapInventory mapper unit tests

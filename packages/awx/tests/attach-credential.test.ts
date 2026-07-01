@@ -244,6 +244,29 @@ describe("attachCredentials", () => {
     expect(client.request).toHaveBeenCalledTimes(1);
   });
 
+  it("handles structured error detail object using JSON.stringify", async () => {
+    const client = mockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      statusText: "Bad Request",
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({
+            detail: { field_errors: ["Invalid credential ID."] },
+          }),
+        ),
+    } as Response);
+
+    await expect(
+      attachCredentials(client, 10, [1]),
+    ).rejects.toThrow(
+      '{"field_errors":["Invalid credential ID."]}',
+    );
+
+    expect(client.request).toHaveBeenCalledTimes(1);
+  });
+
   it("forwards AbortSignal to the HTTP client", async () => {
     const client = mockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
