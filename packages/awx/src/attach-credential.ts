@@ -8,7 +8,6 @@
  * calls this first-class tool which handles auth through the secure
  * middleware pipeline.
  */
-
 import type { AwxClient } from "./client.js";
 
 /**
@@ -30,15 +29,13 @@ export async function attachCredential(
   credentialId: number,
   abortSignal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
-  const body = { id: credentialId };
-
   const response = await client.request(
     "awx-attach-credential",
     `/api/v2/job_templates/${templateId}/credentials/`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ id: credentialId }),
     },
     abortSignal,
   );

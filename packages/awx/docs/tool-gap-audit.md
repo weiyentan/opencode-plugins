@@ -1,6 +1,6 @@
 # AWX Plugin — Tool Coverage Audit
 
-> Generated as part of issue #108: Subagent inline scripts expose AWX PAT tokens in plain text.
+> Combining audits from issue #108 (PAT leakage risk) and issue #109 (tool-gap coverage).
 
 ## Purpose
 
@@ -16,29 +16,55 @@ This document identifies gaps in the AWX plugin's tool coverage. When a needed A
 
 ---
 
-## Covered Operations (17 tools)
+## Existing Tools (22 tools)
 
-| # | Tool | AWX Endpoint | Method |
-|---|------|-------------|--------|
-| 1 | `awx-list-templates` | `/api/v2/job_templates/` | GET |
-| 2 | `awx-list-projects` | `/api/v2/projects/` | GET |
-| 3 | `awx-list-jobs` | `/api/v2/jobs/` | GET |
-| 4 | `awx-get-resource` | `/api/v2/{type}/{id}/` | GET |
-| 5 | `awx-launch-job` | `/api/v2/job_templates/{id}/launch/` | POST |
-| 6 | `awx-attach-credential` | `/api/v2/job_templates/{id}/credentials/` (associate) | POST |
-| 7 | `awx-job-status` | `/api/v2/jobs/{id}/` | GET |
-| 8 | `awx-wait-job` | `/api/v2/jobs/{id}/` | GET |
-| 9 | `awx-get-job-events` | `/api/v2/jobs/{id}/job_events/` | GET |
-| 10 | `awx-sync-project` | `/api/v2/projects/{id}/update/` | POST |
-| 11 | `awx-create-template` | `/api/v2/job_templates/` | POST |
-| 12 | `awx-update-template` | `/api/v2/job_templates/{id}/` | PATCH |
-| 13 | `awx-delete-template` | `/api/v2/job_templates/{id}/` | DELETE |
-| 14 | `awx-create-project` | `/api/v2/projects/` | POST |
-| 15 | `awx-update-project` | `/api/v2/projects/{id}/` | PATCH |
-| 16 | `awx-delete-project` | `/api/v2/projects/{id}/` | DELETE |
-| 17 | `awx-create-inventory` | `/api/v2/inventories/` | POST |
-| 18 | `awx-update-inventory` | `/api/v2/inventories/{id}/` | PATCH |
-| 19 | `awx-delete-inventory` | `/api/v2/inventories/{id}/` | DELETE |
+| # | Tool Name | AWX API Endpoint | HTTP Method | Category |
+|---|---|---|---|---|
+| 1 | `hello` | N/A | N/A | Scaffolding |
+| 2 | `awx-debug-env` | N/A | N/A | Diagnostics |
+| 3 | `awx-configure` | N/A | N/A | Configuration |
+| 4 | `awx-list-templates` | `/api/v2/job_templates/` | GET | Read (List) |
+| 5 | `awx-list-projects` | `/api/v2/projects/` | GET | Read (List) |
+| 6 | `awx-list-jobs` | `/api/v2/jobs/` | GET | Read (List) |
+| 7 | `awx-get-resource` | Dispatched (template/project/inventory) | GET | Read (Detail) |
+| 8 | `awx-launch-job` | `/api/v2/job_templates/{id}/launch/` | POST | Job Lifecycle |
+| 9 | `awx-job-status` | `/api/v2/jobs/{id}/` | GET | Job Lifecycle |
+| 10 | `awx-wait-job` | `/api/v2/jobs/{id}/` | GET | Job Lifecycle |
+| 11 | `awx-get-job-events` | `/api/v2/jobs/{id}/job_events/` | GET | Job Lifecycle |
+| 12 | `awx-sync-project` | `/api/v2/projects/{id}/update/` | POST | Project Operations |
+| 13 | `awx-create-project` | `/api/v2/projects/` | POST | CRUD |
+| 14 | `awx-create-template` | `/api/v2/job_templates/` | POST | CRUD |
+| 15 | `awx-create-inventory` | `/api/v2/inventories/` | POST | CRUD |
+| 16 | `awx-update-project` | `/api/v2/projects/{id}/` | PATCH | CRUD |
+| 17 | `awx-update-template` | `/api/v2/job_templates/{id}/` | PATCH | CRUD |
+| 18 | `awx-update-inventory` | `/api/v2/inventories/{id}/` | PATCH | CRUD |
+| 19 | `awx-delete-project` | `/api/v2/projects/{id}/` | DELETE | CRUD |
+| 20 | `awx-delete-template` | `/api/v2/job_templates/{id}/` | DELETE | CRUD |
+| 21 | `awx-delete-inventory` | `/api/v2/inventories/{id}/` | DELETE | CRUD |
+| 22 | `awx-attach-credential` | `/api/v2/job_templates/{id}/credentials/` | POST | Credential Operations |
+
+---
+
+## Coverage by Resource Type
+
+| Resource Type | List | Get | Create | Update | Delete | Lifecycle |
+|---|---|---|---|---|---|---|
+| **Job Templates** | ✅ | ✅ (via awx-get-resource) | ✅ | ✅ | ✅ | ✅ (launch) |
+| **Projects** | ✅ | ✅ (via awx-get-resource) | ✅ | ✅ | ✅ | ✅ (sync) |
+| **Inventories** | ❌ | ✅ (via awx-get-resource) | ✅ | ✅ | ✅ | ❌ |
+| **Jobs** | ✅ | ✅ | N/A | N/A | N/A | ❌ (cancel/relaunch) |
+| **Credentials** | ❌ | ❌ | ❌ | ❌ | ❌ | N/A |
+| **Organizations** | ❌ | ❌ | ❌ | ❌ | ❌ | N/A |
+| **Inventory Sources** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ (sync) |
+| **Hosts** | ❌ | ❌ | ❌ | ❌ | ❌ | N/A |
+| **Groups** | ❌ | ❌ | ❌ | ❌ | ❌ | N/A |
+| **Workflow Templates** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ (launch) |
+| **Schedules** | ❌ | ❌ | ❌ | ❌ | ❌ | N/A |
+| **Credential Types** | ❌ | ❌ | N/A | N/A | N/A | N/A |
+| **Settings** | N/A | ❌ | N/A | ❌ | N/A | N/A |
+| **Notification Templates** | ❌ | ❌ | ❌ | ❌ | ❌ | N/A |
+| **Users / Teams** | ❌ | ❌ | ❌ | ❌ | ❌ | N/A |
+| **Instance Groups** | ❌ | ❌ | N/A | N/A | N/A | N/A |
 
 ---
 
@@ -216,6 +242,8 @@ This document identifies gaps in the AWX plugin's tool coverage. When a needed A
 
 ## Summary
 
+### PAT Exposure Risk Summary (from issue #108)
+
 | Severity | Count | Urgency |
 |----------|-------|---------|
 | **HIGH** (PAT leakage highly probable) | 6 | Address first |
@@ -223,15 +251,37 @@ This document identifies gaps in the AWX plugin's tool coverage. When a needed A
 | **LOW** (rare exposure risk) | 6 | Nice-to-have |
 | **TOTAL** | 21 | — |
 
+### Tool Coverage Summary (from issue #109)
+
+| Category | Existing | Gaps | Recommended |
+|---|---|---|---|
+| Template Lifecycle | 6 | 0 | — |
+| Project Lifecycle | 5 | 0 | — |
+| Job Lifecycle | 4 | 2 | awx-cancel-job, awx-relaunch-job |
+| Inventory CRUD | 3 | 1 | awx-list-inventories |
+| Organization CRUD | 0 | 5 | Full CRUD set |
+| Credential CRUD | 1 | 6 | Full CRUD + detach |
+| Host CRUD | 0 | 5 | Full CRUD set |
+| Credential Types | 0 | 2 | List + Get |
+| Inventory Sources | 0 | 2 | List + Sync |
+| Workflow Templates | 0 | 2 | List + Launch |
+| Schedules | 0 | 3 | List + Create + Delete |
+| Settings | 0 | 2 | Get + Update |
+| Users & Groups | 0 | 2 | List users, List instance groups |
+| Activity | 0 | 1 | Activity stream |
+| **Totals** | **20 API tools** | **33 gaps** | **32 new tools** |
+
+**Conclusion:** The AWX plugin currently covers ~38% of the most commonly used AWX API surface. Implementing the 32 recommended tools would bring coverage to ~85%+ and eliminate the need for subagents to write inline PAT-exposing scripts for all common AWX operations.
+
 ### Priority Implementation Order
 
-1. `awx-list-credentials` (Gap 1) — Prerequisite for using `awx-attach-credential` effectively
-2. `awx-detach-credential` (Gap 3) — Symmetric operation, same endpoint family
-3. `awx-list-inventories` (Gap 6) — Prerequisite for template creation
-4. `awx-list-organizations` (Gap 7) — Prerequisite for all create operations
-5. `awx-cancel-job` (Gap 4) — Safety-critical for long-running jobs
-6. `awx-get-credential` (Gap 2) — Needed to inspect credential details before attaching
+1. `awx-list-credentials` — Prerequisite for using `awx-attach-credential` effectively
+2. `awx-detach-credential` — Symmetric operation, same endpoint family
+3. `awx-list-inventories` — Prerequisite for template creation
+4. `awx-list-organizations` — Prerequisite for all create operations
+5. `awx-cancel-job` — Safety-critical for long-running jobs
+6. `awx-get-credential` — Needed to inspect credential details before attaching
 
 ---
 
-*Generated as part of issue #108: "Subagent inline scripts expose AWX PAT tokens in plain text."*
+*Combined from issue #108 ("Subagent inline scripts expose AWX PAT tokens in plain text") and issue #109 ("AWX tool-gap audit").*
