@@ -154,7 +154,7 @@ describe("attachCredential", () => {
 
     await expect(
       attachCredential(client, 10, 42),
-    ).rejects.toThrow("AWX attach credential failed: HTTP 500: Internal Server Error");
+    ).rejects.toThrow("AWX attach-credential failed: HTTP 500: Internal Server Error");
 
     expect(client.request).toHaveBeenCalledTimes(1);
   });
@@ -170,7 +170,7 @@ describe("attachCredential", () => {
 
     await expect(
       attachCredential(client, 10, 42),
-    ).rejects.toThrow("AWX attach credential failed: HTTP 502: <html>Bad Gateway</html>");
+    ).rejects.toThrow("AWX attach-credential failed: HTTP 502: <html>Bad Gateway</html>");
 
     expect(client.request).toHaveBeenCalledTimes(1);
   });
