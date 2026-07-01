@@ -35,6 +35,7 @@ import { listProjects } from "./list-projects.js";
 import { listJobs } from "./list-jobs.js";
 import type { JobResult } from "./list-jobs.js";
 import { launchJob } from "./launch.js";
+import { attachCredential } from "./attach-credential.js";
 import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
 import type { ResourceDetailOutput } from "./get-resource.js";
@@ -1970,6 +1971,71 @@ async function server(input: PluginInput): Promise<Hooks> {
                 warnings: [],
                 errors: [message],
               } as unknown as Record<string, unknown>,
+            };
+          }
+        },
+      }),
+
+      /**
+       * Attach a credential to an AWX job template.
+       *
+       * Associates an existing credential with a job template via
+       * POST /api/v2/job_templates/{template_id}/credentials/.
+       * This allows subagents to attach credentials without writing
+       * inline scripts that expose PAT tokens.
+       */
+      "awx-attach-credential": tool({
+        description: [
+          "Attach a credential to an AWX job template.",
+          "Associates an existing credential with a job template via",
+          "POST /api/v2/job_templates/{template_id}/credentials/.",
+          "Returns the credential association result from AWX.",
+        ].join(" "),
+        args: {
+          template_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The AWX job template ID to attach the credential to."),
+          credential_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the credential to attach."),
+        },
+        async execute(args, context) {
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            const result = await attachCredential(
+              awxClient,
+              args.template_id,
+              args.credential_id,
+              context.abort,
+            );
+
+            return {
+              output: JSON.stringify(result),
+              metadata: result as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
+            const message =
+              err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to attach credential: ${message}`,
             };
           }
         },
