@@ -35,11 +35,13 @@ import { listProjects } from "./list-projects.js";
 import { listJobs } from "./list-jobs.js";
 import type { JobResult } from "./list-jobs.js";
 import { launchJob } from "./launch.js";
+import { attachCredential, type AttachCredentialResult } from "./attach-credential.js";
 import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
 import type { ResourceDetailOutput } from "./get-resource.js";
 import { executeCrud } from "./crud.js";
 import type { ResourceMutationOutput } from "./contracts/resource-mutation.js";
+import { attachCredential } from "./attach-credential.js";
 
 import { getCustomConfig, setCustomConfig } from "./runtime-config.js";
 
@@ -805,12 +807,76 @@ async function server(input: PluginInput): Promise<Hooks> {
       }),
 
       /**
-       * Fetch job status from AWX.
+       * Attach a credential to a job template via POST /api/v2/job_templates/{id}/credentials/.
        *
-       * Retrieves detailed job information from /api/v2/jobs/<id>/
-       * and returns it formatted according to the JobDetailOutput v1.0
-       * contract. Optionally includes full job stdout.
+       * Thin proxy that forwards the credential ID to the AWX API
+       * and returns the raw response body. No transformation logic.
        */
+      "awx-attach-credential": tool({
+        description: [
+          "Attach a credential to a job template via",
+          "POST /api/v2/job_templates/{id}/credentials/.",
+          "Thin proxy — forwards the credential ID and returns",
+          "the raw AWX API response body.",
+        ].join(" "),
+        args: {
+          job_template_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("ID of the job template"),
+          credential_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("ID of the credential to attach"),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            const result = await attachCredential(
+              awxClient,
+              args.job_template_id,
+              args.credential_id,
+              context.abort,
+            );
+
+            return {
+              output: `Credential ${args.credential_id} attached to job template ${args.job_template_id}`,
+              metadata: result as unknown as Record<string, unknown>,
+            };
+          } catch (err) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
+            const message =
+              err instanceof Error ? err.message : String(err);
+            return {
+              output: `Failed to attach credential: ${message}`,
+            };
+          }
+        },
+      }),
+
+      /**
+        * Fetch job status from AWX.
+        *
+        * Retrieves detailed job information from /api/v2/jobs/<id>/
+        * and returns it formatted according to the JobDetailOutput v1.0
+        * contract. Optionally includes full job stdout.
+        */
       "awx-job-status": tool({
         description: [
           "Fetch detailed status of an AWX job by job ID.",
@@ -1970,6 +2036,70 @@ async function server(input: PluginInput): Promise<Hooks> {
                 warnings: [],
                 errors: [message],
               } as unknown as Record<string, unknown>,
+            };
+          }
+        },
+      }),
+
+      /**
+       * Attach a credential to an AWX job template.
+       *
+       * Makes a POST request to /api/v2/job_templates/{job_template_id}/credentials/
+       * with body { "id": credential_id }. Returns the AWX API response.
+       */
+      "awx-attach-credential": tool({
+        description: [
+          "Attach a credential to an AWX job template.",
+          "Makes a POST request to",
+          "/api/v2/job_templates/{job_template_id}/credentials/",
+          "with body { \"id\": credential_id }.",
+          "Returns the AWX API response body.",
+        ].join(" "),
+        args: {
+          job_template_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the AWX job template to attach the credential to."),
+          credential_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the credential to attach."),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            const result = await attachCredential(
+              awxClient,
+              args.job_template_id,
+              args.credential_id,
+              context.abort,
+            );
+
+            return {
+              output: `Credential ${args.credential_id} attached to template ${args.job_template_id}.`,
+              metadata: result as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
+            const message = err instanceof Error ? err.message : String(err);
+            return {
+              output: `awx-attach-credential error: ${message}`,
             };
           }
         },
