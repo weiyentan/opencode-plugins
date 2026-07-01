@@ -6,7 +6,7 @@
 
 ## Current AWX Tool Coverage
 
-The following 16 tools are currently registered in the AWX plugin:
+The following 22 tools are currently registered in the AWX plugin:
 
 | # | Tool Name | Description | Endpoint |
 |---|-----------|-------------|----------|
