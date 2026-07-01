@@ -35,6 +35,7 @@ import { listProjects } from "./list-projects.js";
 import { listJobs } from "./list-jobs.js";
 import type { JobResult } from "./list-jobs.js";
 import { launchJob } from "./launch.js";
+import { attachCredential } from "./attach-credential.js";
 import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
 import type { ResourceDetailOutput } from "./get-resource.js";
@@ -799,6 +800,83 @@ async function server(input: PluginInput): Promise<Hooks> {
               err instanceof Error ? err.message : String(err);
             return {
               output: `Failed to launch job: ${message}`,
+            };
+          }
+        },
+      }),
+
+      /**
+       * Attach a credential to an AWX job template.
+       *
+       * Sends POST /api/v2/job_templates/{template_id}/credentials/
+       * with the credential ID in the request body. This eliminates
+       * the need for subagents to write inline PowerShell scripts
+       * that expose AWX PAT tokens in plain text.
+       *
+       * The agent must provide resolved integer IDs (no name-to-ID
+       * resolution). Both the template and credential must exist
+       * and the caller must have appropriate permissions on both.
+       */
+      "awx-attach-credential": tool({
+        description: [
+          "Attach a credential to an AWX job template by ID.",
+          "POST /api/v2/job_templates/{template_id}/credentials/",
+          "with the credential ID in the request body.",
+          "Eliminates the need for subagents to write inline",
+          "PowerShell scripts that expose AWX PAT tokens.",
+          "The agent must provide resolved integer IDs;",
+          "no name-to-ID resolution is performed.",
+        ].join(" "),
+        args: {
+          template_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the AWX job template."),
+          credential_id: z
+            .number()
+            .int()
+            .positive()
+            .describe("The numeric ID of the AWX credential to attach."),
+        },
+        async execute(args, context) {
+          // Respect the abort signal
+          if (context.abort?.aborted) {
+            return { output: "Request was aborted." };
+          }
+
+          let awxClient: AwxClient;
+          try {
+            awxClient = await getAwxClient();
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            return { output: message };
+          }
+
+          try {
+            const result = await attachCredential(
+              awxClient,
+              args.template_id,
+              args.credential_id,
+              context.abort,
+            );
+
+            const credName =
+              typeof result === "object" && result && "name" in result
+                ? `"${String(result.name)}"`
+                : `ID ${args.credential_id}`;
+            return {
+              output: `Credential ${credName} attached to template ${args.template_id}.`,
+              metadata: result as Record<string, unknown>,
+            };
+          } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
+            const message =
+              err instanceof Error ? err.message : String(err);
+            return {
+              output: `awx-attach-credential error: ${message}`,
             };
           }
         },
