@@ -136,12 +136,15 @@ function formatResourceOutput(result: ResourceDetailOutput): string {
       const d = result.data;
       return [
         `Project ${d.id}: ${d.name}`,
-        `  SCM Type: ${d.scm_type}`,
-        `  SCM URL:  ${d.scm_url}`,
-        `  Branch:   ${d.scm_branch || "(none)"}`,
-        `  Status:   ${d.status}`,
-        `  Org:      ${d.organization_name}`,
-        `  Updated:  ${d.last_updated ?? "(never)"}`,
+        `  SCM Type:        ${d.scm_type}`,
+        `  SCM URL:         ${d.scm_url}`,
+        `  Branch:          ${d.scm_branch || "(none)"}`,
+        `  SCM Revision:    ${d.scm_revision || "(none)"}`,
+        `  Credential:      ${d.credential_name || "(none)"}${d.credential_id ? ` (ID: ${d.credential_id})` : ""}`,
+        `  Default Env:     ${d.default_environment_name || "(none)"}${d.default_environment_id ? ` (ID: ${d.default_environment_id})` : ""}`,
+        `  Status:          ${d.status}`,
+        `  Org:             ${d.organization_name}`,
+        `  Updated:         ${d.last_updated ?? "(never)"}`,
       ].join("\n");
     }
     case "template": {
@@ -515,7 +518,11 @@ async function server(input: PluginInput): Promise<Hooks> {
             const table = buildPipeTable(result.results, [
               { header: "ID", value: (t: TemplateResult) => String(t.id) },
               { header: "Name", value: (t: TemplateResult) => t.name },
-              { header: "Description", value: (t: TemplateResult) => t.description },
+              { header: "Job Type", value: (t: TemplateResult) => t.job_type },
+              { header: "Playbook", value: (t: TemplateResult) => t.playbook },
+              { header: "Status", value: (t: TemplateResult) => t.status },
+              { header: "Project", value: (t: TemplateResult) => t.project_name },
+              { header: "Inventory", value: (t: TemplateResult) => t.inventory_name },
             ]);
 
             const output = `Found ${result.count} template(s).\n\n${table}`;
@@ -608,8 +615,11 @@ async function server(input: PluginInput): Promise<Hooks> {
             const table = buildPipeTable(result.results, [
               { header: "ID", value: (p) => String(p.id) },
               { header: "Name", value: (p) => p.name },
-              { header: "Description", value: (p) => p.description },
               { header: "SCM", value: (p) => p.scm_type },
+              { header: "Status", value: (p) => p.status },
+              { header: "Branch", value: (p) => p.scm_branch || "" },
+              { header: "Org", value: (p) => (p.summary_fields as Record<string, { name?: string } | undefined>)?.organization?.name ?? "" },
+              { header: "Updated", value: (p) => p.last_updated ?? "" },
             ]);
 
             const output = `Found ${result.count} project(s).\n\n${table}`;

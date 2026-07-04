@@ -128,6 +128,9 @@ describe("mapProject()", () => {
       scm_type: "",
       scm_url: "",
       scm_branch: "",
+      scm_revision: "",
+      credential: null,
+      default_environment: null,
       status: "never updated",
       last_updated: null,
       created: "2025-01-01T00:00:00Z",
@@ -136,6 +139,11 @@ describe("mapProject()", () => {
 
     const result = mapProject(raw);
 
+    expect(result.data.scm_revision).toBe("");
+    expect(result.data.credential_id).toBeNull();
+    expect(result.data.credential_name).toBe("");
+    expect(result.data.default_environment_id).toBeNull();
+    expect(result.data.default_environment_name).toBe("");
     expect(result.data.organization_name).toBe("");
     expect(result.data.created_by).toBe("");
     expect(result.data.warnings).toEqual([]);
@@ -143,7 +151,22 @@ describe("mapProject()", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 8: Empty description field
+     Cycle 8: Maps credential, default_environment, and scm_revision fields
+     ══════════════════════════════════════════════════════════════ */
+
+  it("maps credential, default_environment, and scm_revision fields", () => {
+    const raw = loadRawProjectFixture();
+    const result = mapProject(raw);
+
+    expect(result.data.scm_revision).toBe("abc123def456");
+    expect(result.data.credential_id).toBe(10);
+    expect(result.data.credential_name).toBe("GitLab PAT - Production");
+    expect(result.data.default_environment_id).toBe(20);
+    expect(result.data.default_environment_name).toBe("Ansible Engine 2.9");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 9: Empty description field
      ══════════════════════════════════════════════════════════════ */
 
   it("handles empty description field gracefully", () => {

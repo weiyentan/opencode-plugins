@@ -19,6 +19,8 @@ export interface Project {
   modified: string;
   description: string;
   scm_type: string;
+  scm_branch?: string;
+  last_updated?: string | null;
   status: string;
   [key: string]: unknown;
 }

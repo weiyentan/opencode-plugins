@@ -67,6 +67,9 @@ const MOCK_RAW_PROJECT: Record<string, unknown> = {
   scm_type: "git",
   scm_url: "https://github.com/example/web-stack-deploy.git",
   scm_branch: "main",
+  scm_revision: "abc123def456",
+  credential: 10,
+  default_environment: 20,
   status: "successful",
   last_updated: "2025-06-20T10:15:00Z",
   created: "2025-01-10T08:00:00Z",
@@ -74,6 +77,8 @@ const MOCK_RAW_PROJECT: Record<string, unknown> = {
   summary_fields: {
     organization: { id: 1, name: "Default" },
     created_by: { id: 1, username: "admin" },
+    credential: { id: 10, name: "GitLab PAT - Production" },
+    default_environment: { id: 20, name: "Ansible Engine 2.9" },
   },
 };
 
