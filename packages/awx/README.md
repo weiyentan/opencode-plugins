@@ -26,8 +26,8 @@ Tool implementation (Phase 2) is complete — all 20 AWX tools are implemented a
 
 | Tool | Output Format | Filter Support |
 |------|--------------|----------------|
-| `awx-list-templates` | Pipe-delimited Markdown table (ID / Name / Description) | `--filter` (e.g., `name__icontains=workspace`) |
-| `awx-list-projects` | Pipe-delimited Markdown table (ID / Name / Description / SCM) | `--filter` (e.g., `name__icontains=workspace`) |
+| `awx-list-templates` | Pipe-delimited Markdown table (ID / Name / Job Type / Playbook / Status / Project / Inventory) | `--filter` (e.g., `name__icontains=workspace`) |
+| `awx-list-projects` | Pipe-delimited Markdown table (ID / Name / SCM / Status / Branch / Org / Updated) | `--filter` (e.g., `name__icontains=workspace`) |
 | `awx-list-jobs` | Pipe-delimited Markdown table (ID / Name / Job Type / Status / Created / Started / Finished / Launched By) | `--filter` (e.g., `name__icontains=workspace`) |
 | `awx-sync-project` | Plain text message + structured metadata | — |
 | `awx-launch-job` | Raw AWX API response JSON (thin proxy — no transforms or structured envelope) | — |
@@ -36,7 +36,7 @@ Tool implementation (Phase 2) is complete — all 20 AWX tools are implemented a
 | `awx-get-job-events` | Plain text message + structured metadata | — |
 | `awx-configure` | Plain text confirmation message | — |
 | `awx-debug-env` | JSON string | — |
-| `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope | `type` (template\|project\|inventory) + `id` |
+| `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope. Project data includes SCM Revision, Credential (name + ID), and Default Environment (name + ID). | `type` (template\|project\|inventory) + `id` |
 | `awx-create-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-create-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-create-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
