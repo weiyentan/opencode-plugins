@@ -14,11 +14,15 @@ export interface Project {
   name: string;
   type: string;
   url: string;
-  summary_fields: Record<string, unknown>;
+  summary_fields?: {
+    organization?: { id?: number; name?: string };
+  };
   created: string;
   modified: string;
   description: string;
   scm_type: string;
+  scm_branch?: string;
+  last_updated?: string | null;
   status: string;
   [key: string]: unknown;
 }

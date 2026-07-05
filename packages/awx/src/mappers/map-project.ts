@@ -34,6 +34,9 @@ interface RawAwxProject {
   scm_type: string;
   scm_url: string;
   scm_branch: string;
+  scm_revision?: string;
+  credential?: number | null;
+  default_environment?: number | null;
   status: string;
   last_updated: string | null;
   created: string;
@@ -41,6 +44,8 @@ interface RawAwxProject {
   summary_fields?: {
     organization?: { id?: number; name?: string } | null;
     created_by?: { id?: number; username?: string } | null;
+    credential?: { id?: number; name?: string } | null;
+    default_environment?: { id?: number; name?: string } | null;
   };
 }
 
@@ -69,6 +74,11 @@ export function mapProject(raw: unknown): ProjectDetailOutput {
     scm_type: p.scm_type ?? "",
     scm_url: p.scm_url ?? "",
     scm_branch: p.scm_branch ?? "",
+    scm_revision: p.scm_revision ?? "",
+    credential_id: p.credential ?? null,
+    credential_name: sf.credential?.name ?? "",
+    default_environment_id: p.default_environment ?? null,
+    default_environment_name: sf.default_environment?.name ?? "",
     status,
     last_updated: p.last_updated ?? null,
     created: p.created ?? "",

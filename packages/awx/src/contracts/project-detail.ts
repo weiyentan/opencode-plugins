@@ -39,6 +39,11 @@ export interface ProjectData {
   scm_type: string;
   scm_url: string;
   scm_branch: string;
+  scm_revision: string;
+  credential_id: number | null;
+  credential_name: string;
+  default_environment_id: number | null;
+  default_environment_name: string;
   status: string;
   last_updated: string | null;
   created: string;

@@ -26,6 +26,11 @@ export interface TemplateResult {
   id: number;
   name: string;
   description: string;
+  job_type: string;
+  playbook: string;
+  status: string;
+  project_name: string;
+  inventory_name: string;
 }
 
 /** Output of the list-templates operation */
@@ -67,6 +72,15 @@ interface AwxTemplateItem {
   id: number;
   name: string;
   description: string;
+  job_type?: string;
+  playbook?: string;
+  status?: string;
+  last_job_failed?: boolean;
+  last_job_run?: string;
+  summary_fields?: {
+    project?: { id?: number; name?: string };
+    inventory?: { id?: number; name?: string };
+  };
   [key: string]: unknown;
 }
 
@@ -125,10 +139,16 @@ function extractPath(fullUrl: string): string {
 
 /** Map a raw AWX template item to the simplified result shape */
 function mapTemplate(item: AwxTemplateItem): TemplateResult {
+  const sf = item.summary_fields ?? {};
   return {
     id: item.id,
     name: item.name,
     description: item.description ?? "",
+    job_type: item.job_type ?? "",
+    playbook: item.playbook ?? "",
+    status: item.status ?? (item.last_job_failed ? "failed" : item.last_job_run ? "successful" : ""),
+    project_name: (sf.project as { name?: string } | undefined)?.name ?? "",
+    inventory_name: (sf.inventory as { name?: string } | undefined)?.name ?? "",
   };
 }
 

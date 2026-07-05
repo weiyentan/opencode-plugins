@@ -274,10 +274,10 @@ describe("AWX Plugin Index", () => {
 
       // Verify structured output with pipe-table format
       const expectedTable = [
-        "| ID | Name | Description | SCM |",
-        "| --- | --- | --- | --- |",
-        "| 1 | alpha |  | git |",
-        "| 2 | beta |  | git |",
+        "| ID | Name | Description | SCM | Status | Branch | Org | Updated |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| 1 | alpha |  | git | successful |  |  |  |",
+        "| 2 | beta |  | git | successful |  |  |  |",
       ].join("\n");
       expect(result).toEqual({
         output: `Found 2 project(s).\n\n${expectedTable}`,

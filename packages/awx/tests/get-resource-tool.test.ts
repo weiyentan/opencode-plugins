@@ -274,12 +274,15 @@ describe("awx-get-resource tool", () => {
 
     const output = (result as { output: string }).output;
     expect(output).toContain("Project 5: Web Stack Deploy");
-    expect(output).toContain("SCM Type: git");
-    expect(output).toContain("SCM URL:  https://github.com/example/web-stack-deploy.git");
-    expect(output).toContain("Branch:   main");
-    expect(output).toContain("Status:   successful");
-    expect(output).toContain("Org:      Default");
-    expect(output).toContain("Updated:  2025-06-20T10:15:00Z");
+    expect(output).toContain("SCM Type:        git");
+    expect(output).toContain("SCM URL:         https://github.com/example/web-stack-deploy.git");
+    expect(output).toContain("Branch:          main");
+    expect(output).toContain("SCM Revision:    (none)");
+    expect(output).toContain("Credential:      (none)");
+    expect(output).toContain("Default Env:     (none)");
+    expect(output).toContain("Status:          successful");
+    expect(output).toContain("Org:             Default");
+    expect(output).toContain("Updated:         2025-06-20T10:15:00Z");
   });
 
   /* ══════════════════════════════════════════════════════════════
