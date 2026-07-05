@@ -4,7 +4,7 @@
  * Validates the attachCredential thin-proxy behavior and the
  * awx-attach-credential tool registration and execution.
  *
- * 13 tests covering:
+ * 14 tests covering:
  *   - Thin proxy function (attachCredential): success, error paths, abort, edge cases
  *   - Registered tool (awx-attach-credential): registration, success, error, abort
  */
@@ -68,13 +68,6 @@ async function createHooks(
     vi.stubEnv("AWX_BASE_URL", options.baseUrl);
   }
   return AwxPlugin(input);
-}
-
-/** Create a mock AwxClient with a controllable request method */
-function createMockClient(): AwxClient {
-  return {
-    request: vi.fn(),
-  };
 }
 
 // ============================================================================
@@ -249,7 +242,7 @@ describe('"awx-attach-credential" tool', () => {
 
   /* ── Setup: mock createClient to return a controllable client ── */
   beforeEach(() => {
-    mockAwxClient = createMockClient();
+    mockAwxClient = mockClient();
     createClientSpy = vi.spyOn(clientModule, "createClient").mockReturnValue(mockAwxClient);
   });
 
