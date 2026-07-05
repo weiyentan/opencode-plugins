@@ -232,7 +232,7 @@ async function server(input: PluginInput): Promise<Hooks> {
     if (!resolvedBaseUrl) throw new Error("AWX_BASE_URL not configured. Set the AWX_BASE_URL environment variable to point to your AAP/AWX instance.");
 
     const token = getCustomConfig()?.token
-      ?? await input.client.getSecret?.("awx")
+      ?? await (input.client as any).getSecret?.("awx")
       ?? process.env.AWX_TOKEN;
     if (!token) throw new Error("AWX Personal Access Token (PAT) not configured. Store your PAT via the plugin auth prompt.");
 
@@ -253,7 +253,7 @@ async function server(input: PluginInput): Promise<Hooks> {
   // If no baseUrl is configured, skip — the user will configure it later.
   if (baseUrl) {
     try {
-      const storedKey = await input.client.getSecret?.("awx") ?? process.env.AWX_TOKEN;
+      const storedKey = getCustomConfig()?.token ?? await (input.client as any).getSecret?.("awx") ?? process.env.AWX_TOKEN;
       if (storedKey) {
         const { signal, clear } = createTimeoutSignal(10_000);
 
