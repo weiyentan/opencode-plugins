@@ -157,6 +157,7 @@ describe("init-time timeout cleanup", () => {
 
   it("does not call createTimeoutSignal when no token is stored", async () => {
     vi.stubEnv("AWX_BASE_URL", "https://aap.example.com");
+    vi.stubEnv("AWX_TOKEN", undefined);
     const hooks: Hooks = await AwxPlugin(
       mockPluginInputWithoutToken(),
     );

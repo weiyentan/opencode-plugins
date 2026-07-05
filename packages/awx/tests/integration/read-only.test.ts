@@ -35,6 +35,9 @@ import { describe, it, expect, vi } from "vitest";
 import type { PluginInput, Hooks, ToolContext, ToolResult } from "@opencode-ai/plugin";
 import { AwxPlugin } from "../../src/index.js";
 
+// Capture at module load time, before any vi.stubEnv can pollute it
+const ENV_AWX_TOKEN = process.env.AWX_TOKEN;
+
 // ── Shared Test Helpers ──────────────────────────────────────────
 
 /** Minimal mock of ToolContext for tool execute tests */
@@ -163,7 +166,7 @@ describe("Read-Only Tools — Configuration Errors", () => {
 describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integration", () => {
   describe("awx-list-templates", () => {
     it("returns structured response with count and results", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-templates"]!.execute(
@@ -196,7 +199,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
     });
 
     it("returns paginated results when page size is small", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-templates"]!.execute(
@@ -221,7 +224,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
 
   describe("awx-list-projects", () => {
     it("returns structured response with count and results", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-projects"]!.execute(
@@ -260,7 +263,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
     });
 
     it("accepts pagination options", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-projects"]!.execute(
@@ -332,7 +335,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
 
   describe("awx-list-jobs", () => {
     it("returns structured response with count and results", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-jobs"]!.execute(
@@ -371,7 +374,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
     });
 
     it("accepts pagination options", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-jobs"]!.execute(

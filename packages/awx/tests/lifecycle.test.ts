@@ -75,6 +75,7 @@ describe("AWX Plugin — Lazy Client/Auth Lifecycle", () => {
     getSecretMock.mockResolvedValue(undefined);
 
     vi.stubEnv("AWX_BASE_URL", "https://example.com");
+    vi.stubEnv("AWX_TOKEN", undefined);
     const hooks: Hooks = await AwxPlugin(
       createPluginInput(getSecretMock),
     );

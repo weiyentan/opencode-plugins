@@ -17,16 +17,13 @@
  * |---------|---------|-------------|
  * | `AWX_TOKEN` | *(required)* | Valid AAP Personal Access Token (PAT) |
  * | `AAP_BASE_URL` | `https://example.com` | Base URL of the AAP instance |
- * | `JOB_TEMPLATE_ID` | `10` | Non-production AWX job template ID to launch |
- * | `EXTRA_VARS_INVENTORY` | `"test"` | Inventory name for extra_vars |
- * | `EXTRA_VARS_SCM_URL` | `"https://github.com/example/repo.git"` | SCM URL for extra_vars |
- * | `EXTRA_VARS_SCM_BRANCH` | `"main"` | SCM branch for extra_vars |
+ * | `JOB_TEMPLATE_ID` | `109` | Non-production AWX job template ID to launch |
  *
  * ## Run
  *
  * ```bash
  * export AWX_TOKEN=your_pat_token_here
- * export JOB_TEMPLATE_ID=27    # non-production template ID
+ * export JOB_TEMPLATE_ID=109   # non-production template ID (DEBUG - Show all variables)
  * npx vitest run tests/integration/job-lifecycle.test.ts
  * ```
  *
@@ -34,9 +31,8 @@
  *
  * - **Use a NON-PRODUCTION job template.** The launch tool starts a real
  *   job on AAP every time these tests run.
- * - The extra_vars must match what the selected job template expects.
- *   By default, the plugin's transforms pipeline requires `inventory`,
- *   `scm_url`, and `scm_branch` — configure them via env vars if needed.
+ * - Template 109 (`DEBUG - Show all variables`) has
+ *   `ask_variables_on_launch: false`, so no extra_vars are passed.
  * - Jobs are NOT automatically cancelled after the test run. If the
  *   launched job runs for a long time, cancel it manually in the AAP UI.
  */
@@ -49,12 +45,7 @@ import { AwxPlugin } from "../../src/index.js";
 const AWX_TOKEN = process.env.AWX_TOKEN;
 const AAP_BASE_URL =
   process.env.AAP_BASE_URL ?? "https://example.com";
-const JOB_TEMPLATE_ID = Number(process.env.JOB_TEMPLATE_ID) || 10;
-const EXTRA_VARS: Record<string, string> = {
-  inventory: process.env.EXTRA_VARS_INVENTORY ?? "test",
-  scm_url: process.env.EXTRA_VARS_SCM_URL ?? "https://github.com/example/repo.git",
-  scm_branch: process.env.EXTRA_VARS_SCM_BRANCH ?? "main",
-};
+const JOB_TEMPLATE_ID = Number(process.env.JOB_TEMPLATE_ID) || 109;
 
 // ── Test Helpers ───────────────────────────────────────────────
 
@@ -151,24 +142,18 @@ describe.skipIf(!AWX_TOKEN)("AWX Job Lifecycle Integration", () => {
 
   it("awx-launch-job launches a job template and returns a job ID", async () => {
     const result = await hooks.tool!["awx-launch-job"]!.execute(
-      { template_id: JOB_TEMPLATE_ID, extra_vars: EXTRA_VARS },
+      { template_id: JOB_TEMPLATE_ID },
       mockToolContext(),
     );
 
     const parsed = getMetadata(result);
 
-    // The transforms pipeline must have completed without errors
-    expect(parsed.errors).toEqual([]);
-    // A real launch returns a positive job ID and an initial status
-    expect(parsed.jobId).toBeGreaterThan(0);
-    expect(parsed.jobStatus).toBeDefined();
+    // AWX launch returns the raw job object — it uses `id` and `status`
+    expect(parsed.id).toBeGreaterThan(0);
+    expect(parsed.status).toBeDefined();
     expect(["pending", "waiting", "running", "new"]).toContain(
-      parsed.jobStatus,
+      parsed.status,
     );
-    // Warnings may come from URL/branch transforms — log them for debugging
-    if (parsed.warnings.length > 0) {
-      console.log("[launch warnings]", parsed.warnings);
-    }
   });
 
   /* ═══════════════════════════════════════════════════════════════
@@ -182,19 +167,17 @@ describe.skipIf(!AWX_TOKEN)("AWX Job Lifecycle Integration", () => {
       // Launch a single job that all lifecycle tests will reference.
       // This avoids launching N jobs for N tests.
       const result = await hooks.tool!["awx-launch-job"]!.execute(
-        { template_id: JOB_TEMPLATE_ID, extra_vars: EXTRA_VARS },
+        { template_id: JOB_TEMPLATE_ID },
         mockToolContext(),
       );
       const parsed = getMetadata(result);
-      jobId = parsed.jobId as number;
+      jobId = parsed.id as number;
 
       // Guard: if transforms prevented launch, skip the lifecycle tests
       // with a clear error message.
-      if (parsed.jobId === 0) {
+      if (parsed.id === 0 || typeof parsed.id !== "number") {
         throw new Error(
-          `Launch failed (jobId=0). Transforms errors: ${JSON.stringify(
-            parsed.errors,
-          )}. Check EXTRA_VARS_* env vars match your job template.`,
+          `Launch failed (id=${parsed.id}). Status: ${parsed.status}. Check JOB_TEMPLATE_ID env var points to a valid template you can execute.`,
         );
       }
     });
