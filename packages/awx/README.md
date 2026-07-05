@@ -26,8 +26,8 @@ Tool implementation (Phase 2) is complete — all 20 AWX tools are implemented a
 
 | Tool | Output Format | Filter Support |
 |------|--------------|----------------|
-| `awx-list-templates` | Pipe-delimited Markdown table (ID / Name / Job Type / Playbook / Status / Project / Inventory) | `--filter` (e.g., `name__icontains=workspace`) |
-| `awx-list-projects` | Pipe-delimited Markdown table (ID / Name / SCM / Status / Branch / Org / Updated) | `--filter` (e.g., `name__icontains=workspace`) |
+| `awx-list-templates` | Pipe-delimited Markdown table (ID / Name / Description / Job Type / Playbook / Status / Project / Inventory) | `--filter` (e.g., `name__icontains=workspace`) |
+| `awx-list-projects` | Pipe-delimited Markdown table (ID / Name / Description / SCM / Status / Branch / Org / Updated) | `--filter` (e.g., `name__icontains=workspace`) |
 | `awx-list-jobs` | Pipe-delimited Markdown table (ID / Name / Job Type / Status / Created / Started / Finished / Launched By) | `--filter` (e.g., `name__icontains=workspace`) |
 | `awx-sync-project` | Plain text message + structured metadata | — |
 | `awx-launch-job` | Raw AWX API response JSON (thin proxy — no transforms or structured envelope) | — |

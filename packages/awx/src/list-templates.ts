@@ -75,6 +75,8 @@ interface AwxTemplateItem {
   job_type?: string;
   playbook?: string;
   status?: string;
+  last_job_failed?: boolean;
+  last_job_run?: string;
   summary_fields?: {
     project?: { id?: number; name?: string };
     inventory?: { id?: number; name?: string };
@@ -144,7 +146,7 @@ function mapTemplate(item: AwxTemplateItem): TemplateResult {
     description: item.description ?? "",
     job_type: item.job_type ?? "",
     playbook: item.playbook ?? "",
-    status: item.status ?? "",
+    status: item.status ?? (item.last_job_failed ? "failed" : item.last_job_run ? "successful" : ""),
     project_name: (sf.project as { name?: string } | undefined)?.name ?? "",
     inventory_name: (sf.inventory as { name?: string } | undefined)?.name ?? "",
   };
