@@ -84,6 +84,7 @@ async function createHooks(
   if (options?.baseUrl) {
     vi.stubEnv("AWX_BASE_URL", options.baseUrl);
   }
+  vi.stubEnv("AWX_TOKEN", undefined);
   return AwxPlugin(input);
 }
 
@@ -223,6 +224,7 @@ describe("getAwxClient() — H4 probe: AWX_TOKEN env var fallback", () => {
   it("awx-list-templates: creates client successfully via AWX_TOKEN env var when getSecret is unavailable", async () => {
     // H4 PROBE: simulate the env var fallback path
     vi.stubEnv("AWX_TOKEN", "probe-token-from-env");
+    vi.stubEnv("AWX_BASE_URL", "https://aap.example.com");
 
     // Mock fetch so the HTTP client can make a successful API call
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
@@ -235,9 +237,9 @@ describe("getAwxClient() — H4 probe: AWX_TOKEN env var fallback", () => {
     }));
 
     const input = mockRealisticPluginInput(); // no getSecret on client
-    const hooks = await createHooks(input, {
-      baseUrl: "https://aap.example.com",
-    });
+    // Bypass createHooks because it stubs AWX_TOKEN to undefined.
+    // The env var must be set before AwxPlugin reads it during init.
+    const hooks = await AwxPlugin(input);
 
     const result = await hooks.tool!["awx-list-templates"]!.execute(
       {},
