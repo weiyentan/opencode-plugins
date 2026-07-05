@@ -301,7 +301,7 @@ describe('"awx-attach-credential" tool', () => {
     );
 
     const wrapped = result as { output: string; metadata: Record<string, unknown> };
-    expect(wrapped.output).toContain("Credential 42 attached to template 10");
+    expect(wrapped.output).toContain("Credential 42 attached to job template 10");
     expect(wrapped.metadata).toEqual(mockResponse);
   });
 
@@ -330,7 +330,7 @@ describe('"awx-attach-credential" tool', () => {
       mockToolContext(),
     );
 
-    expect((result as { output: string }).output).toContain("awx-attach-credential error");
+    expect((result as { output: string }).output).toContain("Failed to attach credential");
     expect((result as { output: string }).output).toContain("Credential not found");
   });
 
