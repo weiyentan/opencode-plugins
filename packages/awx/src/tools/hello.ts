@@ -1,30 +1,19 @@
 /**
- * hello.ts — Hello-world tool factory for the AWX plugin.
+ * hello.ts — Hello-world tool factory.
  *
- * Provides a simple greeting tool that verifies plugin load, tool
- * registration, and hot-reload behavior on the OpenCode plugin server.
- * This is the canonical home for the hello tool, extracted from the
- * inline definition that previously lived in index.ts.
+ * Phase 0 scaffolding tracer that verifies plugin load, tool registration,
+ * and hot-reload behavior.
  */
 import { tool } from "@opencode-ai/plugin";
-import type { AwxClient } from "../client.js";
 
 const z = tool.schema;
 
-/**
- * Create a hello-world tool.
- *
- * @param getAwxClient - Lazy resolver for the AWX HTTP client.
- *   Passed for consistency with the factory pattern used by other
- *   tools, though this tool does not make any API calls.
- * @returns A registered tool definition.
- */
-export function createHelloTool(_getAwxClient: () => Promise<AwxClient>) {
+export function createHelloTool(serverUrl: URL) {
   return tool({
     description: [
       "Returns a hello world greeting. Sanity-check tool that verifies",
       "plugin load, tool registration, and hot-reload behavior on the",
-      "AWX plugin server.",
+      `AWX plugin server (connected to ${serverUrl.href}).`,
     ].join(" "),
     args: {
       name: z
