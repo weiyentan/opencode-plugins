@@ -12,15 +12,18 @@ The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-list-jobs, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-get-resource, awx-debug-env, awx-configure, awx-create-project, awx-create-template, awx-create-inventory, awx-update-project, awx-update-template, awx-update-inventory, awx-delete-project, awx-delete-template, awx-delete-inventory, awx-attach-credential) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools via per-tool factory modules (hello, awx-sync-project, awx-list-templates, awx-list-projects, awx-list-jobs, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-get-resource, awx-create-project, awx-create-template, awx-create-inventory, awx-update-project, awx-update-template, awx-update-inventory, awx-delete-project, awx-delete-template, awx-delete-inventory, awx-attach-credential, awx-debug-env, awx-configure) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Client middleware** | `src/client.ts` | HTTP middleware pipeline: circuit breaker, retry/backoff, timeout via native `fetch` |
 | **Metrics** | `src/metrics.ts` | Per-tool counters with file-backed durability for operational visibility |
+| **Runtime config** | `src/runtime-config.ts` | Module-level baseUrl/token storage for the 3-tier auth fallback chain |
+| **Tool factories** | `src/tools/` | Per-tool factory modules (hello, sync-project, get-resource, crud, attach-credential, configure) extracted from index.ts for maintainability |
+| **Shared utilities** | `src/utils.ts` | Error formatting (`formatErrorResponse`) and mutation result wrapping (`wrapMutationResult`) |
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) is complete — all 21 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
+Tool implementation (Phase 2) is complete — all 22 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
 ### Tool Output Formats
 
@@ -263,7 +266,16 @@ packages/awx/
 │   ├── crud.ts               # CRUD endpoint registry — type→{create,update,delete} dispatch with per-type mappers
 │   ├── metrics.ts            # Per-tool counters with file-backed durability
 │   ├── node-shim.d.ts        # Minimal Node.js declarations (fs/promises, path)
+│   ├── runtime-config.ts     # Module-level baseUrl/token storage (3-tier auth fallback)
+│   ├── utils.ts              # Shared utilities (formatErrorResponse, wrapMutationResult)
 │   ├── launch.ts             # awx-launch-job orchestration (thin proxy — passes extra_vars verbatim to AWX API)
+│   ├── tools/
+│   │   ├── hello.ts          # Factory: hello-world scaffolding tracer
+│   │   ├── sync-project.ts   # Factory: awx-sync-project tool
+│   │   ├── get-resource.ts   # Factory: awx-get-resource tool (wraps src/get-resource.ts)
+│   │   ├── crud.ts           # Factory: awx-{create,update,delete}-{project,template,inventory} tools
+│   │   ├── attach-credential.ts # Factory: awx-attach-credential tool
+│   │   └── configure.ts      # Factory: awx-configure and awx-debug-env tools
 │   ├── contracts/
 │   │   ├── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
 │   │   ├── resource-mutation.ts # ResourceMutationOutput v1.0 contract (schema_version, action, resource_type, id, data)

@@ -40,8 +40,7 @@ import { createGetResourceTool } from "./tools/get-resource.js";
 import { createCrudTools } from "./tools/crud.js";
 import { createAttachCredentialTool } from "./tools/attach-credential.js";
 
-import { getCustomConfig, setCustomConfig } from "./runtime-config.js";
-import { formatErrorResponse } from "./utils.js";
+import { getCustomConfig } from "./runtime-config.js";
 import { createHelloTool } from "./tools/hello.js";
 import { createSyncProjectTool } from "./tools/sync-project.js";
 import { createDebugEnvTool, createConfigureTool } from "./tools/configure.js";
