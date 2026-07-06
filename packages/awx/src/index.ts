@@ -41,6 +41,7 @@ import type { ResourceDetailOutput } from "./get-resource.js";
 import { executeCrud } from "./crud.js";
 import type { ResourceMutationOutput } from "./contracts/resource-mutation.js";
 import { attachCredential } from "./attach-credential.js";
+import { createHelloTool } from "./tools/hello.js";
 
 import { getCustomConfig, setCustomConfig } from "./runtime-config.js";
 
@@ -186,7 +187,6 @@ function formatResourceOutput(result: ResourceDetailOutput): string {
  * - Registered tools (awx-list-templates, awx-launch-job, awx-job-status, etc.)
  */
 async function server(input: PluginInput): Promise<Hooks> {
-  const { serverUrl } = input;
   const baseUrl = process.env.AWX_BASE_URL;
 
   /* ── Auth hook ────────────────────────────────────────────── */
@@ -307,35 +307,7 @@ async function server(input: PluginInput): Promise<Hooks> {
       await persistence.clear();
     },
     tool: {
-      /**
-       * Hello-world tool — Phase 0 scaffolding tracer.
-       *
-       * Verifies that tools can be registered, invoked, and hot-reloaded
-       * by the OpenCode plugin server. This tool exercises the full plugin
-       * lifecycle: import, register, execute, return.
-       */
-      hello: tool({
-        description: [
-          "Returns a hello world greeting. Sanity-check tool that verifies",
-          "plugin load, tool registration, and hot-reload behavior on the",
-          `AWX plugin server (connected to ${serverUrl.href}).`,
-        ].join(" "),
-        args: {
-          name: z
-            .string()
-            .optional()
-            .describe("Name to greet. Defaults to 'world'."),
-        },
-        async execute(args, context) {
-          // Respect the abort signal
-          if (context.abort?.aborted) {
-            return { output: "Request was aborted." };
-          }
-
-          const name = args.name ?? "world";
-          return { output: `Hello, ${name}! 👋` };
-        },
-      }),
+      hello: createHelloTool(getAwxClient),
 
       /**
        * Trigger an SCM sync on an AWX project.
