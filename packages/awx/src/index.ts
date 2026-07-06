@@ -39,68 +39,11 @@ import { fetchJobStatus } from "./job-status.js";
 import { getResource } from "./get-resource.js";
 import type { ResourceDetailOutput } from "./get-resource.js";
 import { executeCrud } from "./crud.js";
-import type { ResourceMutationOutput } from "./contracts/resource-mutation.js";
 import { attachCredential } from "./attach-credential.js";
+import { formatErrorResponse, wrapMutationResult } from "./utils.js";
+import { createHelloTool } from "./tools/hello.js";
 
 import { getCustomConfig, setCustomConfig } from "./runtime-config.js";
-
-/**
- * Format a user-facing error message for HTTP error responses.
- *
- * Maps HTTP status codes to meaningful error messages the agent
- * can act on (e.g., "not found", "not authorized").
- */
-function formatErrorResponse(projectId: number, status: number): string {
-  switch (status) {
-    case 404:
-      return `Project ${projectId} not found. Verify the project ID and try again.`;
-    case 401:
-    case 403:
-      return (
-        `Not authorized to sync project ${projectId}. ` +
-        "Check your Personal Access Token permissions."
-      );
-    default:
-      return (
-        `Failed to sync project ${projectId}. ` +
-        `AWX API returned HTTP ${status}.`
-      );
-  }
-}
-
-/**
- * Wrap a CrudResult into the standard ResourceMutationOutput envelope.
- *
- * The CrudResult.data contains the full mapper output (e.g., TemplateDetailOutput
- * which has schema_version, resource_type, id, data). For the mutation output,
- * we extract just the inner data payload (e.g., TemplateData) so consumers
- * can access fields like name, job_type, etc. directly via `data.name`.
- */
-function wrapMutationResult(result: {
-  action: "created" | "updated" | "deleted";
-  resource_type: string;
-  id: number;
-  data: unknown | null;
-}): ResourceMutationOutput {
-  // The mapper output nests the payload inside a `data` field.
-  // Extract it so consumers can access `result.data.name` directly.
-  const innerData =
-    result.data &&
-    typeof result.data === "object" &&
-    "data" in (result.data as Record<string, unknown>)
-      ? (result.data as Record<string, unknown>).data
-      : result.data;
-
-  return {
-    schema_version: "1.0",
-    action: result.action,
-    resource_type: result.resource_type as ResourceMutationOutput["resource_type"],
-    id: result.id,
-    data: innerData,
-    warnings: [],
-    errors: [],
-  };
-}
 
 /**
  * Build a Markdown pipe-delimited table from an array of items.
@@ -307,35 +250,7 @@ async function server(input: PluginInput): Promise<Hooks> {
       await persistence.clear();
     },
     tool: {
-      /**
-       * Hello-world tool — Phase 0 scaffolding tracer.
-       *
-       * Verifies that tools can be registered, invoked, and hot-reloaded
-       * by the OpenCode plugin server. This tool exercises the full plugin
-       * lifecycle: import, register, execute, return.
-       */
-      hello: tool({
-        description: [
-          "Returns a hello world greeting. Sanity-check tool that verifies",
-          "plugin load, tool registration, and hot-reload behavior on the",
-          `AWX plugin server (connected to ${serverUrl.href}).`,
-        ].join(" "),
-        args: {
-          name: z
-            .string()
-            .optional()
-            .describe("Name to greet. Defaults to 'world'."),
-        },
-        async execute(args, context) {
-          // Respect the abort signal
-          if (context.abort?.aborted) {
-            return { output: "Request was aborted." };
-          }
-
-          const name = args.name ?? "world";
-          return { output: `Hello, ${name}! 👋` };
-        },
-      }),
+      hello: createHelloTool(getAwxClient, serverUrl),
 
       /**
        * Trigger an SCM sync on an AWX project.
