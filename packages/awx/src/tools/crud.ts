@@ -16,41 +16,7 @@ import { tool } from "@opencode-ai/plugin";
 const z = tool.schema;
 import type { AwxClient } from "../client.js";
 import { executeCrud } from "../crud.js";
-import type { ResourceMutationOutput } from "../contracts/resource-mutation.js";
-
-/**
- * Wrap a CrudResult into the standard ResourceMutationOutput envelope.
- *
- * The CrudResult.data contains the full mapper output (e.g., TemplateDetailOutput
- * which has schema_version, resource_type, id, data). For the mutation output,
- * we extract just the inner data payload (e.g., TemplateData) so consumers
- * can access fields like name, job_type, etc. directly via `data.name`.
- */
-function wrapMutationResult(result: {
-  action: "created" | "updated" | "deleted";
-  resource_type: string;
-  id: number;
-  data: unknown | null;
-}): ResourceMutationOutput {
-  // The mapper output nests the payload inside a `data` field.
-  // Extract it so consumers can access `result.data.name` directly.
-  const innerData =
-    result.data &&
-    typeof result.data === "object" &&
-    "data" in (result.data as Record<string, unknown>)
-      ? (result.data as Record<string, unknown>).data
-      : result.data;
-
-  return {
-    schema_version: "1.0",
-    action: result.action,
-    resource_type: result.resource_type as ResourceMutationOutput["resource_type"],
-    id: result.id,
-    data: innerData,
-    warnings: [],
-    errors: [],
-  };
-}
+import { wrapMutationResult } from "../utils.js";
 
 /**
  * Factory that creates all 9 CRUD tool registrations.
@@ -141,7 +107,7 @@ export function createCrudTools(
             metadata: mutationOutput as unknown as Record<string, unknown>,
           };
         } catch (err: unknown) {
-          if (err instanceof DOMException && err.name === "AbortError") {
+          if (err instanceof Error && err.name === "AbortError") {
             return { output: "Request was aborted." };
           }
           const message = err instanceof Error ? err.message : String(err);
@@ -227,7 +193,7 @@ export function createCrudTools(
             metadata: mutationOutput as unknown as Record<string, unknown>,
           };
         } catch (err: unknown) {
-          if (err instanceof DOMException && err.name === "AbortError") {
+          if (err instanceof Error && err.name === "AbortError") {
             return { output: "Request was aborted." };
           }
           const message = err instanceof Error ? err.message : String(err);
@@ -328,7 +294,7 @@ export function createCrudTools(
             metadata: mutationOutput as unknown as Record<string, unknown>,
           };
         } catch (err: unknown) {
-          if (err instanceof DOMException && err.name === "AbortError") {
+          if (err instanceof Error && err.name === "AbortError") {
             return { output: "Request was aborted." };
           }
           const message =
@@ -431,7 +397,7 @@ export function createCrudTools(
             metadata: mutationOutput as unknown as Record<string, unknown>,
           };
         } catch (err: unknown) {
-          if (err instanceof DOMException && err.name === "AbortError") {
+          if (err instanceof Error && err.name === "AbortError") {
             return { output: "Request was aborted." };
           }
           const message = err instanceof Error ? err.message : String(err);
@@ -516,7 +482,7 @@ export function createCrudTools(
             metadata: mutationOutput as unknown as Record<string, unknown>,
           };
         } catch (err: unknown) {
-          if (err instanceof DOMException && err.name === "AbortError") {
+          if (err instanceof Error && err.name === "AbortError") {
             return { output: "Request was aborted." };
           }
           const message = err instanceof Error ? err.message : String(err);
@@ -625,7 +591,7 @@ export function createCrudTools(
             metadata: mutationOutput as unknown as Record<string, unknown>,
           };
         } catch (err: unknown) {
-          if (err instanceof DOMException && err.name === "AbortError") {
+          if (err instanceof Error && err.name === "AbortError") {
             return { output: "Request was aborted." };
           }
           const message =
@@ -698,7 +664,7 @@ export function createCrudTools(
             metadata: mutationOutput as unknown as Record<string, unknown>,
           };
         } catch (err: unknown) {
-          if (err instanceof DOMException && err.name === "AbortError") {
+          if (err instanceof Error && err.name === "AbortError") {
             return { output: "Request was aborted." };
           }
           const message = err instanceof Error ? err.message : String(err);
@@ -767,7 +733,7 @@ export function createCrudTools(
             metadata: mutationOutput as unknown as Record<string, unknown>,
           };
         } catch (err: unknown) {
-          if (err instanceof DOMException && err.name === "AbortError") {
+          if (err instanceof Error && err.name === "AbortError") {
             return { output: "Request was aborted." };
           }
           const message = err instanceof Error ? err.message : String(err);
@@ -847,7 +813,7 @@ export function createCrudTools(
             metadata: mutationOutput as unknown as Record<string, unknown>,
           };
         } catch (err: unknown) {
-          if (err instanceof DOMException && err.name === "AbortError") {
+          if (err instanceof Error && err.name === "AbortError") {
             return { output: "Request was aborted." };
           }
           const message =

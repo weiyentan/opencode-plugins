@@ -60,6 +60,8 @@ function formatResourceOutput(result: ResourceDetailOutput): string {
         `  Org:        ${d.organization_name}`,
       ].join("\n");
     }
+    default:
+      return `Unknown resource type: ${result.resource_type} (ID: ${result.id})`;
   }
 }
 
@@ -128,7 +130,7 @@ export function createGetResourceTool(getAwxClient: () => Promise<AwxClient>) {
           metadata: result,
         };
       } catch (err: unknown) {
-        if (err instanceof DOMException && err.name === "AbortError") {
+        if (err instanceof Error && err.name === "AbortError") {
           return { output: "Request was aborted." };
         }
         const message =

@@ -66,7 +66,7 @@ export function createAttachCredentialTool(
           metadata: result as Record<string, unknown>,
         };
       } catch (err: unknown) {
-        if (err instanceof DOMException && err.name === "AbortError") {
+        if (err instanceof Error && err.name === "AbortError") {
           return { output: "Request was aborted." };
         }
         const message = err instanceof Error ? err.message : String(err);

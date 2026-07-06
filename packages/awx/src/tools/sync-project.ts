@@ -11,32 +11,9 @@
  */
 import { tool } from "@opencode-ai/plugin";
 import type { AwxClient } from "../client.js";
+import { formatErrorResponse } from "../utils.js";
 
 const z = tool.schema;
-
-/**
- * Format a user-facing error message for HTTP error responses.
- *
- * Maps HTTP status codes to meaningful error messages the agent
- * can act on (e.g., "not found", "not authorized").
- */
-function formatErrorResponse(projectId: number, status: number): string {
-  switch (status) {
-    case 404:
-      return `Project ${projectId} not found. Verify the project ID and try again.`;
-    case 401:
-    case 403:
-      return (
-        `Not authorized to sync project ${projectId}. ` +
-        "Check your Personal Access Token permissions."
-      );
-    default:
-      return (
-        `Failed to sync project ${projectId}. ` +
-        `AWX API returned HTTP ${status}.`
-      );
-  }
-}
 
 /**
  * Create the awx-sync-project tool registration.
@@ -138,7 +115,7 @@ export function createSyncProjectTool(
           },
         };
       } catch (err: unknown) {
-        if (err instanceof DOMException && err.name === "AbortError") {
+        if (err instanceof Error && err.name === "AbortError") {
           return { output: "Request was aborted." };
         }
         return {
