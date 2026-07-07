@@ -12,11 +12,21 @@ The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-list-jobs, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-get-resource, awx-debug-env, awx-configure, awx-create-project, awx-create-template, awx-create-inventory, awx-update-project, awx-update-template, awx-update-inventory, awx-delete-project, awx-delete-template, awx-delete-inventory, awx-attach-credential) + hello-world scaffold; wires HTTP client, metrics lifecycle, and dispose hook |
+| **Plugin entry** | `src/index.ts` | Thin orchestrator (~168 lines) — imports from tool factories, wires HTTP client, metrics lifecycle, auth hook, and dispose hook. |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Client middleware** | `src/client.ts` | HTTP middleware pipeline: circuit breaker, retry/backoff, timeout via native `fetch` |
 | **Metrics** | `src/metrics.ts` | Per-tool counters with file-backed durability for operational visibility |
+| **Shared utilities** | `src/utils.ts` | Shared helpers: `formatErrorResponse`, `wrapMutationResult`, `buildPipeTable`, `formatResourceOutput` |
+| **Tool: hello** | `src/tools/hello.ts` | `hello` tool factory |
+| **Tool: configure** | `src/tools/configure.ts` | `awx-debug-env` and `awx-configure` tool factories |
+| **Tool: CRUD** | `src/tools/crud.ts` | 9 CRUD tool factories (`awx-create-*`, `awx-update-*`, `awx-delete-*`) |
+| **Tool: job lifecycle** | `src/tools/job-lifecycle.ts` | `awx-launch-job`, `awx-job-status`, `awx-wait-job` tool factories |
+| **Tool: job events** | `src/tools/job-events.ts` | `awx-get-job-events` tool factory |
+| **Tool: list** | `src/tools/list.ts` | `awx-list-templates`, `awx-list-projects`, `awx-list-jobs` tool factories |
+| **Tool: get-resource** | `src/tools/get-resource.ts` | `awx-get-resource` tool factory |
+| **Tool: sync-project** | `src/tools/sync-project.ts` | `awx-sync-project` tool factory |
+| **Tool: attach-credential** | `src/tools/attach-credential.ts` | `awx-attach-credential` tool factory |
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
@@ -256,18 +266,27 @@ A single `tsconfig.json` at `packages/awx/tsconfig.json` is used instead of Type
 ```
 packages/awx/
 ├── src/
-│   ├── index.ts              # Plugin entry point — Hooks (auth + tools + dispose); client wiring & metrics lifecycle
+│   ├── index.ts              # Thin orchestrator (~168 lines) — imports factories, wires client & metrics lifecycle
 │   ├── auth.ts               # Bearer token auth hook (type: "api")
 │   ├── client.ts             # HTTP middleware pipeline (circuit breaker, retry, timeout)
-│   ├── get-resource.ts       # Shared resource detail orchestrator — type→endpoint registry, fetch, map dispatch
-│   ├── crud.ts               # CRUD endpoint registry — type→{create,update,delete} dispatch with per-type mappers
+│   ├── utils.ts              # Shared helpers: formatErrorResponse, wrapMutationResult, buildPipeTable, formatResourceOutput
 │   ├── metrics.ts            # Per-tool counters with file-backed durability
 │   ├── node-shim.d.ts        # Minimal Node.js declarations (fs/promises, path)
-│   ├── launch.ts             # awx-launch-job orchestration (thin proxy — passes extra_vars verbatim to AWX API)
+│   ├── runtime-config.ts     # Runtime configuration helpers
+│   ├── tools/
+│   │   ├── hello.ts          # hello tool factory
+│   │   ├── configure.ts      # awx-debug-env, awx-configure tool factories
+│   │   ├── crud.ts           # 9 CRUD tool factories (create/update/delete for project/template/inventory)
+│   │   ├── job-lifecycle.ts  # awx-launch-job, awx-job-status, awx-wait-job tool factories
+│   │   ├── job-events.ts     # awx-get-job-events tool factory
+│   │   ├── list.ts           # awx-list-templates, awx-list-projects, awx-list-jobs tool factories
+│   │   ├── get-resource.ts   # awx-get-resource tool factory
+│   │   ├── sync-project.ts   # awx-sync-project tool factory
+│   │   └── attach-credential.ts # awx-attach-credential tool factory
 │   ├── contracts/
 │   │   ├── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
-│   │   ├── resource-mutation.ts # ResourceMutationOutput v1.0 contract (schema_version, action, resource_type, id, data)
-│   │   ├── template-detail.ts # TemplateDetailOutput contract (schema_version, resource_type, id, data)
+│   │   ├── resource-mutation.ts # ResourceMutationOutput v1.0 contract
+│   │   ├── template-detail.ts # TemplateDetailOutput contract
 │   │   ├── project-detail.ts  # ProjectDetailOutput contract
 │   │   └── inventory-detail.ts # InventoryDetailOutput contract
 │   └── mappers/
@@ -277,27 +296,31 @@ packages/awx/
 ├── tests/
 │   ├── plugin.test.ts            # Plugin registration and lifecycle tests
 │   ├── client.test.ts            # Client middleware pipeline tests
-│   ├── lifecycle.test.ts         # Lazy client/auth lifecycle tests (no-token → token → client-created)
-│   ├── metrics.test.ts           # MetricsStore persistence & counter tests incl. concurrent serialization
-│   ├── plugin-init-timeout.test.ts  # Init-time timeout cleanup tests (clear() called after validation)
-│   ├── crud-project.test.ts      # CRUD create/update/delete integration tests for projects
-│   ├── crud-template.test.ts     # CRUD create/update/delete integration tests for templates
-│   ├── crud-inventory.test.ts    # CRUD create/update/delete integration tests for inventories
-│   ├── get-resource.test.ts      # getResource orchestrator unit tests (dispatch, error handling, registry)
-│   ├── get-resource-tool.test.ts # awx-get-resource tool integration tests (via plugin tool registration)
-│   ├── map-template.test.ts      # mapTemplate mapper unit tests
-│   ├── map-project.test.ts       # mapProject mapper unit tests
-│   ├── map-inventory.test.ts     # mapInventory mapper unit tests
-│   ├── contracts/
-│   │   ├── contract.test.ts      # Contract compatibility tests
-│   │   └── __snapshots__/        # Canonical contract output (ground truth)
+│   ├── lifecycle.test.ts         # Lazy client/auth lifecycle tests
+│   ├── metrics.test.ts           # MetricsStore persistence & counter tests
+│   ├── plugin-init-timeout.test.ts  # Init-time timeout cleanup tests
+│   ├── index.test.ts             # Plugin entry point integration tests
+│   ├── crud-project.test.ts      # CRUD create/update/delete tests for projects
+│   ├── crud-template.test.ts     # CRUD create/update/delete tests for templates
+│   ├── crud-inventory.test.ts    # CRUD create/update/delete tests for inventories
+│   ├── get-resource.test.ts      # getResource orchestrator unit tests
+│   ├── get-resource-tool.test.ts # awx-get-resource tool integration tests
+│   ├── launch.test.ts            # awx-launch-job unit tests
+│   ├── job-status.test.ts        # awx-job-status unit tests
+│   ├── wait-job.test.ts          # awx-wait-job unit tests
+│   ├── get-job-events.test.ts    # awx-get-job-events unit tests
+│   ├── list-projects.test.ts     # awx-list-projects unit tests
+│   ├── list-jobs.test.ts         # awx-list-jobs unit tests
+│   ├── attach-credential.test.ts # awx-attach-credential unit tests
+│   ├── sync-project.test.ts      # awx-sync-project unit tests
+│   ├── contract.test.ts          # Contract compatibility tests
 │   └── fixtures/
 │       ├── awx_job_success.json
 │       ├── awx_job_partial.json
 │       ├── awx_job_failure.json
-│       ├── raw_awx_template.json  # Raw AWX API response fixture (template)
-│       ├── raw_awx_project.json   # Raw AWX API response fixture (project)
-│       └── raw_awx_inventory.json # Raw AWX API response fixture (inventory)
+│       ├── raw_awx_template.json
+│       ├── raw_awx_project.json
+│       └── raw_awx_inventory.json
 └── scripts/
     └── generate-snapshots.py # Python script to regenerate snapshots
 ```
