@@ -23,14 +23,14 @@ The AWX plugin delivers these modules:
 | **Tool: CRUD** | `src/tools/crud.ts` | 9 CRUD tool factories (`awx-create-*`, `awx-update-*`, `awx-delete-*`) |
 | **Tool: job lifecycle** | `src/tools/job-lifecycle.ts` | `awx-launch-job`, `awx-job-status`, `awx-wait-job` tool factories |
 | **Tool: job events** | `src/tools/job-events.ts` | `awx-get-job-events` tool factory |
-| **Tool: list** | `src/tools/list.ts` | `awx-list-templates`, `awx-list-projects`, `awx-list-jobs` tool factories |
+| **Tool: list** | `src/tools/list.ts` | `awx-list-templates`, `awx-list-projects`, `awx-list-jobs`, `awx-list-organizations`, `awx-list-credentials`, `awx-list-inventories` tool factories |
 | **Tool: get-resource** | `src/tools/get-resource.ts` | `awx-get-resource` tool factory |
 | **Tool: sync-project** | `src/tools/sync-project.ts` | `awx-sync-project` tool factory |
 | **Tool: attach-credential** | `src/tools/attach-credential.ts` | `awx-attach-credential` tool factory |
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) is complete — all 21 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
+Tool implementation (Phase 2) is complete — all 24 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
 ### Tool Output Formats
 
@@ -39,6 +39,9 @@ Tool implementation (Phase 2) is complete — all 21 AWX tools are implemented a
 | `awx-list-templates` | Pipe-delimited Markdown table (ID / Name / Description / Job Type / Playbook / Status / Project / Inventory) | `--filter` (e.g., `name__icontains=workspace`) |
 | `awx-list-projects` | Pipe-delimited Markdown table (ID / Name / Description / SCM / Status / Branch / Org / Updated) | `--filter` (e.g., `name__icontains=workspace`) |
 | `awx-list-jobs` | Pipe-delimited Markdown table (ID / Name / Job Type / Status / Created / Started / Finished / Launched By) | `--filter` (e.g., `name__icontains=workspace`) |
+| `awx-list-organizations` | Pipe-delimited Markdown table (ID / Name / Description) | `--filter` (e.g., `name__icontains=workspace`) |
+| `awx-list-credentials` | Pipe-delimited Markdown table (ID / Name / Type / Org / Description) | `--filter` (e.g., `name__icontains=ssh`) |
+| `awx-list-inventories` | Pipe-delimited Markdown table (ID / Name / Kind / Hosts / Groups / Org / Description) | `--filter` (e.g., `name__icontains=workspace`) |
 | `awx-sync-project` | Plain text message + structured metadata | — |
 | `awx-launch-job` | Raw AWX API response JSON (thin proxy — no transforms or structured envelope) | — |
 | `awx-job-status` | JSON-serialized `JobDetailOutput` v1.0 contract | — |
@@ -58,7 +61,7 @@ Tool implementation (Phase 2) is complete — all 21 AWX tools are implemented a
 | `awx-delete-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-attach-credential` | Plain text confirmation message + metadata (raw AWX API response body) | — |
 
-Both `awx-list-templates` and `awx-list-projects` accept `--timeout` (total tool timeout in ms, default 30000).
+All `awx-list-*` tools (`awx-list-templates`, `awx-list-projects`, `awx-list-jobs`, `awx-list-organizations`, `awx-list-credentials`, `awx-list-inventories`) accept `--timeout` (total tool timeout in ms, default 30000), `--filter`, `--maxPages`, and `--pageSize` for pagination control.
 
 ## Prerequisites
 
@@ -105,7 +108,7 @@ Integration tests in `tests/integration/` exercise the plugin's tools against a 
 
 #### Read-Only Tools
 
-The suite `tests/integration/read-only.test.ts` covers `awx-list-templates`, `awx-list-projects`, and `awx-list-jobs`.
+The suite `tests/integration/read-only.test.ts` covers `awx-list-templates`, `awx-list-projects`, and `awx-list-jobs`. (The `awx-list-organizations`, `awx-list-credentials`, and `awx-list-inventories` tools have unit tests; live-integration tests are pending.)
 
 #### Job Lifecycle Tools
 
@@ -279,7 +282,7 @@ packages/awx/
 │   │   ├── crud.ts           # 9 CRUD tool factories (create/update/delete for project/template/inventory)
 │   │   ├── job-lifecycle.ts  # awx-launch-job, awx-job-status, awx-wait-job tool factories
 │   │   ├── job-events.ts     # awx-get-job-events tool factory
-│   │   ├── list.ts           # awx-list-templates, awx-list-projects, awx-list-jobs tool factories
+│   │   ├── list.ts           # awx-list-* (6: templates, projects, jobs, organizations, credentials, inventories) tool factories
 │   │   ├── get-resource.ts   # awx-get-resource tool factory
 │   │   ├── sync-project.ts   # awx-sync-project tool factory
 │   │   └── attach-credential.ts # awx-attach-credential tool factory

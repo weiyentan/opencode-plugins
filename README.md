@@ -8,9 +8,9 @@ A monorepo of [OpenCode](https://opencode.ai) server plugins that extend the Ope
 
 An OpenCode plugin for [AWX](https://github.com/ansible/awx) / Ansible Automation Platform (AAP). Provides native tool access to job templates, projects, and job lifecycle operations — replacing brittle PowerShell scripts with a portable, testable TypeScript plugin.
 
-**Status:** ✅ Phase 0 (scaffolding), Phase 1 (client infrastructure), and Phase 2 core tools complete — 21 tools implemented covering project lookup, template detail, inventory detail, job lifecycle, CRUD operations (create/update/delete for projects, templates, inventories), credential attachment, environment debugging, and interactive configuration.
+**Status:** ✅ Phase 0 (scaffolding), Phase 1 (client infrastructure), and Phase 2 core tools complete — 24 tools implemented covering project lookup, template detail, inventory detail, job lifecycle, CRUD operations (create/update/delete for projects, templates, inventories), credential attachment, environment debugging, interactive configuration, and organization/credential/inventory discovery.
 
-**Coverage:** 21 of 22 AWX operations planned for v1 (~95%), covering the 95%+ use case. Full tool-action mapping table documented in the tool gap audit.
+**Coverage:** 24 of 33 AWX operations mapped (~76%), with full tool-action mapping table documented in the tool gap audit and the new `docs/tool-action-mapping.md`.
 
 **Key docs:**
 - [Architecture Decision Records](docs/adr/) — 6 ADRs covering auth, output contract, resilience, polling, transforms
