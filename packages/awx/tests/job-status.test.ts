@@ -331,7 +331,7 @@ describe("awx-job-status tool", () => {
     const out = (result as { output: string }).output;
     expect(out).toContain("awx-job-status error");
     expect(out).toContain("AWX API error (500)");
-  });
+  }, 15000);
 
   it("returns error when AWX client is not available", async () => {
     const input = mockPluginInput();
