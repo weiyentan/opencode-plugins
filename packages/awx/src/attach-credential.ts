@@ -8,14 +8,15 @@
 import type { AwxClient } from "./client.js";
 
 /**
- * Attach a credential to an AWX job template.
+ * Attach one or more credentials to an AWX job template.
  *
  * Makes a POST request to /api/v2/job_templates/{templateId}/credentials/
- * with body { "id": credentialId }.
+ * with body { "id": credentialId } for a single credential or
+ * { "id": [id1, id2, ...] } for multiple credentials.
  *
  * @param client       - The AWX HTTP client
- * @param templateId   - The job template ID to attach the credential to
- * @param credentialId - The credential ID to attach
+ * @param templateId   - The job template ID to attach the credential(s) to
+ * @param credentialId - A single credential ID or an array of credential IDs to attach
  * @param abortSignal  - Optional abort signal propagated to the HTTP client
  * @returns The raw AWX API response body (typically the credential object)
  * @throws Error if the AWX API returns an unexpected error
@@ -23,7 +24,7 @@ import type { AwxClient } from "./client.js";
 export async function attachCredential(
   client: AwxClient,
   templateId: number,
-  credentialId: number,
+  credentialId: number | number[],
   abortSignal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   // ── Build request body ────────────────────────────────────────

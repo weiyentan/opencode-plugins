@@ -4,9 +4,9 @@
  * Validates the attachCredential thin-proxy behavior and the
  * awx-attach-credential tool registration and execution.
  *
- * 14 tests covering:
- *   - Thin proxy function (attachCredential): success, error paths, abort, edge cases
- *   - Registered tool (awx-attach-credential): registration, success, error, abort
+ * 22 tests covering:
+ *   - Thin proxy function (attachCredential): single-credential and multi-credential success, error paths, abort, edge cases
+ *   - Registered tool (awx-attach-credential): registration, single-credential and multi-credential success, error, abort
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
@@ -230,6 +230,91 @@ describe("attachCredential", () => {
     expect(result).toEqual({});
     expect(client.request).toHaveBeenCalledTimes(1);
   });
+
+  // ── Multi-credential attachment ─────────────────────────────────
+
+  it("sends POST with array of credential IDs", async () => {
+    const client = mockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      statusText: "Created",
+      text: () => Promise.resolve(JSON.stringify({ id: [1, 2, 3] })),
+    } as Response);
+
+    await attachCredential(client, 10, [1, 2, 3]);
+
+    expect(client.request).toHaveBeenCalledTimes(1);
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-attach-credential",
+      "/api/v2/job_templates/10/credentials/",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: [1, 2, 3] }),
+      },
+      undefined,
+    );
+  });
+
+  it("returns raw AWX response body when attaching multiple credentials", async () => {
+    const client = mockClient();
+    const awxResponse = {
+      count: 3,
+      results: [
+        { id: 1, name: "Vault Credential" },
+        { id: 2, name: "SSH Key" },
+        { id: 3, name: "Cloud Credential" },
+      ],
+    };
+
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      statusText: "Created",
+      text: () => Promise.resolve(JSON.stringify(awxResponse)),
+    } as Response);
+
+    const result = await attachCredential(client, 10, [1, 2, 3]);
+
+    expect(result).toEqual(awxResponse);
+  });
+
+  it("forwards AbortSignal with array of credential IDs", async () => {
+    const client = mockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      statusText: "Created",
+      text: () => Promise.resolve(JSON.stringify({ id: [1, 2, 3] })),
+    } as Response);
+
+    const controller = new AbortController();
+    await attachCredential(client, 10, [1, 2, 3], controller.signal);
+
+    expect(client.request).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.any(Object),
+      controller.signal,
+    );
+  });
+
+  it("throws clear error on HTTP error with array of credential IDs", async () => {
+    const client = mockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      statusText: "Bad Request",
+      text: () => Promise.resolve(JSON.stringify({ detail: "One or more credentials already attached." })),
+    } as Response);
+
+    await expect(
+      attachCredential(client, 10, [1, 2, 3]),
+    ).rejects.toThrow("One or more credentials already attached.");
+
+    expect(client.request).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ============================================================================
@@ -370,5 +455,119 @@ describe('"awx-attach-credential" tool', () => {
     );
 
     expect((result as { output: string }).output).toBe("Request was aborted.");
+  });
+
+  /* ══════════════════════════════════════════════════════════════════
+     Multi-Credential — Array Input
+     ══════════════════════════════════════════════════════════════════ */
+
+  it("returns success output and metadata when multiple credentials are attached", async () => {
+    const mockResponse = {
+      count: 3,
+      results: [
+        { id: 1, name: "Vault" },
+        { id: 2, name: "SSH Key" },
+        { id: 3, name: "Cloud" },
+      ],
+    };
+    (mockAwxClient.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(JSON.stringify(mockResponse), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const input = mockPluginInput();
+    (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
+
+    const hooks = await createHooks(input, {
+      baseUrl: "https://aap.example.com",
+    });
+
+    const result = await hooks.tool!["awx-attach-credential"]!.execute(
+      { job_template_id: 10, credential_id: [1, 2, 3] },
+      mockToolContext(),
+    );
+
+    const wrapped = result as { output: string; metadata: Record<string, unknown> };
+    expect(wrapped.output).toContain("Credentials [1, 2, 3] attached to template 10");
+    expect(wrapped.metadata).toEqual(mockResponse);
+  });
+
+  it("sends array request body when credential_id is an array", async () => {
+    const mockResponse = { id: [1, 2, 3] };
+    (mockAwxClient.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(JSON.stringify(mockResponse), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const input = mockPluginInput();
+    (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
+
+    const hooks = await createHooks(input, {
+      baseUrl: "https://aap.example.com",
+    });
+
+    await hooks.tool!["awx-attach-credential"]!.execute(
+      { job_template_id: 10, credential_id: [1, 2, 3] },
+      mockToolContext(),
+    );
+
+    expect(mockAwxClient.request).toHaveBeenCalledWith(
+      "awx-attach-credential",
+      "/api/v2/job_templates/10/credentials/",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: [1, 2, 3] }),
+      }),
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("handles abort signal before execution with array credential_id", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const input = mockPluginInput();
+    (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
+
+    const hooks = await createHooks(input, {
+      baseUrl: "https://aap.example.com",
+    });
+
+    const result = await hooks.tool!["awx-attach-credential"]!.execute(
+      { job_template_id: 10, credential_id: [1, 2, 3] },
+      mockToolContext({ abort: controller.signal }),
+    );
+
+    expect((result as { output: string }).output).toBe("Request was aborted.");
+  });
+
+  it("returns error output when API fails with array credential_id", async () => {
+    (mockAwxClient.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response(JSON.stringify({ detail: "Credential 2 not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const input = mockPluginInput();
+    (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
+
+    const hooks = await createHooks(input, {
+      baseUrl: "https://aap.example.com",
+    });
+
+    const result = await hooks.tool!["awx-attach-credential"]!.execute(
+      { job_template_id: 10, credential_id: [1, 2, 3] },
+      mockToolContext(),
+    );
+
+    expect((result as { output: string }).output).toContain("awx-attach-credential error");
+    expect((result as { output: string }).output).toContain("Credential 2 not found");
   });
 });
