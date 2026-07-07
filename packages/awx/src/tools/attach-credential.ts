@@ -17,8 +17,9 @@ export function createAttachCredentialTool(getAwxClient: () => Promise<AwxClient
       "Attach one or more credentials to an AWX job template.",
       "Makes a POST request to",
       "/api/v2/job_templates/{job_template_id}/credentials/",
-      'with body { "id": credential_id } for a single credential or',
-      '{ "id": [id1, id2, ...] } for multiple credentials.',
+      'with body { "id": credential_id } for a single credential.',
+      "For multiple credentials, makes one POST per credential ID",
+      "(individual per-credential POSTs, not a single array payload).",
       "Returns the AWX API response body.",
     ].join(" "),
     args: {
