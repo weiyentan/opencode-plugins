@@ -18,6 +18,7 @@ import { buildPipeTable } from "../utils.js";
 import { listOrganizations, type Organization } from "../list-organizations.js";
 import { listCredentials, type Credential } from "../list-credentials.js";
 import { listInventories, type Inventory } from "../list-inventories.js";
+import { listTemplatesByCredential } from "../list-templates-by-credential.js";
 import { listUsers, type User } from "../list-users.js";
 import { listTeams, type Team } from "../list-teams.js";
 import { listWorkflowTemplates, type WorkflowTemplate } from "../list-workflow-templates.js";
@@ -631,6 +632,120 @@ export function createListTools(
      * - If more pages exist beyond the cap, returns a warning field
      * - Per-page timeout: total tool timeout / (maxPages + 1)
      */
+
+
+    /**
+     * Reverse-lookup job templates by credential.
+     *
+     * Fetches job templates from the AWX
+     * /api/v2/credentials/{credential_id}/job_templates/ endpoint,
+     * consolidating results across pages up to a configurable page cap.
+     * Results are sorted by name. Supports page size override and
+     * returns a warning when the page cap limits results.
+     */
+    "awx-list-templates-by-credential": tool({
+      description: [
+        "Reverse-lookup job templates by credential ID.",
+        "Fetches job templates associated with a given credential from",
+        "/api/v2/credentials/{credential_id}/job_templates/,",
+        "consolidating across pages up to a configurable cap.",
+        "Results sorted by name. Supports page size override.",
+        "Returns descriptive error for invalid credential ID.",
+      ].join(" "),
+      args: {
+        credential_id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The credential ID to look up job templates for"),
+        pageSize: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Items per page (1-200, default: 50)"),
+        maxPages: z
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe("Maximum pages to fetch (0 = no cap, default: 5)"),
+        filter: z
+          .array(z.string())
+          .optional()
+          .describe("Filter templates by field (e.g., --filter name__icontains=workspace)"),
+        timeout: z
+          .number()
+          .int()
+          .min(1_000)
+          .max(300_000)
+          .optional()
+          .describe("Total tool timeout in milliseconds (default: 30000)"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: message,
+            metadata: {
+              count: 0,
+              results: [],
+              warning: message,
+            },
+          };
+        }
+
+        try {
+          const result = await listTemplatesByCredential(
+            awxClient,
+            args.credential_id,
+            {
+              pageSize: args.pageSize,
+              maxPages: args.maxPages,
+              timeout: args.timeout,
+              abortSignal: context.abort,
+              filters: args.filter,
+            },
+          );
+
+          const table = buildPipeTable(result.results, [
+            { header: "ID", value: (t: TemplateResult) => String(t.id) },
+            { header: "Name", value: (t: TemplateResult) => t.name },
+            { header: "Description", value: (t: TemplateResult) => t.description },
+            { header: "Job Type", value: (t: TemplateResult) => t.job_type },
+            { header: "Playbook", value: (t: TemplateResult) => t.playbook },
+            { header: "Status", value: (t: TemplateResult) => t.status },
+            { header: "Project", value: (t: TemplateResult) => t.project_name },
+            { header: "Inventory", value: (t: TemplateResult) => t.inventory_name },
+          ]);
+
+          const output = `Found ${result.count} template(s) for credential ${args.credential_id}.\n\n${table}`;
+          return {
+            output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
+            metadata: result as unknown as Record<string, unknown>,
+          };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: message,
+            metadata: {
+              count: 0,
+              results: [],
+              warning: message,
+            },
+          };
+        }
+      },
+    }),
+
     "awx-list-users": tool({
       description: [
         "List AWX users with pagination. Fetches users from",

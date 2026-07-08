@@ -205,6 +205,25 @@ describe("Read-Only Tools — Configuration Errors", () => {
       await hooks.dispose?.();
     }
   });
+
+
+  it("awx-list-templates-by-credential returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-templates-by-credential"]!.execute(
+        { credential_id: 1 },
+        mockToolContext(),
+      );
+
+      const parsed = getMetadata(result);
+      expect(parsed.count).toBe(0);
+      expect(parsed.results).toEqual([]);
+      expect(parsed.warning).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -499,6 +518,67 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
       }
     });
   });
+
+
+  describe("awx-list-templates-by-credential", () => {
+    it("returns structured response when given a valid credential ID", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        // Use a known credential ID (credential 1 is typically the AAP built-in)
+        const result = await hooks.tool!["awx-list-templates-by-credential"]!.execute(
+          { credential_id: 1 },
+          mockToolContext(),
+        );
+
+        const parsed = getMetadata(result);
+        expect(parsed).toHaveProperty("count");
+        expect(typeof parsed.count).toBe("number");
+        expect(Array.isArray(parsed.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((parsed.results as unknown[]).length > 0) {
+          for (const item of parsed.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("description");
+            expect(item).toHaveProperty("job_type");
+            expect(item).toHaveProperty("playbook");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("returns error metadata for invalid credential ID", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-templates-by-credential"]!.execute(
+          { credential_id: 999999 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = getMetadata(result);
+        expect(metadata.count).toBe(0);
+        expect(metadata.results).toEqual([]);
+        expect(metadata.warning).toBeDefined();
+        expect(typeof metadata.warning).toBe("string");
+        expect((metadata.warning as string).length).toBeGreaterThan(0);
+        expect((metadata.warning as string)).toContain("not found");
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
 
 
   describe("awx-list-hosts", () => {
@@ -828,6 +908,35 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
       }
     });
   });
+
+
+  describe("auth failure (awx-list-templates-by-credential)", () => {
+    it("returns error metadata with invalid token", async () => {
+      const hooks = await createPlugin(
+        "this-is-a-deliberately-invalid-token-for-testing",
+      );
+
+      try {
+        const result = await hooks.tool!["awx-list-templates-by-credential"]!.execute(
+          { credential_id: 1 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = getMetadata(result);
+        expect(metadata.count).toBe(0);
+        expect(metadata.results).toEqual([]);
+        expect(metadata.warning).toBeDefined();
+        expect(typeof metadata.warning).toBe("string");
+        expect((metadata.warning as string).length).toBeGreaterThan(0);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
 
   describe("auth failure (awx-list-jobs)", () => {
     it("returns error metadata with invalid token", async () => {
