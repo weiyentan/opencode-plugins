@@ -598,7 +598,7 @@ export function createListTools(
             { header: "Description", value: (i: Inventory) => i.description },
           ]);
 
-          const output = `Found ${result.count} inventory/inventories.\n\n${table}`;
+          const output = `Found ${result.count} inventories.\n\n${table}`;
           return {
             output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
             metadata: result as unknown as Record<string, unknown>,

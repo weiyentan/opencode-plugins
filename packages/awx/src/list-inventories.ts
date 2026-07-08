@@ -5,6 +5,7 @@
  * and name sorting for the `awx-list-inventories` tool.
  */
 import type { AwxClient } from "./client.js";
+import { calcPageBudget, buildPaginatedUrl, pageCapWarning } from "./pagination.js";
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
@@ -53,29 +54,6 @@ export interface ListInventoriesOptions {
   filters?: string[];
 }
 
-/* ── Timeout budget ─────────────────────────────────────────────── */
-
-function calcPageBudget(totalTimeout: number, maxPages: number): number {
-  return Math.floor(totalTimeout / (maxPages + 1));
-}
-
-/* ── URL builder ────────────────────────────────────────────────── */
-
-function buildInventoriesUrl(page: number, pageSize: number, filters?: string[]): string {
-  const params = new URLSearchParams();
-  params.set("page", String(page));
-  params.set("page_size", String(pageSize));
-  if (filters) {
-    for (const f of filters) {
-      const eqIdx = f.indexOf("=");
-      if (eqIdx > 0) {
-        params.set(f.slice(0, eqIdx), f.slice(eqIdx + 1));
-      }
-    }
-  }
-  return `/api/v2/inventories/?${params.toString()}`;
-}
-
 /* ── Pagination logic ───────────────────────────────────────────── */
 
 export async function listInventories(
@@ -113,7 +91,7 @@ export async function listInventories(
     }
 
     try {
-      const path = buildInventoriesUrl(page, pageSize, options?.filters);
+      const path = buildPaginatedUrl("/api/v2/inventories/", page, pageSize, options?.filters);
 
       const response = await client.request(
         "awx-list-inventories",
@@ -151,7 +129,7 @@ export async function listInventories(
   };
 
   if (page > maxPages && hasMore) {
-    output.warning = "More items exist. Increase max-pages or use a filter.";
+    output.warning = pageCapWarning();
   }
 
   return output;

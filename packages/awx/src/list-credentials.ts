@@ -5,6 +5,7 @@
  * and name sorting for the `awx-list-credentials` tool.
  */
 import type { AwxClient } from "./client.js";
+import { calcPageBudget, buildPaginatedUrl, pageCapWarning } from "./pagination.js";
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
@@ -51,29 +52,6 @@ export interface ListCredentialsOptions {
   filters?: string[];
 }
 
-/* ── Timeout budget ─────────────────────────────────────────────── */
-
-function calcPageBudget(totalTimeout: number, maxPages: number): number {
-  return Math.floor(totalTimeout / (maxPages + 1));
-}
-
-/* ── URL builder ────────────────────────────────────────────────── */
-
-function buildCredentialsUrl(page: number, pageSize: number, filters?: string[]): string {
-  const params = new URLSearchParams();
-  params.set("page", String(page));
-  params.set("page_size", String(pageSize));
-  if (filters) {
-    for (const f of filters) {
-      const eqIdx = f.indexOf("=");
-      if (eqIdx > 0) {
-        params.set(f.slice(0, eqIdx), f.slice(eqIdx + 1));
-      }
-    }
-  }
-  return `/api/v2/credentials/?${params.toString()}`;
-}
-
 /* ── Pagination logic ───────────────────────────────────────────── */
 
 export async function listCredentials(
@@ -111,7 +89,7 @@ export async function listCredentials(
     }
 
     try {
-      const path = buildCredentialsUrl(page, pageSize, options?.filters);
+      const path = buildPaginatedUrl("/api/v2/credentials/", page, pageSize, options?.filters);
 
       const response = await client.request(
         "awx-list-credentials",
@@ -149,7 +127,7 @@ export async function listCredentials(
   };
 
   if (page > maxPages && hasMore) {
-    output.warning = "More items exist. Increase max-pages or use a filter.";
+    output.warning = pageCapWarning();
   }
 
   return output;
