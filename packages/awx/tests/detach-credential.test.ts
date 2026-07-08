@@ -1,17 +1,12 @@
 /**
- * Attach Credential Tool Tests
+ * Detach Credential Tool Tests
  *
- * Validates the attachCredential thin-proxy behavior and the
- * awx-attach-credential tool registration and execution.
- *
- * 25 tests covering:
- *   - Thin proxy function (attachCredential): single-credential and per-credential multi-POST success, error paths, abort, edge cases
- *   - Registered tool (awx-attach-credential): registration, single-credential and multi-credential success, error, abort
- *   - Integration tests (env-guarded) against real AWX
+ * Validates the detachCredential thin-proxy behavior and the
+ * awx-detach-credential tool registration and execution.
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
-import { attachCredential } from "../src/attach-credential.js";
+import { detachCredential } from "../src/detach-credential.js";
 import { AwxPlugin } from "../src/index.js";
 import * as clientModule from "../src/client.js";
 import type { AwxClient } from "../src/client.js";
@@ -28,19 +23,19 @@ function mockClient(): AwxClient {
 }
 
 /**
- * Create a mock Response object for a successful credential attachment.
+ * Create a mock Response object for a successful credential detachment.
  */
 function mockOkResponse(body: Record<string, unknown>): Response {
   return {
     ok: true,
-    status: 201,
-    statusText: "Created",
+    status: 204,
+    statusText: "No Content",
     text: () => Promise.resolve(JSON.stringify(body)),
   } as Response;
 }
 
 /**
- * Create a mock Response object for a failed credential attachment.
+ * Create a mock Response object for a failed credential detachment.
  */
 function mockErrorResponse(
   status: number,
@@ -70,7 +65,7 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   };
 }
 
-/** Minimal mock of PluginInput with configurable getSecret */
+/** Minimal mock of PluginInput */
 function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
   return {
     client: {
@@ -100,26 +95,26 @@ async function createHooks(
 }
 
 // ============================================================================
-// attachCredential — Thin proxy function
+// detachCredential — Thin proxy function
 // ============================================================================
 
-describe("attachCredential", () => {
-  it("sends POST to /api/v2/job_templates/{id}/credentials/ with credential_id", async () => {
+describe("detachCredential", () => {
+  it("sends POST with disassociate: true to /api/v2/job_templates/{id}/credentials/", async () => {
     const client = mockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      mockOkResponse({ id: 42, name: "My Credential" }),
+      mockOkResponse({}),
     );
 
-    await attachCredential(client, 10, 42);
+    await detachCredential(client, 10, 42);
 
     expect(client.request).toHaveBeenCalledTimes(1);
     expect(client.request).toHaveBeenCalledWith(
-      "awx-attach-credential",
+      "awx-detach-credential",
       "/api/v2/job_templates/10/credentials/",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: 42 }),
+        body: JSON.stringify({ id: 42, disassociate: true }),
       },
       undefined,
     );
@@ -127,18 +122,13 @@ describe("attachCredential", () => {
 
   it("returns raw AWX response body on success", async () => {
     const client = mockClient();
-    const awxResponse = {
-      id: 42,
-      name: "My Credential",
-      credential_type: 1,
-      organization: 2,
-    };
+    const awxResponse = { id: 42, name: "My Credential", credential_type: 1 };
 
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       mockOkResponse(awxResponse),
     );
 
-    const result = await attachCredential(client, 10, 42);
+    const result = await detachCredential(client, 10, 42);
 
     expect(result).toEqual(awxResponse);
   });
@@ -146,12 +136,12 @@ describe("attachCredential", () => {
   it("throws clear error on HTTP error with detail message", async () => {
     const client = mockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      mockErrorResponse(400, "Bad Request", "Invalid credential ID."),
+      mockErrorResponse(400, "Bad Request", "Credential not attached to job template."),
     );
 
     await expect(
-      attachCredential(client, 10, 99999),
-    ).rejects.toThrow("Invalid credential ID.");
+      detachCredential(client, 10, 99999),
+    ).rejects.toThrow("Credential not attached to job template.");
 
     expect(client.request).toHaveBeenCalledTimes(1);
   });
@@ -166,8 +156,8 @@ describe("attachCredential", () => {
     } as Response);
 
     await expect(
-      attachCredential(client, 10, 42),
-    ).rejects.toThrow("AWX attach credential failed: HTTP 500: Internal Server Error");
+      detachCredential(client, 10, 42),
+    ).rejects.toThrow("AWX detach credential failed: HTTP 500: Internal Server Error");
 
     expect(client.request).toHaveBeenCalledTimes(1);
   });
@@ -182,8 +172,8 @@ describe("attachCredential", () => {
     } as Response);
 
     await expect(
-      attachCredential(client, 10, 42),
-    ).rejects.toThrow("AWX attach credential failed: HTTP 502: <html>Bad Gateway</html>");
+      detachCredential(client, 10, 42),
+    ).rejects.toThrow("AWX detach credential failed: HTTP 502: <html>Bad Gateway</html>");
 
     expect(client.request).toHaveBeenCalledTimes(1);
   });
@@ -195,7 +185,7 @@ describe("attachCredential", () => {
     );
 
     await expect(
-      attachCredential(client, 10, 42),
+      detachCredential(client, 10, 42),
     ).rejects.toThrow("connect ECONNREFUSED");
 
     expect(client.request).toHaveBeenCalledTimes(1);
@@ -204,11 +194,11 @@ describe("attachCredential", () => {
   it("forwards AbortSignal to the HTTP client", async () => {
     const client = mockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      mockOkResponse({ id: 42 }),
+      mockOkResponse({}),
     );
 
     const controller = new AbortController();
-    await attachCredential(client, 10, 42, controller.signal);
+    await detachCredential(client, 10, 42, controller.signal);
 
     expect(client.request).toHaveBeenCalledWith(
       expect.any(String),
@@ -222,12 +212,12 @@ describe("attachCredential", () => {
     const client = mockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
-      status: 201,
-      statusText: "Created",
+      status: 204,
+      statusText: "No Content",
       text: () => Promise.resolve(""),
     } as Response);
 
-    const result = await attachCredential(client, 10, 42);
+    const result = await detachCredential(client, 10, 42);
 
     expect(result).toEqual({});
     expect(client.request).toHaveBeenCalledTimes(1);
@@ -242,7 +232,7 @@ describe("attachCredential", () => {
       text: () => Promise.resolve(""),
     } as Response);
 
-    const result = await attachCredential(client, 10, 42);
+    const result = await detachCredential(client, 10, 42);
 
     expect(result).toEqual({});
     expect(client.request).toHaveBeenCalledTimes(1);
@@ -250,48 +240,46 @@ describe("attachCredential", () => {
 
   // ── Multi-credential — per-credential individual POSTs ──────────
 
-  it("makes 3 individual POSTs (one per credential ID)", async () => {
+  it("makes 3 individual POSTs (one per credential ID) with disassociate: true", async () => {
     const client = mockClient();
-    // Mock 3 individual responses, one for each credential ID
     (client.request as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce(mockOkResponse({ id: 1, name: "Vault" }))
-      .mockResolvedValueOnce(mockOkResponse({ id: 2, name: "SSH Key" }))
-      .mockResolvedValueOnce(mockOkResponse({ id: 3, name: "Cloud" }));
+      .mockResolvedValueOnce(mockOkResponse({}))
+      .mockResolvedValueOnce(mockOkResponse({}))
+      .mockResolvedValueOnce(mockOkResponse({}));
 
-    await attachCredential(client, 10, [1, 2, 3]);
+    await detachCredential(client, 10, [1, 2, 3]);
 
-    // Three individual POSTs, not a single array-payload POST
     expect(client.request).toHaveBeenCalledTimes(3);
     expect(client.request).toHaveBeenNthCalledWith(
       1,
-      "awx-attach-credential",
+      "awx-detach-credential",
       "/api/v2/job_templates/10/credentials/",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: 1 }),
+        body: JSON.stringify({ id: 1, disassociate: true }),
       },
       undefined,
     );
     expect(client.request).toHaveBeenNthCalledWith(
       2,
-      "awx-attach-credential",
+      "awx-detach-credential",
       "/api/v2/job_templates/10/credentials/",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: 2 }),
+        body: JSON.stringify({ id: 2, disassociate: true }),
       },
       undefined,
     );
     expect(client.request).toHaveBeenNthCalledWith(
       3,
-      "awx-attach-credential",
+      "awx-detach-credential",
       "/api/v2/job_templates/10/credentials/",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: 3 }),
+        body: JSON.stringify({ id: 3, disassociate: true }),
       },
       undefined,
     );
@@ -308,7 +296,7 @@ describe("attachCredential", () => {
       .mockResolvedValueOnce(mockOkResponse(sshResp))
       .mockResolvedValueOnce(mockOkResponse(cloudResp));
 
-    const result = await attachCredential(client, 10, [1, 2, 3]);
+    const result = await detachCredential(client, 10, [1, 2, 3]);
 
     expect(result).toEqual({
       count: 3,
@@ -318,18 +306,17 @@ describe("attachCredential", () => {
 
   it("throws partial-failure error identifying which credential ID failed", async () => {
     const client = mockClient();
-    // Credential 1 succeeds, credential 2 fails, credential 3 succeeds
     (client.request as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce(mockOkResponse({ id: 1, name: "Vault" }))
+      .mockResolvedValueOnce(mockOkResponse({}))
       .mockResolvedValueOnce(
-        mockErrorResponse(404, "Not Found", "Credential not found."),
+        mockErrorResponse(404, "Not Found", "Credential not attached to template."),
       )
-      .mockResolvedValueOnce(mockOkResponse({ id: 3, name: "Cloud" }));
+      .mockResolvedValueOnce(mockOkResponse({}));
 
     await expect(
-      attachCredential(client, 10, [1, 2, 3]),
+      detachCredential(client, 10, [1, 2, 3]),
     ).rejects.toThrow(
-      "Partial failure attaching credentials: credential 2: AWX attach credential failed: HTTP 404: Credential not found.",
+      "Partial failure detaching credentials: credential 2: AWX detach credential failed: HTTP 404: Credential not attached to template.",
     );
 
     expect(client.request).toHaveBeenCalledTimes(3);
@@ -342,13 +329,13 @@ describe("attachCredential", () => {
         mockErrorResponse(404, "Not Found", "Credential not found."),
       )
       .mockResolvedValueOnce(
-        mockErrorResponse(400, "Bad Request", "Already attached."),
+        mockErrorResponse(400, "Bad Request", "Already detached."),
       );
 
     await expect(
-      attachCredential(client, 10, [1, 2]),
+      detachCredential(client, 10, [1, 2]),
     ).rejects.toThrow(
-      /Failed to attach credentials: credential 1:.*credential 2:.*/,
+      /Failed to detach credentials: credential 1:.*credential 2:.*/,
     );
 
     expect(client.request).toHaveBeenCalledTimes(2);
@@ -357,14 +344,13 @@ describe("attachCredential", () => {
   it("forwards AbortSignal to every individual POST", async () => {
     const client = mockClient();
     (client.request as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce(mockOkResponse({ id: 1 }))
-      .mockResolvedValueOnce(mockOkResponse({ id: 2 }))
-      .mockResolvedValueOnce(mockOkResponse({ id: 3 }));
+      .mockResolvedValueOnce(mockOkResponse({}))
+      .mockResolvedValueOnce(mockOkResponse({}))
+      .mockResolvedValueOnce(mockOkResponse({}));
 
     const controller = new AbortController();
-    await attachCredential(client, 10, [1, 2, 3], controller.signal);
+    await detachCredential(client, 10, [1, 2, 3], controller.signal);
 
-    // Each of the 3 calls should receive the abort signal
     expect(client.request).toHaveBeenCalledTimes(3);
     for (let i = 1; i <= 3; i++) {
       expect(client.request).toHaveBeenNthCalledWith(
@@ -379,27 +365,25 @@ describe("attachCredential", () => {
 
   it("re-throws AbortError immediately in multi-credential loop", async () => {
     const client = mockClient();
-    // First credential succeeds, then abort
     (client.request as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce(mockOkResponse({ id: 1 }))
+      .mockResolvedValueOnce(mockOkResponse({}))
       .mockRejectedValueOnce(
         new DOMException("The operation was aborted.", "AbortError"),
       );
 
     await expect(
-      attachCredential(client, 10, [1, 2, 3]),
+      detachCredential(client, 10, [1, 2, 3]),
     ).rejects.toThrow("aborted");
 
-    // Should not have tried the 3rd credential
     expect(client.request).toHaveBeenCalledTimes(2);
   });
 });
 
 // ============================================================================
-// awx-attach-credential — Registered tool
+// awx-detach-credential — Registered tool
 // ============================================================================
 
-describe('"awx-attach-credential" tool', () => {
+describe('"awx-detach-credential" tool', () => {
   let mockAwxClient: AwxClient;
   let createClientSpy: ReturnType<typeof vi.spyOn>;
 
@@ -418,7 +402,7 @@ describe('"awx-attach-credential" tool', () => {
      Tool Registration
      ══════════════════════════════════════════════════════════════════ */
 
-  it('is registered as "awx-attach-credential" in hooks.tool', async () => {
+  it('is registered as "awx-detach-credential" in hooks.tool', async () => {
     const input = mockPluginInput();
     (input.client as any).getSecret = vi.fn().mockResolvedValue("test-token");
 
@@ -427,19 +411,19 @@ describe('"awx-attach-credential" tool', () => {
     });
 
     expect(hooks.tool).toBeDefined();
-    expect(hooks.tool!["awx-attach-credential"]).toBeDefined();
-    expect(typeof hooks.tool!["awx-attach-credential"]!.description).toBe("string");
+    expect(hooks.tool!["awx-detach-credential"]).toBeDefined();
+    expect(typeof hooks.tool!["awx-detach-credential"]!.description).toBe("string");
   });
 
   /* ══════════════════════════════════════════════════════════════════
      Successful Execution
      ══════════════════════════════════════════════════════════════════ */
 
-  it("returns success output and metadata when credential is attached", async () => {
+  it("returns success output and metadata when credential is detached", async () => {
     const mockResponse = { id: 42, name: "My Credential", credential_type: 1 };
     (mockAwxClient.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       new Response(JSON.stringify(mockResponse), {
-        status: 201,
+        status: 200,
         headers: { "Content-Type": "application/json" },
       }),
     );
@@ -451,13 +435,13 @@ describe('"awx-attach-credential" tool', () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!["awx-attach-credential"]!.execute(
+    const result = await hooks.tool!["awx-detach-credential"]!.execute(
       { job_template_id: 10, credential_id: 42 },
       mockToolContext(),
     );
 
     const wrapped = result as { output: string; metadata: Record<string, unknown> };
-    expect(wrapped.output).toContain("Credential 42 attached to template 10");
+    expect(wrapped.output).toContain("Credential 42 detached from template 10");
     expect(wrapped.metadata).toEqual(mockResponse);
   });
 
@@ -481,12 +465,12 @@ describe('"awx-attach-credential" tool', () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!["awx-attach-credential"]!.execute(
+    const result = await hooks.tool!["awx-detach-credential"]!.execute(
       { job_template_id: 10, credential_id: 99999 },
       mockToolContext(),
     );
 
-    expect((result as { output: string }).output).toContain("awx-attach-credential error");
+    expect((result as { output: string }).output).toContain("awx-detach-credential error");
     expect((result as { output: string }).output).toContain("Credential not found");
   });
 
@@ -495,7 +479,6 @@ describe('"awx-attach-credential" tool', () => {
      ══════════════════════════════════════════════════════════════════ */
 
   it("returns error when AWX client cannot be initialized", async () => {
-    // When getSecret returns null and no env var is set, client init fails
     const input = mockPluginInput();
     (input.client as any).getSecret = vi.fn().mockResolvedValue(null);
     vi.stubEnv("AWX_TOKEN", "");
@@ -504,7 +487,7 @@ describe('"awx-attach-credential" tool', () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!["awx-attach-credential"]!.execute(
+    const result = await hooks.tool!["awx-detach-credential"]!.execute(
       { job_template_id: 10, credential_id: 42 },
       mockToolContext(),
     );
@@ -527,7 +510,7 @@ describe('"awx-attach-credential" tool', () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!["awx-attach-credential"]!.execute(
+    const result = await hooks.tool!["awx-detach-credential"]!.execute(
       { job_template_id: 10, credential_id: 42 },
       mockToolContext({ abort: controller.signal }),
     );
@@ -539,7 +522,7 @@ describe('"awx-attach-credential" tool', () => {
      Multi-Credential — Per-Credential Individual POSTs
      ══════════════════════════════════════════════════════════════════ */
 
-  it("returns success output and metadata when multiple credentials are attached", async () => {
+  it("returns success output and metadata when multiple credentials are detached", async () => {
     const vaultResp = { id: 1, name: "Vault" };
     const sshResp = { id: 2, name: "SSH Key" };
     const cloudResp = { id: 3, name: "Cloud" };
@@ -547,19 +530,19 @@ describe('"awx-attach-credential" tool', () => {
     (mockAwxClient.request as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(
         new Response(JSON.stringify(vaultResp), {
-          status: 201,
+          status: 200,
           headers: { "Content-Type": "application/json" },
         }),
       )
       .mockResolvedValueOnce(
         new Response(JSON.stringify(sshResp), {
-          status: 201,
+          status: 200,
           headers: { "Content-Type": "application/json" },
         }),
       )
       .mockResolvedValueOnce(
         new Response(JSON.stringify(cloudResp), {
-          status: 201,
+          status: 200,
           headers: { "Content-Type": "application/json" },
         }),
       );
@@ -571,36 +554,36 @@ describe('"awx-attach-credential" tool', () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!["awx-attach-credential"]!.execute(
+    const result = await hooks.tool!["awx-detach-credential"]!.execute(
       { job_template_id: 10, credential_id: [1, 2, 3] },
       mockToolContext(),
     );
 
     const wrapped = result as { output: string; metadata: Record<string, unknown> };
-    expect(wrapped.output).toContain("Credentials [1, 2, 3] attached to template 10");
+    expect(wrapped.output).toContain("Credentials [1, 2, 3] detached from template 10");
     expect(wrapped.metadata).toEqual({
       count: 3,
       results: [vaultResp, sshResp, cloudResp],
     });
   });
 
-  it("verifies 3 individual POST bodies when credential_id is an array", async () => {
+  it("verifies 3 individual POST bodies with disassociate: true when credential_id is an array", async () => {
     (mockAwxClient.request as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ id: 1 }), {
-          status: 201,
+        new Response(JSON.stringify({}), {
+          status: 200,
           headers: { "Content-Type": "application/json" },
         }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ id: 2 }), {
-          status: 201,
+        new Response(JSON.stringify({}), {
+          status: 200,
           headers: { "Content-Type": "application/json" },
         }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ id: 3 }), {
-          status: 201,
+        new Response(JSON.stringify({}), {
+          status: 200,
           headers: { "Content-Type": "application/json" },
         }),
       );
@@ -612,43 +595,42 @@ describe('"awx-attach-credential" tool', () => {
       baseUrl: "https://aap.example.com",
     });
 
-    await hooks.tool!["awx-attach-credential"]!.execute(
+    await hooks.tool!["awx-detach-credential"]!.execute(
       { job_template_id: 10, credential_id: [1, 2, 3] },
       mockToolContext(),
     );
 
-    // Each call should have an individual single-ID body, not an array
     expect(mockAwxClient.request).toHaveBeenCalledTimes(3);
     expect(mockAwxClient.request).toHaveBeenNthCalledWith(
       1,
-      "awx-attach-credential",
+      "awx-detach-credential",
       "/api/v2/job_templates/10/credentials/",
       expect.objectContaining({
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: 1 }),
+        body: JSON.stringify({ id: 1, disassociate: true }),
       }),
       expect.any(AbortSignal),
     );
     expect(mockAwxClient.request).toHaveBeenNthCalledWith(
       2,
-      "awx-attach-credential",
+      "awx-detach-credential",
       "/api/v2/job_templates/10/credentials/",
       expect.objectContaining({
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: 2 }),
+        body: JSON.stringify({ id: 2, disassociate: true }),
       }),
       expect.any(AbortSignal),
     );
     expect(mockAwxClient.request).toHaveBeenNthCalledWith(
       3,
-      "awx-attach-credential",
+      "awx-detach-credential",
       "/api/v2/job_templates/10/credentials/",
       expect.objectContaining({
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: 3 }),
+        body: JSON.stringify({ id: 3, disassociate: true }),
       }),
       expect.any(AbortSignal),
     );
@@ -665,7 +647,7 @@ describe('"awx-attach-credential" tool', () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!["awx-attach-credential"]!.execute(
+    const result = await hooks.tool!["awx-detach-credential"]!.execute(
       { job_template_id: 10, credential_id: [1, 2, 3] },
       mockToolContext({ abort: controller.signal }),
     );
@@ -674,11 +656,10 @@ describe('"awx-attach-credential" tool', () => {
   });
 
   it("returns error output when API fails with array credential_id", async () => {
-    // Credential 1 succeeds, credential 2 fails, credential 3 succeeds
     (mockAwxClient.request as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ id: 1 }), {
-          status: 201,
+          status: 200,
           headers: { "Content-Type": "application/json" },
         }),
       )
@@ -691,7 +672,7 @@ describe('"awx-attach-credential" tool', () => {
       )
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ id: 3 }), {
-          status: 201,
+          status: 200,
           headers: { "Content-Type": "application/json" },
         }),
       );
@@ -703,13 +684,13 @@ describe('"awx-attach-credential" tool', () => {
       baseUrl: "https://aap.example.com",
     });
 
-    const result = await hooks.tool!["awx-attach-credential"]!.execute(
+    const result = await hooks.tool!["awx-detach-credential"]!.execute(
       { job_template_id: 10, credential_id: [1, 2, 3] },
       mockToolContext(),
     );
 
-    expect((result as { output: string }).output).toContain("awx-attach-credential error");
-    expect((result as { output: string }).output).toContain("Partial failure attaching credentials");
+    expect((result as { output: string }).output).toContain("awx-detach-credential error");
+    expect((result as { output: string }).output).toContain("Partial failure detaching credentials");
     expect((result as { output: string }).output).toContain("credential 2");
     expect((result as { output: string }).output).toContain("Credential 2 not found");
   });
@@ -719,21 +700,21 @@ describe('"awx-attach-credential" tool', () => {
 // Integration Tests — run against real AWX (env-guarded)
 // ══════════════════════════════════════════════════════════════════
 //
-// Run with: AWX_INTEGRATION_TEST=1 npm test -- attach-credential
+// Run with: AWX_INTEGRATION_TEST=1 npm test -- detach-credential
 //
 // Requires:
 //   AWX_INTEGRATION_TEST=1  — must be set to run
 //   AWX_BASE_URL            — full AWX URL (e.g. https://aap.example.com)
 //   AWX_TOKEN               — AWX Personal Access Token (PAT)
-//   AWX_TEST_TEMPLATE_ID    — ID of a real job template to attach to
-//   AWX_TEST_CREDENTIAL_ID  — ID of a real credential to attach
-//   AWX_TEST_CREDENTIAL_2   — (optional) second credential for multi-attach
+//   AWX_TEST_TEMPLATE_ID    — ID of a real job template to detach from
+//   AWX_TEST_CREDENTIAL_ID  — ID of a real credential to detach
+//   AWX_TEST_CREDENTIAL_2   — (optional) second credential for multi-detach
 
 const integrationTest = process.env.AWX_INTEGRATION_TEST ? it : it.skip;
 
-describe("awx-attach-credential integration", () => {
+describe("awx-detach-credential integration", () => {
   integrationTest(
-    "attaches multiple credentials individually via POST to real AWX",
+    "detaches multiple credentials individually via POST to real AWX",
     async () => {
       const baseUrl = process.env.AWX_BASE_URL;
       const token = process.env.AWX_TOKEN;
@@ -761,8 +742,8 @@ describe("awx-attach-credential integration", () => {
         credentialIds.push(Number(credentialId2));
       }
 
-      // Attach credentials using the thin-proxy function
-      const result = await attachCredential(
+      // Detach credentials using the thin-proxy function
+      const result = await detachCredential(
         client,
         Number(templateId),
         credentialIds,

@@ -303,6 +303,37 @@ describe("executeCrud()", () => {
     );
   });
 
+  it("includes extra_vars in PATCH body when provided", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_TEMPLATE);
+    const body = {
+      name: "Updated Template",
+      extra_vars: '{"region":"us-east-1","environment":"staging"}',
+    };
+
+    await executeCrud(client, "template", "update", 7, body);
+
+    const callArgs = vi.mocked(client.request).mock.calls[0];
+    const init = callArgs[2] as RequestInit;
+    const parsedBody = JSON.parse(init.body as string);
+    expect(parsedBody).toEqual({
+      name: "Updated Template",
+      extra_vars: '{"region":"us-east-1","environment":"staging"}',
+    });
+  });
+
+  it("does not include extra_vars in PATCH body when omitted", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_TEMPLATE);
+    const body = { name: "Updated Template" };
+
+    await executeCrud(client, "template", "update", 7, body);
+
+    const callArgs = vi.mocked(client.request).mock.calls[0];
+    const init = callArgs[2] as RequestInit;
+    const parsedBody = JSON.parse(init.body as string);
+    expect(parsedBody).toEqual({ name: "Updated Template" });
+    expect(parsedBody).not.toHaveProperty("extra_vars");
+  });
+
   it("updates a project and returns the mapped result", async () => {
     const client = mockClientWithResponse(MOCK_RAW_PROJECT);
 

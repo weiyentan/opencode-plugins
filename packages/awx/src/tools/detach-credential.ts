@@ -1,23 +1,23 @@
 /**
- * attach-credential.ts — Attach credential tool factory.
+ * detach-credential.ts — Detach credential tool factory.
  *
- * awx-attach-credential: Attaches a credential to an AWX job template
- * via POST /api/v2/job_templates/{id}/credentials/.
+ * awx-detach-credential: Detaches a credential from an AWX job template
+ * via POST /api/v2/job_templates/{id}/credentials/ with disassociate: true.
  */
 import { tool } from "@opencode-ai/plugin";
 
 const z = tool.schema;
 
 import type { AwxClient } from "../client.js";
-import { attachCredential } from "../attach-credential.js";
+import { detachCredential } from "../detach-credential.js";
 
-export function createAttachCredentialTool(getAwxClient: () => Promise<AwxClient>) {
+export function createDetachCredentialTool(getAwxClient: () => Promise<AwxClient>) {
   return tool({
     description: [
-      "Attach one or more credentials to an AWX job template.",
+      "Detach one or more credentials from an AWX job template.",
       "Makes a POST request to",
       "/api/v2/job_templates/{job_template_id}/credentials/",
-      'with body { "id": credential_id } for a single credential.',
+      'with body { "id": credential_id, "disassociate": true } for a single credential.',
       "For multiple credentials, makes one POST per credential ID",
       "(individual per-credential POSTs, not a single array payload).",
       "Returns the AWX API response body.",
@@ -27,14 +27,14 @@ export function createAttachCredentialTool(getAwxClient: () => Promise<AwxClient
         .number()
         .int()
         .positive()
-        .describe("The numeric ID of the AWX job template to attach the credential to."),
+        .describe("The numeric ID of the AWX job template to detach the credential from."),
       credential_id: z
         .union([
           z.number().int().positive(),
           z.array(z.number().int().positive()).min(1),
         ])
         .describe(
-          "The numeric ID of the credential to attach, or an array of credential IDs for multi-credential attachment.",
+          "The numeric ID of the credential to detach, or an array of credential IDs for multi-credential detachment.",
         ),
     },
     async execute(args, context) {
@@ -52,7 +52,7 @@ export function createAttachCredentialTool(getAwxClient: () => Promise<AwxClient
       }
 
       try {
-        const result = await attachCredential(
+        const result = await detachCredential(
           awxClient,
           args.job_template_id,
           args.credential_id,
@@ -64,7 +64,7 @@ export function createAttachCredentialTool(getAwxClient: () => Promise<AwxClient
           : String(args.credential_id);
 
         return {
-          output: `Credential${Array.isArray(args.credential_id) ? "s" : ""} ${credentialDisplay} attached to template ${args.job_template_id}.`,
+          output: `Credential${Array.isArray(args.credential_id) ? "s" : ""} ${credentialDisplay} detached from template ${args.job_template_id}.`,
           metadata: result as Record<string, unknown>,
         };
       } catch (err: unknown) {
@@ -73,7 +73,7 @@ export function createAttachCredentialTool(getAwxClient: () => Promise<AwxClient
         }
         const message = err instanceof Error ? err.message : String(err);
         return {
-          output: `awx-attach-credential error: ${message}`,
+          output: `awx-detach-credential error: ${message}`,
         };
       }
     },

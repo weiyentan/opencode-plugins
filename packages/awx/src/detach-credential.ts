@@ -1,33 +1,33 @@
 /**
- * attach-credential.ts — Thin proxy for POST /api/v2/job_templates/{id}/credentials/
+ * detach-credential.ts — Thin proxy for removing credentials from a job template
  *
- * Attaches a credential to a job template in AWX by making a POST request
- * to the AWX API credentials endpoint. No transforms, no validation beyond
- * the AWX API's own checks — just forward the credential ID.
+ * Removes credentials from a job template by POSTing with disassociate: true
+ * to /api/v2/job_templates/{id}/credentials/
  *
  * Multi-credential support: when credentialId is an array, each credential
- * is attached via an individual POST request (not a single array payload),
- * matching the AWX API's expected request shape.
+ * is detached via an individual POST request (not a single array payload),
+ * matching the AWX API's expected request shape pattern (same endpoint as
+ * attach, but with disassociate: true).
  */
 import type { AwxClient } from "./client.js";
 
 /**
- * Make a single POST to attach one credential to a job template.
+ * Make a single POST to detach one credential from a job template.
  *
- * @returns The raw AWX API response body for the single attachment.
+ * @returns The raw AWX API response body for the single detachment.
  * @throws Error if the AWX API returns an unexpected error response.
  */
-async function attachSingle(
+async function detachSingle(
   client: AwxClient,
   templateId: number,
   credentialId: number,
   abortSignal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
-  const body: Record<string, unknown> = { id: credentialId };
+  const body: Record<string, unknown> = { id: credentialId, disassociate: true };
 
-  // ── Call AWX attach credential API ────────────────────────────
+  // ── Call AWX detach credential API ─────────────────────────────
   const response = await client.request(
-    "awx-attach-credential",
+    "awx-detach-credential",
     `/api/v2/job_templates/${templateId}/credentials/`,
     {
       method: "POST",
@@ -46,13 +46,13 @@ async function attachSingle(
     responseBody = undefined;
   }
 
-  // ── Handle error responses ────────────────────────────────────
+  // ── Handle error responses ───────────────────────────────────
   if (!response.ok) {
     const detail =
       typeof responseBody === "object" && responseBody && "detail" in responseBody
         ? String((responseBody as { detail: unknown }).detail)
         : text || response.statusText;
-    throw new Error(`AWX attach credential failed: HTTP ${response.status}: ${detail}`);
+    throw new Error(`AWX detach credential failed: HTTP ${response.status}: ${detail}`);
   }
 
   // ── Return raw AWX response body ──────────────────────────────
@@ -60,25 +60,26 @@ async function attachSingle(
 }
 
 /**
- * Attach one or more credentials to an AWX job template.
+ * Detach one or more credentials from an AWX job template.
  *
  * For a single credential, makes one POST to
- * /api/v2/job_templates/{templateId}/credentials/ with body { "id": credentialId }.
+ * /api/v2/job_templates/{templateId}/credentials/ with body
+ * { "id": credentialId, "disassociate": true }.
  *
  * For multiple credentials, makes N individual POST requests (one per
- * credential ID), each with body { "id": <single_id> }, then collects
- * the results into a composite object { count: N, results: [...] }.
+ * credential ID), each with body { "id": <single_id>, "disassociate": true },
+ * then collects the results into a composite object { count: N, results: [...] }.
  * Partial failures throw with per-credential error detail.
  *
  * @param client       - The AWX HTTP client
- * @param templateId   - The job template ID to attach the credential(s) to
- * @param credentialId - A single credential ID or an array of credential IDs to attach
+ * @param templateId   - The job template ID to detach the credential(s) from
+ * @param credentialId - A single credential ID or an array of credential IDs to detach
  * @param abortSignal  - Optional abort signal propagated to every individual HTTP request
  * @returns A composite object with `count` and `results` for multi-credential,
  *          or the raw AWX API response body for a single credential.
- * @throws Error with per-credential detail if any attachment fails.
+ * @throws Error with per-credential detail if any detachment fails.
  */
-export async function attachCredential(
+export async function detachCredential(
   client: AwxClient,
   templateId: number,
   credentialId: number | number[],
@@ -86,7 +87,7 @@ export async function attachCredential(
 ): Promise<Record<string, unknown>> {
   // ── Single credential — one POST, original behaviour ──────────
   if (!Array.isArray(credentialId)) {
-    return attachSingle(client, templateId, credentialId, abortSignal);
+    return detachSingle(client, templateId, credentialId, abortSignal);
   }
 
   // ── Multi-credential — N individual POSTs ─────────────────────
@@ -95,7 +96,7 @@ export async function attachCredential(
 
   for (const id of credentialId) {
     try {
-      const result = await attachSingle(client, templateId, id, abortSignal);
+      const result = await detachSingle(client, templateId, id, abortSignal);
       results.push(result);
     } catch (err: unknown) {
       // Re-throw abort signals immediately — not a credential error
@@ -119,12 +120,10 @@ export async function attachCredential(
       .map((f) => `credential ${f.id}: ${f.error}`)
       .join("; ");
 
-    composite._errors = failures;
-
     throw new Error(
       failures.length === credentialId.length
-        ? `Failed to attach credentials: ${failureDescriptions}`
-        : `Partial failure attaching credentials: ${failureDescriptions}`,
+        ? `Failed to detach credentials: ${failureDescriptions}`
+        : `Partial failure detaching credentials: ${failureDescriptions}`,
     );
   }
 

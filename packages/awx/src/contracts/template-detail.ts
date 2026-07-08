@@ -48,6 +48,20 @@ export interface TemplateData {
   next_schedule: string | null;
   /** Resolved label names from summary_fields.labels.results */
   labels: string[];
+  /** Array of attached credentials with id, name, credential_type_id, and kind */
+  credentials: Array<{ id: number; name: string; credential_type_id: number; kind: string }>;
+  /** Raw extra_vars string from the AWX API */
+  extra_vars: string;
+  /** Job timeout in seconds */
+  timeout: number;
+  /** Comma-separated list of job tags to run */
+  job_tags: string;
+  /** Comma-separated list of job tags to skip */
+  skip_tags: string;
+  /** Whether the template prompts for job tags on launch */
+  ask_tags_on_launch: boolean;
+  /** Whether the template prompts for skip tags on launch */
+  ask_skip_tags_on_launch: boolean;
 }
 
 // ─── Top-level output envelope ───────────────────────────────
