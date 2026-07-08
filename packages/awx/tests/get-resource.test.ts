@@ -45,6 +45,12 @@ const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
   last_job_run: "2025-06-15T14:32:00Z",
   status: "successful",
   next_schedule: null,
+  timeout: 300,
+  job_tags: "deploy,healthcheck",
+  skip_tags: "debug",
+  ask_tags_on_launch: true,
+  ask_skip_tags_on_launch: false,
+  extra_vars: "---\naws_region: us-east-1\nenvironment: production\n",
   summary_fields: {
     organization: { id: 1, name: "Default" },
     inventory: { id: 1, name: "Production" },
@@ -54,6 +60,12 @@ const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
         { id: 1, name: "production" },
         { id: 2, name: "web" },
         { id: 3, name: "deploy" },
+      ],
+    },
+    credentials: {
+      results: [
+        { id: 5, name: "Production SSH", credential_type_id: 1, kind: "ssh" },
+        { id: 8, name: "Vault Token", credential_type_id: 4, kind: "vault" },
       ],
     },
   },
@@ -124,6 +136,17 @@ describe("getResource()", () => {
     expect(result.data.inventory_name).toBe("Production");
     expect(result.data.project_name).toBe("Web Stack Deploy");
     expect(result.data.organization_name).toBe("Default");
+    expect(result.data.description).toBe("Deploy the web application stack to production servers");
+    expect(result.data.timeout).toBe(300);
+    expect(result.data.job_tags).toBe("deploy,healthcheck");
+    expect(result.data.skip_tags).toBe("debug");
+    expect(result.data.ask_tags_on_launch).toBe(true);
+    expect(result.data.ask_skip_tags_on_launch).toBe(false);
+    expect(result.data.extra_vars).toBe("---\naws_region: us-east-1\nenvironment: production\n");
+    expect(result.data.credentials).toEqual([
+      { id: 5, name: "Production SSH", credential_type_id: 1, kind: "ssh" },
+      { id: 8, name: "Vault Token", credential_type_id: 4, kind: "vault" },
+    ]);
   });
 
   /* ══════════════════════════════════════════════════════════════

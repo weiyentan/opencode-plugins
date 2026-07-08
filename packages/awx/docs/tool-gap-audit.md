@@ -6,7 +6,7 @@
 
 ## Current AWX Tool Coverage
 
-The following 22 tools are currently registered in the AWX plugin:
+The following 23 tools are currently registered in the AWX plugin:
 
 | # | Tool Name | Description | Endpoint |
 |---|-----------|-------------|----------|
@@ -32,6 +32,7 @@ The following 22 tools are currently registered in the AWX plugin:
 | 20 | `awx-debug-env` | Debug environment configuration | (none) |
 | 21 | `awx-configure` | Configure AWX connection settings | (none) |
 | 22 | `awx-attach-credential` | Attach credential to job template | `POST /api/v2/job_templates/{id}/credentials/` |
+| 23 | `awx-detach-credential` | Detach credential(s) from job template | `POST /api/v2/job_templates/{id}/credentials/` with `disassociate: true` |
 
 ## Gap Analysis
 
@@ -60,8 +61,7 @@ The following gaps represent AWX API operations that are not yet covered by plug
 |---|-----|------------------|--------|----------------|
 | 8 | **List inventory groups** | `GET /api/v2/inventories/{id}/groups/` | Agents managing inventory structure need group access for host organization. | Add `awx-list-groups` tool for a given inventory. |
 | 9 | **List inventory hosts** | `GET /api/v2/inventories/{id}/hosts/` | Required for inventory content inspection and host-level operations. | Add `awx-list-hosts` tool with optional filter parameters. |
-| 10 | **Detach credential** | `POST /api/v2/job_templates/{id}/credentials/` with `DELETE` | Once a credential is attached, there is no way to remove it. Full lifecycle requires detach capability. | Add `DELETE` support or a `awx-detach-credential` tool. |
-| 11 | **List job templates by credential** | `GET /api/v2/credentials/{id}/job_templates/` | Reverse lookup — which templates use a given credential? Useful for impact analysis before credential rotation. | Add a `job_templates` relation endpoint to `awx-get-resource` for credentials, or a new tool. |
+| 10 | **List job templates by credential** | `GET /api/v2/credentials/{id}/job_templates/` | Reverse lookup — which templates use a given credential? Useful for impact analysis before credential rotation. | Add a `job_templates` relation endpoint to `awx-get-resource` for credentials, or a new tool. |
 
 ### P3 — Lower Priority (nice-to-have)
 
@@ -81,18 +81,18 @@ The following gaps represent AWX API operations that are not yet covered by plug
 |----------|-----------|
 | **P0 (Critical)** | 3 |
 | **P1 (High)** | 4 |
-| **P2 (Medium)** | 4 |
+| **P2 (Medium)** | 3 |
 | **P3 (Lower)** | 7 |
-| **Total** | **18** |
+| **Total** | **17** |
 
 ## Coverage Statistics
 
 | Metric | Value |
 |--------|-------|
-| Current tools | 22 |
-| Documented gaps | 18 |
+| Current tools | 23 |
+| Documented gaps | 17 |
 | Total AWX operations (est.) | 60+ |
-| Estimated coverage | ~35% |
+| Estimated coverage | ~38% |
 
 ## Notes
 
