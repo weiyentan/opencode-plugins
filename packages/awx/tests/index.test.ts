@@ -527,13 +527,7 @@ describe("AWX Plugin Index", () => {
 
       expect(result).toEqual({
         output: "Failed to fetch jobs: API connection refused",
-        metadata: {
-          schema_version: "1.0",
-          total_jobs: 0,
-          results: [],
-          pages_fetched: 0,
-          warning: "Failed to fetch jobs: API connection refused",
-        },
+        metadata: { error: "API connection refused" },
       });
 
       listJobsSpy.mockRestore();

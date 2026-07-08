@@ -116,9 +116,7 @@ describe("Read-Only Tools — Configuration Errors", () => {
       );
 
       const parsed = getMetadata(result);
-      expect(parsed.count).toBe(0);
-      expect(parsed.results).toEqual([]);
-      expect(parsed.warning).toContain("PAT");
+      expect(parsed.error).toContain("PAT");
     } finally {
       await hooks.dispose?.();
     }
@@ -150,9 +148,7 @@ describe("Read-Only Tools — Configuration Errors", () => {
       );
 
       const metadata = getMetadata(result);
-      expect(metadata.total_jobs).toBe(0);
-      expect(metadata.results).toEqual([]);
-      expect(metadata.warning).toContain("PAT");
+      expect(metadata.error).toContain("PAT");
     } finally {
       await hooks.dispose?.();
     }
@@ -217,9 +213,7 @@ describe("Read-Only Tools — Configuration Errors", () => {
       );
 
       const parsed = getMetadata(result);
-      expect(parsed.count).toBe(0);
-      expect(parsed.results).toEqual([]);
-      expect(parsed.warning).toContain("PAT");
+      expect(parsed.error).toContain("PAT");
     } finally {
       await hooks.dispose?.();
     }
