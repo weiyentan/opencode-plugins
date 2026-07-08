@@ -18,6 +18,8 @@ import { buildPipeTable } from "../utils.js";
 import { listOrganizations, type Organization } from "../list-organizations.js";
 import { listCredentials, type Credential } from "../list-credentials.js";
 import { listInventories, type Inventory } from "../list-inventories.js";
+import { listUsers, type User } from "../list-users.js";
+import { listTeams, type Team } from "../list-teams.js";
 
 export function createListTools(
   getAwxClient: () => Promise<AwxClient>,
@@ -607,6 +609,192 @@ export function createListTools(
           const message = err instanceof Error ? err.message : String(err);
           return {
             output: `Failed to list inventories: ${message}`,
+            metadata: { error: message },
+          };
+        }
+      },
+    }),
+
+    /**
+     * List AWX users with pagination.
+     *
+     * Fetches users from the AWX /api/v2/users/ endpoint,
+     * consolidating results across multiple pages up to a configurable
+     * page cap. Results are sorted alphabetically by username. Supports
+     * server-side filtering.
+     *
+     * Pagination behavior:
+     * - Default: up to 5 pages × 50 items/page = 250 items max
+     * - If more pages exist beyond the cap, returns a warning field
+     * - Per-page timeout: total tool timeout / (maxPages + 1)
+     */
+    "awx-list-users": tool({
+      description: [
+        "List AWX users with pagination. Fetches users from",
+        "the AWX /api/v2/users/ endpoint, consolidating results",
+        "across multiple pages up to a configurable page cap.",
+        "Results are sorted alphabetically by username. Supports",
+        "server-side filtering.",
+      ].join(" "),
+      args: {
+        maxPages: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Maximum pages to fetch (default: 5, max: 100)."),
+        pageSize: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Items per page (default: 50, max: 200)."),
+        timeout: z
+          .number()
+          .int()
+          .min(1_000)
+          .optional()
+          .describe("Total tool timeout in milliseconds (default: 30000)."),
+        filter: z
+          .array(z.string())
+          .optional()
+          .describe("Filter users by field (e.g., --filter username__icontains=admin)"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await listUsers(awxClient, {
+            maxPages: args.maxPages,
+            pageSize: args.pageSize,
+            timeout: args.timeout,
+            abortSignal: context.abort,
+            filters: args.filter,
+          });
+
+          const table = buildPipeTable(result.results, [
+            { header: "ID", value: (u: User) => String(u.id) },
+            { header: "Username", value: (u: User) => u.username },
+            { header: "First Name", value: (u: User) => u.first_name },
+            { header: "Last Name", value: (u: User) => u.last_name },
+            { header: "Email", value: (u: User) => u.email },
+            { header: "Superuser", value: (u: User) => String(u.is_superuser) },
+            { header: "Auditor", value: (u: User) => String(u.is_system_auditor) },
+          ]);
+
+          const output = `Found ${result.count} user(s).\n\n${table}`;
+          return {
+            output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
+            metadata: result as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to list users: ${message}`,
+            metadata: { error: message },
+          };
+        }
+      },
+    }),
+
+    /**
+     * List AWX teams with pagination.
+     *
+     * Fetches teams from the AWX /api/v2/teams/ endpoint,
+     * consolidating results across multiple pages up to a configurable
+     * page cap. Results are sorted alphabetically by name. Supports
+     * server-side filtering.
+     *
+     * Pagination behavior:
+     * - Default: up to 5 pages × 50 items/page = 250 items max
+     * - If more pages exist beyond the cap, returns a warning field
+     * - Per-page timeout: total tool timeout / (maxPages + 1)
+     */
+    "awx-list-teams": tool({
+      description: [
+        "List AWX teams with pagination. Fetches teams from",
+        "the AWX /api/v2/teams/ endpoint, consolidating results",
+        "across multiple pages up to a configurable page cap.",
+        "Results are sorted alphabetically by name. Supports",
+        "server-side filtering.",
+      ].join(" "),
+      args: {
+        maxPages: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Maximum pages to fetch (default: 5, max: 100)."),
+        pageSize: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Items per page (default: 50, max: 200)."),
+        timeout: z
+          .number()
+          .int()
+          .min(1_000)
+          .optional()
+          .describe("Total tool timeout in milliseconds (default: 30000)."),
+        filter: z
+          .array(z.string())
+          .optional()
+          .describe("Filter teams by field (e.g., --filter name__icontains=engineering)"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await listTeams(awxClient, {
+            maxPages: args.maxPages,
+            pageSize: args.pageSize,
+            timeout: args.timeout,
+            abortSignal: context.abort,
+            filters: args.filter,
+          });
+
+          const table = buildPipeTable(result.results, [
+            { header: "ID", value: (t: Team) => String(t.id) },
+            { header: "Name", value: (t: Team) => t.name },
+            { header: "Description", value: (t: Team) => t.description },
+            { header: "Org", value: (t: Team) => t.summary_fields?.organization?.name ?? "" },
+            { header: "Users", value: (t: Team) => String(t.summary_fields?.user_count ?? "") },
+          ]);
+
+          const output = `Found ${result.count} team(s).\n\n${table}`;
+          return {
+            output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
+            metadata: result as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to list teams: ${message}`,
             metadata: { error: message },
           };
         }

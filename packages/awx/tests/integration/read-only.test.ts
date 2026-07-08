@@ -157,6 +157,38 @@ describe("Read-Only Tools — Configuration Errors", () => {
       await hooks.dispose?.();
     }
   });
+
+  it("awx-list-users returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-users"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      const out = (result as { output: string }).output;
+      expect(out).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+
+  it("awx-list-teams returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-teams"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      const out = (result as { output: string }).output;
+      expect(out).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -394,6 +426,118 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
     });
   });
 
+  describe("awx-list-users", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-users"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        // listUsers returns { output, metadata }
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("username");
+            expect(typeof item.username).toBe("string");
+            expect(item).toHaveProperty("email");
+            expect(typeof item.email).toBe("string");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("accepts pagination options", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-users"]!.execute(
+          { maxPages: 2, pageSize: 10, timeout: 15_000 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(Array.isArray(metadata.results)).toBe(true);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+  describe("awx-list-teams", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-teams"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        // listTeams returns { output, metadata }
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("description");
+            expect(typeof item.description).toBe("string");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("accepts pagination options", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-teams"]!.execute(
+          { maxPages: 2, pageSize: 10, timeout: 15_000 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(Array.isArray(metadata.results)).toBe(true);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
   describe("auth failure (awx-list-jobs)", () => {
     it("returns error metadata with invalid token", async () => {
       const hooks = await createPlugin(
@@ -413,6 +557,58 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
         if (metadata.warning) {
           expect(typeof metadata.warning).toBe("string");
           expect((metadata.warning as string).length).toBeGreaterThan(0);
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+  describe("auth failure (awx-list-users)", () => {
+    it("returns error metadata with invalid token", async () => {
+      const hooks = await createPlugin(
+        "this-is-a-deliberately-invalid-token-for-testing",
+      );
+
+      try {
+        const result = await hooks.tool!["awx-list-users"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        if (metadata.error) {
+          expect(typeof metadata.error).toBe("string");
+          expect((metadata.error as string).length).toBeGreaterThan(0);
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+  describe("auth failure (awx-list-teams)", () => {
+    it("returns error metadata with invalid token", async () => {
+      const hooks = await createPlugin(
+        "this-is-a-deliberately-invalid-token-for-testing",
+      );
+
+      try {
+        const result = await hooks.tool!["awx-list-teams"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        if (metadata.error) {
+          expect(typeof metadata.error).toBe("string");
+          expect((metadata.error as string).length).toBeGreaterThan(0);
         }
       } finally {
         await hooks.dispose?.();
