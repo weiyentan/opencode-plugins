@@ -153,4 +153,94 @@ describe("mapTemplate()", () => {
 
     expect(result.data.labels).toEqual([]);
   });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 9: Credentials from summary_fields (object-with-results shape)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("resolves credentials from summary_fields.credentials.results (object shape)", () => {
+    const raw = loadRawTemplateFixture();
+    const result = mapTemplate(raw);
+
+    expect(result.data.credentials).toEqual([
+      { id: 5, name: "Production SSH", credential_type_id: 1, kind: "ssh" },
+      { id: 8, name: "Vault Token", credential_type_id: 4, kind: "vault" },
+    ]);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 10: Credentials as plain array shape (the bug fix)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("resolves credentials when summary_fields.credentials is a plain array", () => {
+    const raw: Record<string, unknown> = {
+      id: 10,
+      name: "Array Creds Template",
+      description: "Template with array-shaped credentials",
+      job_type: "run",
+      playbook: "test.yml",
+      verbosity: 0,
+      ask_variables_on_launch: false,
+      ask_inventory_on_launch: false,
+      ask_limit_on_launch: false,
+      last_job_run: null,
+      status: "never updated",
+      next_schedule: null,
+      summary_fields: {
+        credentials: [
+          { id: 1, name: "Machine Cred", credential_type_id: 1, kind: "ssh" },
+          { id: 2, name: "Vault Cred", credential_type_id: 4, kind: "vault" },
+        ],
+      },
+    };
+
+    const result = mapTemplate(raw);
+
+    expect(result.data.credentials).toEqual([
+      { id: 1, name: "Machine Cred", credential_type_id: 1, kind: "ssh" },
+      { id: 2, name: "Vault Cred", credential_type_id: 4, kind: "vault" },
+    ]);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 11: Missing/null credentials returns empty array
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns empty credentials array when summary_fields.credentials is missing or null", () => {
+    // Case 1: no summary_fields at all
+    const raw1: Record<string, unknown> = {
+      id: 11,
+      name: "No Summary",
+      description: "",
+      job_type: "run",
+      playbook: "test.yml",
+      verbosity: 0,
+      ask_variables_on_launch: false,
+      ask_inventory_on_launch: false,
+      ask_limit_on_launch: false,
+      last_job_run: null,
+      status: "never updated",
+      next_schedule: null,
+    };
+
+    // Case 2: summary_fields exists but credentials is null
+    const raw2: Record<string, unknown> = {
+      ...raw1,
+      id: 12,
+      name: "Null Creds",
+      summary_fields: { credentials: null },
+    };
+
+    // Case 3: summary_fields exists but credentials is missing
+    const raw3: Record<string, unknown> = {
+      ...raw1,
+      id: 13,
+      name: "Missing Creds",
+      summary_fields: {},
+    };
+
+    expect(mapTemplate(raw1).data.credentials).toEqual([]);
+    expect(mapTemplate(raw2).data.credentials).toEqual([]);
+    expect(mapTemplate(raw3).data.credentials).toEqual([]);
+  });
 });
