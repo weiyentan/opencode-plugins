@@ -123,6 +123,20 @@ describe("AWX Plugin Index", () => {
       expect(typeof hooks.tool!["awx-debug-env"]!.description).toBe("string");
       expect(hooks.tool!["awx-debug-env"]!.args).toBeDefined();
     });
+
+    it('hooks.tool contains "awx-list-workflow-templates" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-list-workflow-templates"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-list-workflow-templates"]!.description).toBe("string");
+    });
+
+    it('hooks.tool contains "awx-launch-workflow" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-launch-workflow"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-launch-workflow"]!.description).toBe("string");
+    });
   });
 
   /* ══════════════════════════════════════════════════════════════════
