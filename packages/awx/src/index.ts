@@ -35,6 +35,7 @@ import { getCustomConfig } from "./runtime-config.js";
 import { createHelloTool } from "./tools/hello.js";
 import { createConfigTools } from "./tools/configure.js";
 import { createAttachCredentialTool } from "./tools/attach-credential.js";
+import { createDetachCredentialTool } from "./tools/detach-credential.js";
 import { createSyncProjectTool } from "./tools/sync-project.js";
 import { createJobEventsTool } from "./tools/job-events.js";
 import { createGetResourceTool } from "./tools/get-resource.js";
@@ -185,6 +186,7 @@ async function server(input: PluginInput): Promise<Hooks> {
       "awx-get-resource": createGetResourceTool(getAwxClient),
       "awx-sync-project": createSyncProjectTool(getAwxClient),
       "awx-attach-credential": createAttachCredentialTool(getAwxClient),
+      "awx-detach-credential": createDetachCredentialTool(getAwxClient),
     },
   };
 }
