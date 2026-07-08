@@ -112,7 +112,7 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
       ].join("\n");
     }
     case "template": {
-      const d = result.data as Record<string, unknown>;
+      const d = result.data as unknown as Record<string, unknown>;
       const creds = Array.isArray(d.credentials)
         ? (d.credentials as Array<{ name: string }>)
         : [];

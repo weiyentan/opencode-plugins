@@ -120,8 +120,6 @@ export async function detachCredential(
       .map((f) => `credential ${f.id}: ${f.error}`)
       .join("; ");
 
-    composite._errors = failures;
-
     throw new Error(
       failures.length === credentialId.length
         ? `Failed to detach credentials: ${failureDescriptions}`
