@@ -52,9 +52,10 @@ interface RawAwxTemplate {
     labels?: {
       results?: Array<{ id?: number; name?: string }>;
     } | null;
-    credentials?: {
-      results?: Array<{ id?: number; name?: string; credential_type_id?: number; kind?: string }>;
-    } | null;
+    credentials?:
+      | Array<{ id?: number; name?: string; credential_type_id?: number; kind?: string }>
+      | { results?: Array<{ id?: number; name?: string; credential_type_id?: number; kind?: string }> }
+      | null;
   };
 }
 
@@ -95,12 +96,18 @@ export function mapTemplate(raw: unknown): TemplateDetailOutput {
         ? (t.next_schedule as { name?: string }).name ?? null
         : null),
     labels: sf.labels?.results?.map((l) => l.name ?? "").filter(Boolean) ?? [],
-    credentials: sf.credentials?.results?.map((c) => ({
-      id: c.id ?? 0,
-      name: c.name ?? "",
-      credential_type_id: c.credential_type_id ?? 0,
-      kind: c.kind ?? "",
-    })) ?? [],
+    credentials: (() => {
+      const rawCreds = sf.credentials;
+      const items = Array.isArray(rawCreds)
+        ? rawCreds
+        : rawCreds?.results ?? [];
+      return items.map((c) => ({
+        id: c.id ?? 0,
+        name: c.name ?? "",
+        credential_type_id: c.credential_type_id ?? 0,
+        kind: c.kind ?? "",
+      }));
+    })(),
     extra_vars: t.extra_vars ?? "",
     timeout: t.timeout ?? 0,
     job_tags: t.job_tags ?? "",
