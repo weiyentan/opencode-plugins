@@ -430,6 +430,7 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
         inventory_id: z.number().int().positive().optional().describe("Resolved AWX inventory ID"),
         playbook: z.string().min(1).optional().describe("Playbook filename (e.g., site.yml)"),
         description: z.string().optional().describe("Optional template description"),
+        extra_vars: z.record(z.string(), z.unknown()).optional().describe("Extra variables for the template (will be serialized to JSON string)"),
       },
       async execute(args, context) {
         if (context.abort?.aborted) {
@@ -453,6 +454,7 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
           if (args.inventory_id !== undefined) body.inventory = args.inventory_id;
           if (args.playbook !== undefined) body.playbook = args.playbook;
           if (args.description !== undefined) body.description = args.description;
+          if (args.extra_vars !== undefined) body.extra_vars = JSON.stringify(args.extra_vars);
 
           const crudResult = await executeCrud(
             awxClient,
