@@ -123,6 +123,29 @@ describe("AWX Plugin Index", () => {
       expect(typeof hooks.tool!["awx-debug-env"]!.description).toBe("string");
       expect(hooks.tool!["awx-debug-env"]!.args).toBeDefined();
     });
+
+    it('hooks.tool contains "awx-list-instance-groups" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-list-instance-groups"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-list-instance-groups"]!.description).toBe("string");
+      expect(hooks.tool!["awx-list-instance-groups"]!.args).toBeDefined();
+    });
+
+    it('hooks.tool contains "awx-list-execution-environments" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-list-execution-environments"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-list-execution-environments"]!.description).toBe("string");
+      expect(hooks.tool!["awx-list-execution-environments"]!.args).toBeDefined();
+    });
+
+    it('hooks.tool contains "awx-ping" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-ping"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-ping"]!.description).toBe("string");
+    });
   });
 
   /* ══════════════════════════════════════════════════════════════════
