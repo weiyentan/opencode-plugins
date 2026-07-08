@@ -18,6 +18,8 @@ import { buildPipeTable } from "../utils.js";
 import { listOrganizations, type Organization } from "../list-organizations.js";
 import { listCredentials, type Credential } from "../list-credentials.js";
 import { listInventories, type Inventory } from "../list-inventories.js";
+import { listHosts, type Host } from "../list-hosts.js";
+import { listGroups, type Group } from "../list-groups.js";
 
 export function createListTools(
   getAwxClient: () => Promise<AwxClient>,
@@ -608,6 +610,214 @@ export function createListTools(
           return {
             output: `Failed to list inventories: ${message}`,
             metadata: { error: message },
+          };
+        }
+      },
+    }),
+
+    /**
+     * List AWX hosts for a given inventory with pagination.
+     *
+     * Fetches hosts from the AWX /api/v2/inventories/{inventory_id}/hosts/
+     * endpoint, consolidating results across multiple pages up to a
+     * configurable page cap. Results are sorted alphabetically by name.
+     * Supports server-side filtering.
+     */
+    "awx-list-hosts": tool({
+      description: [
+        "List AWX hosts for a given inventory with pagination.",
+        "Fetches hosts from /api/v2/inventories/{inventory_id}/hosts/,",
+        "consolidating across pages up to a configurable cap.",
+        "Results sorted by name. Requires inventory_id.",
+        "Supports page size override, server-side filtering,",
+        "and configurable timeout. Returns warning when page cap",
+        "limits results.",
+      ].join(" "),
+      args: {
+        inventory_id: z
+          .number()
+          .int()
+          .positive()
+          .describe("AWX inventory ID whose hosts to list (required)."),
+        maxPages: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Maximum pages to fetch (default: 5, max: 100)."),
+        pageSize: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Items per page (default: 50, max: 200)."),
+        timeout: z
+          .number()
+          .int()
+          .min(1_000)
+          .optional()
+          .describe("Total tool timeout in milliseconds (default: 30000)."),
+        filter: z
+          .array(z.string())
+          .optional()
+          .describe("Filter hosts by field (e.g., --filter name__icontains=web)"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: message,
+            metadata: {
+              count: 0,
+              results: [],
+              warning: message,
+            },
+          };
+        }
+
+        try {
+          const result = await listHosts(awxClient, args.inventory_id, {
+            maxPages: args.maxPages,
+            pageSize: args.pageSize,
+            timeout: args.timeout,
+            abortSignal: context.abort,
+            filters: args.filter,
+          });
+
+          const table = buildPipeTable(result.results, [
+            { header: "ID", value: (h: Host) => String(h.id) },
+            { header: "Name", value: (h: Host) => h.name },
+            { header: "Description", value: (h: Host) => h.description },
+            { header: "Inventory", value: (h: Host) => String(h.inventory) },
+          ]);
+
+          const output = `Found ${result.count} host(s) for inventory ${args.inventory_id}.\n\n${table}`;
+          return {
+            output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
+            metadata: result as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to list hosts: ${message}`,
+            metadata: {
+              count: 0,
+              results: [],
+              warning: `Failed to list hosts: ${message}`,
+            },
+          };
+        }
+      },
+    }),
+
+    /**
+     * List AWX groups for a given inventory with pagination.
+     *
+     * Fetches groups from the AWX /api/v2/inventories/{inventory_id}/groups/
+     * endpoint, consolidating results across multiple pages up to a
+     * configurable page cap. Results are sorted alphabetically by name.
+     * Supports server-side filtering.
+     */
+    "awx-list-groups": tool({
+      description: [
+        "List AWX groups for a given inventory with pagination.",
+        "Fetches groups from /api/v2/inventories/{inventory_id}/groups/,",
+        "consolidating across pages up to a configurable cap.",
+        "Results sorted by name. Requires inventory_id.",
+        "Supports page size override, server-side filtering,",
+        "and configurable timeout. Returns warning when page cap",
+        "limits results.",
+      ].join(" "),
+      args: {
+        inventory_id: z
+          .number()
+          .int()
+          .positive()
+          .describe("AWX inventory ID whose groups to list (required)."),
+        maxPages: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Maximum pages to fetch (default: 5, max: 100)."),
+        pageSize: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Items per page (default: 50, max: 200)."),
+        timeout: z
+          .number()
+          .int()
+          .min(1_000)
+          .optional()
+          .describe("Total tool timeout in milliseconds (default: 30000)."),
+        filter: z
+          .array(z.string())
+          .optional()
+          .describe("Filter groups by field (e.g., --filter name__icontains=web)"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: message,
+            metadata: {
+              count: 0,
+              results: [],
+              warning: message,
+            },
+          };
+        }
+
+        try {
+          const result = await listGroups(awxClient, args.inventory_id, {
+            maxPages: args.maxPages,
+            pageSize: args.pageSize,
+            timeout: args.timeout,
+            abortSignal: context.abort,
+            filters: args.filter,
+          });
+
+          const table = buildPipeTable(result.results, [
+            { header: "ID", value: (g: Group) => String(g.id) },
+            { header: "Name", value: (g: Group) => g.name },
+            { header: "Description", value: (g: Group) => g.description },
+            { header: "Inventory", value: (g: Group) => String(g.inventory) },
+          ]);
+
+          const output = `Found ${result.count} group(s) for inventory ${args.inventory_id}.\n\n${table}`;
+          return {
+            output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
+            metadata: result as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to list groups: ${message}`,
+            metadata: {
+              count: 0,
+              results: [],
+              warning: `Failed to list groups: ${message}`,
+            },
           };
         }
       },
