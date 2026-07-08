@@ -822,5 +822,527 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
         }
       },
     }),
+
+    // ═══════════════════════════════════════════════════════════════
+    // Credential CRUD
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Create a new AWX credential.
+     *
+     * Creates a credential in AWX with the specified name, organization,
+     * and credential type. The organization_id and credential_type_id
+     * must be resolved numeric IDs (not names). Optional inputs can be
+     * provided for the credential (e.g. username, password) but are
+     * NEVER exposed in the tool output.
+     * Delegates to crud.ts for the HTTP dispatch and mapCredential for
+     * the response (which explicitly excludes sensitive inputs).
+     * Returns the created credential detail in the standard mutation envelope.
+     */
+    "awx-create-credential": tool({
+      description: [
+        "Create a new AWX credential with the specified name, organization,",
+        "and credential type. The organization_id and credential_type_id",
+        "must be resolved numeric IDs (not names). Inputs for the credential",
+        "(e.g. username, password) are accepted but NEVER exposed in output.",
+        "Returns the created credential detail in the standard mutation envelope.",
+      ].join(" "),
+      args: {
+        name: z
+          .string().min(1)
+          .describe("Credential name"),
+        organization_id: z
+          .number()
+          .int()
+          .positive()
+          .describe("Resolved organization ID"),
+        credential_type_id: z
+          .number()
+          .int()
+          .positive()
+          .describe("Resolved credential type ID"),
+        description: z
+          .string()
+          .optional()
+          .describe("Credential description"),
+        inputs: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe("Credential inputs (e.g. { username, password }) — never exposed in output"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {
+            name: args.name,
+            organization: args.organization_id,
+            credential_type: args.credential_type_id,
+          };
+          if (args.description !== undefined) body.description = args.description;
+          if (args.inputs !== undefined) body.inputs = args.inputs;
+
+          const result = await executeCrud(
+            awxClient,
+            "credential",
+            "create",
+            undefined,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          const credentialName = mutationOutput.data
+            ? (mutationOutput.data as Record<string, unknown>).name as string ?? ""
+            : "";
+          return {
+            output: `Credential ${result.id} created successfully. Name: ${credentialName}`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to create credential: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "created",
+              resource_type: "credential",
+              id: 0,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Update an existing AWX credential.
+     *
+     * Modifies an existing credential by PATCHing the specified fields.
+     * Only provided fields are updated (partial update semantics).
+     * Requires the credential ID. Supports updating name, organization_id,
+     * credential_type_id, description, and inputs. Sensitive inputs are
+     * NEVER exposed in the tool output.
+     * Delegates to crud.ts for the HTTP dispatch and mapCredential for the response.
+     * Returns the updated credential detail in the standard mutation envelope.
+     */
+    "awx-update-credential": tool({
+      description: [
+        "Update an existing AWX credential by ID. Partial update — only",
+        "provided fields are modified. Supports updating name,",
+        "organization_id, credential_type_id, description, and inputs.",
+        "Sensitive inputs are NEVER exposed in the tool output.",
+        "Returns the updated credential detail in the standard mutation envelope.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the credential to update."),
+        name: z
+          .string()
+          .optional()
+          .describe("New credential name"),
+        organization_id: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("Resolved organization ID"),
+        credential_type_id: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("Resolved credential type ID"),
+        description: z
+          .string()
+          .optional()
+          .describe("Credential description"),
+        inputs: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe("Credential inputs — never exposed in output"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {};
+          if (args.name !== undefined) body.name = args.name;
+          if (args.organization_id !== undefined) body.organization = args.organization_id;
+          if (args.credential_type_id !== undefined) body.credential_type = args.credential_type_id;
+          if (args.description !== undefined) body.description = args.description;
+          if (args.inputs !== undefined) body.inputs = args.inputs;
+
+          const result = await executeCrud(
+            awxClient,
+            "credential",
+            "update",
+            args.id,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Credential ${result.id} updated successfully.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to update credential ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "updated",
+              resource_type: "credential",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Delete an AWX credential.
+     *
+     * Deletes a credential by ID from AWX. This action is irreversible.
+     * The credential must exist and the user must have sufficient permissions.
+     * Delegates to crud.ts for the HTTP dispatch.
+     * Returns the standard mutation envelope with data: null on success.
+     */
+    "awx-delete-credential": tool({
+      description: [
+        "Delete an AWX credential by ID. This action is irreversible.",
+        "The credential must exist and the user must have sufficient",
+        "permissions to delete it. Returns the standard mutation",
+        "envelope with data: null on success.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the AWX credential to delete."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await executeCrud(
+            awxClient,
+            "credential",
+            "delete",
+            args.id,
+            undefined,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Credential ${result.id} deleted successfully.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to delete credential ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "deleted",
+              resource_type: "credential",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    // ═══════════════════════════════════════════════════════════════
+    // Organization CRUD
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Create a new AWX organization.
+     *
+     * Creates an organization in AWX with the specified name.
+     * Optionally accepts a description.
+     * Delegates to crud.ts for the HTTP dispatch and mapOrganization for the response.
+     * Returns the created organization detail in the standard mutation envelope.
+     */
+    "awx-create-organization": tool({
+      description: [
+        "Create a new AWX organization with the specified name.",
+        "Optionally accepts a description.",
+        "Returns the created organization detail in the standard mutation envelope.",
+      ].join(" "),
+      args: {
+        name: z
+          .string().min(1)
+          .describe("Organization name"),
+        description: z
+          .string()
+          .optional()
+          .describe("Organization description"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {
+            name: args.name,
+          };
+          if (args.description !== undefined) body.description = args.description;
+
+          const result = await executeCrud(
+            awxClient,
+            "organization",
+            "create",
+            undefined,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          const orgName = mutationOutput.data
+            ? (mutationOutput.data as Record<string, unknown>).name as string ?? ""
+            : "";
+          return {
+            output: `Organization ${result.id} created successfully. Name: ${orgName}`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to create organization: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "created",
+              resource_type: "organization",
+              id: 0,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Update an existing AWX organization.
+     *
+     * Modifies an existing organization by PATCHing the specified fields.
+     * Only provided fields are updated (partial update semantics).
+     * Supports updating name and description.
+     * Delegates to crud.ts for the HTTP dispatch and mapOrganization for the response.
+     * Returns the updated organization detail in the standard mutation envelope.
+     */
+    "awx-update-organization": tool({
+      description: [
+        "Update an existing AWX organization by ID. Partial update — only",
+        "provided fields are modified. Supports updating name and description.",
+        "Returns the updated organization detail in the standard mutation envelope.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the organization to update."),
+        name: z
+          .string()
+          .optional()
+          .describe("New organization name"),
+        description: z
+          .string()
+          .optional()
+          .describe("New organization description"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {};
+          if (args.name !== undefined) body.name = args.name;
+          if (args.description !== undefined) body.description = args.description;
+
+          const result = await executeCrud(
+            awxClient,
+            "organization",
+            "update",
+            args.id,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Organization ${result.id} updated successfully.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to update organization ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "updated",
+              resource_type: "organization",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Delete an AWX organization.
+     *
+     * Deletes an organization by ID from AWX. This action is irreversible.
+     * The organization must exist and the user must have sufficient permissions.
+     * Delegates to crud.ts for the HTTP dispatch.
+     * Returns the standard mutation envelope with data: null on success.
+     */
+    "awx-delete-organization": tool({
+      description: [
+        "Delete an AWX organization by ID. This action is irreversible.",
+        "The organization must exist and the user must have sufficient",
+        "permissions to delete it. Returns the standard mutation",
+        "envelope with data: null on success.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the AWX organization to delete."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await executeCrud(
+            awxClient,
+            "organization",
+            "delete",
+            args.id,
+            undefined,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Organization ${result.id} deleted successfully.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to delete organization ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "deleted",
+              resource_type: "organization",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
   };
 }
