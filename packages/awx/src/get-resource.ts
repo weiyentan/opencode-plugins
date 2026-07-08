@@ -26,20 +26,24 @@ import type { AwxClient } from "./client.js";
 import { mapTemplate } from "./mappers/map-template.js";
 import { mapProject } from "./mappers/map-project.js";
 import { mapInventory } from "./mappers/map-inventory.js";
+import { mapCredential } from "./mappers/map-credential.js";
+import { mapOrganization } from "./mappers/map-organization.js";
 import type { TemplateDetailOutput } from "./contracts/template-detail.js";
 import type { ProjectDetailOutput } from "./contracts/project-detail.js";
 import type { InventoryDetailOutput } from "./contracts/inventory-detail.js";
+import type { CredentialDetailOutput } from "./contracts/credential-detail.js";
+import type { OrganizationDetailOutput } from "./contracts/organization-detail.js";
 
 /**
  * Union of all supported resource detail output types.
  * Extend this when adding new resource types.
  */
-export type ResourceDetailOutput = TemplateDetailOutput | ProjectDetailOutput | InventoryDetailOutput;
+export type ResourceDetailOutput = TemplateDetailOutput | ProjectDetailOutput | InventoryDetailOutput | CredentialDetailOutput | OrganizationDetailOutput;
 
 /**
  * Supported resource type keys (used by the tool args Zod schema).
  */
-export type ResourceType = "template" | "project" | "inventory";
+export type ResourceType = "template" | "project" | "inventory" | "credential" | "organization";
 
 /**
  * Entry in the resource registry.
@@ -70,6 +74,14 @@ const RESOURCE_REGISTRY: Record<ResourceType, ResourceEntry> = {
   inventory: {
     path: "/api/v2/inventories/{id}/",
     mapper: mapInventory,
+  },
+  credential: {
+    path: "/api/v2/credentials/{id}/",
+    mapper: mapCredential,
+  },
+  organization: {
+    path: "/api/v2/organizations/{id}/",
+    mapper: mapOrganization,
   },
 };
 

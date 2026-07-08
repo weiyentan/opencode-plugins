@@ -123,6 +123,43 @@ describe("AWX Plugin Index", () => {
       expect(typeof hooks.tool!["awx-debug-env"]!.description).toBe("string");
       expect(hooks.tool!["awx-debug-env"]!.args).toBeDefined();
     });
+
+    it('hooks.tool contains "awx-list-workflow-templates" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-list-workflow-templates"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-list-workflow-templates"]!.description).toBe("string");
+    });
+
+    it('hooks.tool contains "awx-launch-workflow" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-launch-workflow"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-launch-workflow"]!.description).toBe("string");
+    });
+
+    it('hooks.tool contains "awx-list-instance-groups" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-list-instance-groups"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-list-instance-groups"]!.description).toBe("string");
+      expect(hooks.tool!["awx-list-instance-groups"]!.args).toBeDefined();
+    });
+
+    it('hooks.tool contains "awx-list-execution-environments" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-list-execution-environments"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-list-execution-environments"]!.description).toBe("string");
+      expect(hooks.tool!["awx-list-execution-environments"]!.args).toBeDefined();
+    });
+
+    it('hooks.tool contains "awx-ping" tool', async () => {
+      const hooks = await createHooks(mockPluginInput());
+
+      expect(hooks.tool!["awx-ping"]).toBeDefined();
+      expect(typeof hooks.tool!["awx-ping"]!.description).toBe("string");
+    });
   });
 
   /* ══════════════════════════════════════════════════════════════════
@@ -490,13 +527,7 @@ describe("AWX Plugin Index", () => {
 
       expect(result).toEqual({
         output: "Failed to fetch jobs: API connection refused",
-        metadata: {
-          schema_version: "1.0",
-          total_jobs: 0,
-          results: [],
-          pages_fetched: 0,
-          warning: "Failed to fetch jobs: API connection refused",
-        },
+        metadata: { error: "API connection refused" },
       });
 
       listJobsSpy.mockRestore();
