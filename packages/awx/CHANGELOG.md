@@ -4,6 +4,23 @@ All notable changes to the AWX plugin are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **11 new list tools**: Added `awx-list-schedules`, `awx-list-notification-templates`, `awx-list-labels`, `awx-list-instance-groups`, `awx-list-execution-environments`, `awx-list-templates-by-credential`, `awx-list-users`, `awx-list-hosts`, `awx-list-workflow-templates`, `awx-list-groups`, and `awx-list-teams` — all with pagination, timeout budgeting, page cap enforcement, name sorting, and server-side filtering.
+- **New source modules** (`src/list-*.ts`): 11 dedicated modules for each new list tool, plus `src/list-templates-by-credential.ts`.
+- **`awx-run-command` tool** (`src/run-command.ts`): Launch ad-hoc Ansible commands (`POST /api/v2/ad_hoc_commands/`) with any module.
+- **`awx-launch-workflow` tool** (`src/tools/launch-workflow.ts`): Launch workflow job templates with extra_vars support.
+- **`awx-ping` tool** (`src/ping.ts` + `src/tools/ping.ts`): Health check / connectivity verification via `GET /api/v2/ping/`.
+- **New contracts**: `src/contracts/credential-detail.ts`, `src/contracts/organization-detail.ts`.
+- **New mappers**: `src/mappers/map-credential.ts`, `src/mappers/map-organization.ts`.
+- **Tool factories**: `src/tools/run-command.ts`, `src/tools/launch-workflow.ts`, `src/tools/ping.ts`.
+- **`awx-get-resource` enhanced**: Now supports `type="credential"` and `type="organization"` via new contracts and mappers.
+
+### Changed
+
+- **Tool count**: Expanded from 25 tools to 40 tools across all modules.
+- **Tool-action mapping**: Updated `docs/tool-action-mapping.md` — coverage from ~76% to ~97% (32 of 33 operations covered).
+
 ## [0.6.1] - 2026-07-08
 
 ### Fixed

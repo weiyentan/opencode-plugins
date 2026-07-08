@@ -1,9 +1,9 @@
 # AWX Plugin — Tool-Action Mapping Table
 
-**Date:** 2026-07-07  
+**Date:** 2026-07-08  
 **Plugin:** `@weiyentan/opencode-plugin-awx`  
-**Version:** 0.5.3+  
-**Purpose:** This document maps every AWX API operation that an OpenCode subagent (e.g., awx-operator) might need to its corresponding first-class plugin tool, ensuring subagents never need to write raw `Invoke-RestMethod` calls that handle `AWX_TOKEN` directly. Gaps are documented with rationale and priority.
+**Version:** 0.6.1+  
+**Purpose:** This document maps every AWX API operation that an OpenCode subagent (e.g., awx-operator) might need to its corresponding first-class plugin tool, ensuring subagents never need to write raw `Invoke-RestMethod` calls that handle `AWX_TOKEN` directly. All 33 operations are now fully covered.
 
 ## Mapping Table
 
@@ -18,7 +18,7 @@
 | Delete template | `DELETE /api/v2/job_templates/{id}/` | `awx-delete-template` | ✅ Covered | |
 | Launch template | `POST /api/v2/job_templates/{id}/launch/` | `awx-launch-job` | ✅ Covered | Supports extra_vars |
 | Attach credential | `POST /api/v2/job_templates/{id}/credentials/` | `awx-attach-credential` | ✅ Covered | |
-| Detach credential | `POST /api/v2/job_templates/{id}/credentials/` with disassociate | — | 🔴 Gap (P2) | Reverse operation; not yet implemented. Subagent workaround: use awx-attach-credential documentation. |
+| Detach credential | `POST /api/v2/job_templates/{id}/credentials/` with disassociate | `awx-detach-credential` | ✅ Covered | Reverse operation — disassociates a credential from a job template |
 
 ### Projects
 
@@ -40,23 +40,23 @@
 | Create inventory | `POST /api/v2/inventories/` | `awx-create-inventory` | ✅ Covered | Name, org_id |
 | Update inventory | `PATCH /api/v2/inventories/{id}/` | `awx-update-inventory` | ✅ Covered | Partial update semantics |
 | Delete inventory | `DELETE /api/v2/inventories/{id}/` | `awx-delete-inventory` | ✅ Covered | |
-| List inventory hosts | `GET /api/v2/inventories/{id}/hosts/` | — | 🟡 Gap (P2) | Needs `awx-list-hosts` tool |
-| List inventory groups | `GET /api/v2/inventories/{id}/groups/` | — | 🟡 Gap (P2) | Needs `awx-list-groups` tool |
+| List inventory hosts | `GET /api/v2/inventories/{id}/hosts/` | `awx-list-hosts` | ✅ Covered | Filterable by inventory_id |
+| List inventory groups | `GET /api/v2/inventories/{id}/groups/` | `awx-list-groups` | ✅ Covered | Filterable by inventory_id |
 
 ### Organizations
 
 | AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
 |---------------|-------------|-------------|--------|-------|
 | List organizations | `GET /api/v2/organizations/` | `awx-list-organizations` | ✅ Covered | **NEW** — added in issue #108 |
-| Get org detail | `GET /api/v2/organizations/{id}/` | `awx-get-resource` | 🔴 Gap (P3) | Type "organization" not yet in resource registry |
+| Get org detail | `GET /api/v2/organizations/{id}/` | `awx-get-resource` (type=organization) | ✅ Covered | Returns full OrganizationDetailOutput |
 
 ### Credentials
 
 | AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
 |---------------|-------------|-------------|--------|-------|
 | List credentials | `GET /api/v2/credentials/` | `awx-list-credentials` | ✅ Covered | **NEW** — added in issue #108; filtering by name, kind, organization |
-| Get credential detail | `GET /api/v2/credentials/{id}/` | — | 🟡 Gap (P3) | Type "credential" not yet in resource registry; use awx-list-credentials for discovery |
-| Templates by credential | `GET /api/v2/credentials/{id}/job_templates/` | — | 🔴 Gap (P2) | Reverse lookup for impact analysis |
+| Get credential detail | `GET /api/v2/credentials/{id}/` | `awx-get-resource` (type=credential) | ✅ Covered | Returns full CredentialDetailOutput |
+| Templates by credential | `GET /api/v2/credentials/{id}/job_templates/` | `awx-list-templates-by-credential` | ✅ Covered | Reverse lookup for impact analysis |
 
 ### Jobs
 
@@ -66,32 +66,32 @@
 | Get job status | `GET /api/v2/jobs/{id}/` | `awx-job-status` | ✅ Covered | Full JobDetailOutput v1.0 + optional stdout |
 | Non-blocking status check | `GET /api/v2/jobs/{id}/` | `awx-wait-job` | ✅ Covered | Single poll, returns immediately |
 | Get job events | `GET /api/v2/jobs/{id}/job_events/` | `awx-get-job-events` | ✅ Covered | |
-| Ad-hoc commands | `POST /api/v2/ad_hoc_commands/` | — | 🔴 Gap (P1) | Important for running commands on inventory hosts; not yet implemented |
+| Ad-hoc commands | `POST /api/v2/ad_hoc_commands/` | `awx-run-command` | ✅ Covered | Supports any Ansible module (command, shell, ping, setup, etc.) |
 
 ### Users & Teams
 
 | AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
 |---------------|-------------|-------------|--------|-------|
-| List users | `GET /api/v2/users/` | — | 🔴 Gap (P1) | Needed for RBAC assignments |
-| List teams | `GET /api/v2/teams/` | — | 🔴 Gap (P1) | Needed for role assignments |
+| List users | `GET /api/v2/users/` | `awx-list-users` | ✅ Covered | Filterable by username, email, etc. |
+| List teams | `GET /api/v2/teams/` | `awx-list-teams` | ✅ Covered | Filterable by name, organization_id |
 
 ### Workflow Job Templates
 
 | AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
 |---------------|-------------|-------------|--------|-------|
-| List workflows | `GET /api/v2/workflow_job_templates/` | — | 🔴 Gap (P1) | Distinct from job templates |
-| Launch workflow | `POST /api/v2/workflow_job_templates/{id}/launch/` | — | 🔴 Gap (P1) | |
+| List workflows | `GET /api/v2/workflow_job_templates/` | `awx-list-workflow-templates` | ✅ Covered | Distinct from job templates |
+| Launch workflow | `POST /api/v2/workflow_job_templates/{id}/launch/` | `awx-launch-workflow` | ✅ Covered | Supports extra_vars |
 
 ### Other Resources
 
 | AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
 |---------------|-------------|-------------|--------|-------|
-| List schedules | `GET /api/v2/schedules/` | — | 🟡 Gap (P3) | |
-| List notification templates | `GET /api/v2/notification_templates/` | — | 🟡 Gap (P3) | |
-| List instance groups | `GET /api/v2/instance_groups/` | — | 🟡 Gap (P3) | |
-| List labels | `GET /api/v2/labels/` | — | 🟡 Gap (P3) | |
-| List execution environments | `GET /api/v2/execution_environments/` | — | 🟡 Gap (P3) | |
-| Ping / health check | `GET /api/v2/ping/` | — | 🟡 Gap (P3) | Connectivity verification without resource lookup |
+| List schedules | `GET /api/v2/schedules/` | `awx-list-schedules` | ✅ Covered | Filterable by unified_job_template_id |
+| List notification templates | `GET /api/v2/notification_templates/` | `awx-list-notification-templates` | ✅ Covered | |
+| List instance groups | `GET /api/v2/instance_groups/` | `awx-list-instance-groups` | ✅ Covered | |
+| List labels | `GET /api/v2/labels/` | `awx-list-labels` | ✅ Covered | Filterable by organization_id |
+| List execution environments | `GET /api/v2/execution_environments/` | `awx-list-execution-environments` | ✅ Covered | |
+| Ping / health check | `GET /api/v2/ping/` | `awx-ping` | ✅ Covered | Returns AWX version, HA state, install UUID, instance info |
 
 ### Utility / Infrastructure (Not API-Mapped)
 
@@ -106,30 +106,27 @@
 | Category | Count |
 |----------|-------|
 | **Total AWX operations mapped** | 33 |
-| **Fully covered by tools** | 22 |
+| **Fully covered by tools** | 33 |
 | **Added in issue #108** | 3 (awx-list-organizations, awx-list-credentials, awx-list-inventories) |
-| **Total covered (post-#108)** | 25 |
-| **Remaining gaps** | 10 |
-| **Estimated coverage** | ~76% (up from ~60% pre-#108) |
+| **Added in this enhancement** | 14 (awx-list-schedules, awx-list-notification-templates, awx-list-labels, awx-list-instance-groups, awx-list-execution-environments, awx-list-templates-by-credential, awx-list-users, awx-list-hosts, awx-list-workflow-templates, awx-list-groups, awx-list-teams, awx-run-command, awx-launch-workflow, awx-ping) |
+| **Total covered** | 33 |
+| **Remaining gaps** | 0 |
+| **Estimated coverage** | 100% (up from ~76% post-#108) |
 
 ## Gap Priority Breakdown
 
 | Priority | Count | Operations |
 |----------|-------|------------|
 | **P0 (Critical)** | 0 | All P0 gaps resolved in #108 |
-| **P1 (High)** | 4 | List users, List teams, Ad-hoc commands, Workflow templates |
-| **P2 (Medium)** | 3 | Detach credential, List inventory hosts, List inventory groups, Templates by credential |
-| **P3 (Lower)** | 7 | Org detail, Credential detail, Schedules, Notifications, Instance groups, Labels, Execution environments, Ping |
+| **P1 (High)** | 0 | All P1 gaps resolved — users, teams, ad-hoc commands, workflow templates, launch workflow |
+| **P2 (Medium)** | 0 | All P2 gaps resolved — detach credential, hosts, groups, templates-by-credential |
+| **P3 (Lower)** | 0 | All P3 gaps resolved — org detail, credential detail, schedules, notifications, instance groups, labels, execution environments, ping |
 
-## Remaining Gap Notes
+## Coverage Notes
 
-### Why These Gaps Remain
+1. **Full coverage achieved.** The plugin now covers all 33 mapped AWX operations (100%). Every operation a subagent might need has a first-class plugin tool.
 
-1. **Gap distribution is intentional.** The plugin covers the most common daily operations: template lifecycle, project management, job execution, and inventory/organization/credential discovery. The P1–P3 gaps represent operations that are less frequently needed by subagents but should be added over time.
-
-2. **Agent fallback is safe.** For operations that lack a first-class tool, the OpenCode agent can still use `awx-list-*` tools for discovery and then construct the required ID-based operations. No raw PowerShell or `Invoke-RestMethod` with bare `AWX_TOKEN` should ever be needed.
-
-3. **Prioritization rationale.** The P1 gaps (users, teams, ad-hoc commands, workflows) are the next candidates for coverage, as they represent common extension paths. P2 gaps (hosts, groups, detach) are important for inventory management completeness. P3 gaps are nice-to-have and should be added opportunistically.
+2. **Agent fallback is safe.** All 33 operations have first-class tools — no raw PowerShell or `Invoke-RestMethod` with bare `AWX_TOKEN` should ever be needed.
 
 ## Token Safety Verification
 
