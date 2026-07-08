@@ -500,6 +500,144 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
     });
   });
 
+
+  describe("awx-list-hosts", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        // Discover an inventory ID via awx-list-inventories
+        const invResult = await hooks.tool!["awx-list-inventories"]!.execute(
+          {},
+          mockToolContext(),
+        );
+        const invMeta = getMetadata(invResult);
+        const inventories = invMeta.results as Array<{ id: number }> | undefined;
+        if (!inventories || inventories.length === 0) {
+          // No inventory to test with; skip gracefully
+          return;
+        }
+        const inventoryId = inventories[0].id;
+
+        const result = await hooks.tool!["awx-list-hosts"]!.execute(
+          { inventory_id: inventoryId },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("description");
+            expect(item).toHaveProperty("inventory");
+            expect(item.inventory).toBe(inventoryId);
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("returns error metadata with invalid inventory_id", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-hosts"]!.execute(
+          { inventory_id: 99999999 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("warning");
+        expect((metadata.warning as string)).toContain("Failed to");
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
+
+  describe("awx-list-groups", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        // Discover an inventory ID via awx-list-inventories
+        const invResult = await hooks.tool!["awx-list-inventories"]!.execute(
+          {},
+          mockToolContext(),
+        );
+        const invMeta = getMetadata(invResult);
+        const inventories = invMeta.results as Array<{ id: number }> | undefined;
+        if (!inventories || inventories.length === 0) {
+          // No inventory to test with; skip gracefully
+          return;
+        }
+        const inventoryId = inventories[0].id;
+
+        const result = await hooks.tool!["awx-list-groups"]!.execute(
+          { inventory_id: inventoryId },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("description");
+            expect(item).toHaveProperty("inventory");
+            expect(item.inventory).toBe(inventoryId);
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("returns error metadata with invalid inventory_id", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-groups"]!.execute(
+          { inventory_id: 99999999 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("warning");
+        expect((metadata.warning as string)).toContain("Failed to");
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
   describe("awx-list-users", () => {
     it("returns structured response with count and results", async () => {
       const hooks = await createPlugin(ENV_AWX_TOKEN);
