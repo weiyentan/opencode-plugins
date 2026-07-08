@@ -1,10 +1,14 @@
 {
   "name": "@weiyentan/opencode-plugin-awx",
-"version": "0.6.1",
+  "version": "0.7.0-experimental.0",
   "private": false,
   "description": "OpenCode plugin for AWX / Ansible Automation Platform — native tool access to job templates, projects, and job lifecycle operations.",
   "type": "module",
-  "files": ["dist/**", "README.md", "LICENSE"],
+  "files": [
+    "dist/**",
+    "README.md",
+    "LICENSE"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
