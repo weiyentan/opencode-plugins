@@ -15,6 +15,8 @@ import type { AwxClient } from "../src/client.js";
 import type { TemplateDetailOutput } from "../src/contracts/template-detail.js";
 import type { ProjectDetailOutput } from "../src/contracts/project-detail.js";
 import type { InventoryDetailOutput } from "../src/contracts/inventory-detail.js";
+import type { CredentialDetailOutput } from "../src/contracts/credential-detail.js";
+import type { OrganizationDetailOutput } from "../src/contracts/organization-detail.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -91,6 +93,43 @@ const MOCK_RAW_PROJECT: Record<string, unknown> = {
     created_by: { id: 1, username: "admin" },
     credential: { id: 10, name: "GitLab PAT - Production" },
     default_environment: { id: 20, name: "Ansible Engine 2.9" },
+  },
+};
+
+/** Raw AWX credential API response */
+const MOCK_RAW_CREDENTIAL: Record<string, unknown> = {
+  id: 15,
+  name: "Production SSH Key",
+  description: "SSH key for production server access",
+  credential_type: 1,
+  kind: "ssh",
+  managed: false,
+  organization: 1,
+  inputs: {
+    username: "deploy",
+    password: "$encrypted$",
+  },
+  summary_fields: {
+    credential_type: { id: 1, name: "Machine" },
+    organization: { id: 1, name: "Default" },
+  },
+};
+
+/** Raw AWX organization API response */
+const MOCK_RAW_ORGANIZATION: Record<string, unknown> = {
+  id: 1,
+  name: "Default",
+  description: "Default organization",
+  created: "2025-01-01T00:00:00Z",
+  modified: "2025-06-15T12:00:00Z",
+  summary_fields: {
+    related: {
+      users: { count: 3, results: [] },
+      teams: { count: 2, results: [] },
+      job_templates: { count: 5, results: [] },
+      projects: { count: 3, results: [] },
+      inventories: { count: 2, results: [] },
+    },
   },
 };
 
@@ -286,6 +325,78 @@ describe("getResource()", () => {
     expect(client.request).toHaveBeenCalledWith(
       "awx-get-resource",
       "/api/v2/inventories/12/",
+      undefined,
+      undefined,
+    );
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 8: Successful credential resource fetch
+     ══════════════════════════════════════════════════════════════ */
+
+  it("fetches and maps a credential resource via the registry", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_CREDENTIAL);
+
+    const result = (await getResource(client, "credential", 15)) as CredentialDetailOutput;
+
+    expect(result.schema_version).toBe("1.0");
+    expect(result.resource_type).toBe("credential");
+    expect(result.id).toBe(15);
+    expect(result.data.name).toBe("Production SSH Key");
+    expect(result.data.credential_type_name).toBe("Machine");
+    expect(result.data.organization_name).toBe("Default");
+    expect(result.data).not.toHaveProperty("inputs");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 9: Credential registry endpoint mapping
+     ══════════════════════════════════════════════════════════════ */
+
+  it("calls the correct API endpoint for the credential resource", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_CREDENTIAL);
+
+    await getResource(client, "credential", 15);
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-get-resource",
+      "/api/v2/credentials/15/",
+      undefined,
+      undefined,
+    );
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 10: Successful organization resource fetch
+     ══════════════════════════════════════════════════════════════ */
+
+  it("fetches and maps an organization resource via the registry", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_ORGANIZATION);
+
+    const result = (await getResource(client, "organization", 1)) as OrganizationDetailOutput;
+
+    expect(result.schema_version).toBe("1.0");
+    expect(result.resource_type).toBe("organization");
+    expect(result.id).toBe(1);
+    expect(result.data.name).toBe("Default");
+    expect(result.data.related.users).toBe(3);
+    expect(result.data.related.teams).toBe(2);
+    expect(result.data.related.job_templates).toBe(5);
+    expect(result.data.related.projects).toBe(3);
+    expect(result.data.related.inventories).toBe(2);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 11: Organization registry endpoint mapping
+     ══════════════════════════════════════════════════════════════ */
+
+  it("calls the correct API endpoint for the organization resource", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_ORGANIZATION);
+
+    await getResource(client, "organization", 1);
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-get-resource",
+      "/api/v2/organizations/1/",
       undefined,
       undefined,
     );

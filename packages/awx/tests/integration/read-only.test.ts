@@ -365,6 +365,64 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
     });
   });
 
+  describe("awx-get-resource", () => {
+    it("returns structured response for credential resource", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-get-resource"]!.execute(
+          { type: "credential", id: 1 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata.schema_version).toBe("1.0");
+        expect(metadata.resource_type).toBe("credential");
+        expect(typeof metadata.id).toBe("number");
+        expect(metadata.data).toBeDefined();
+
+        const data = metadata.data as Record<string, unknown>;
+        expect(typeof data.name).toBe("string");
+        expect(typeof data.credential_type_id).toBe("number");
+        // Verify sensitive inputs are not exposed
+        expect(data.inputs).toBeUndefined();
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("returns structured response for organization resource", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-get-resource"]!.execute(
+          { type: "organization", id: 1 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata.schema_version).toBe("1.0");
+        expect(metadata.resource_type).toBe("organization");
+        expect(typeof metadata.id).toBe("number");
+        expect(metadata.data).toBeDefined();
+
+        const data = metadata.data as Record<string, unknown>;
+        expect(typeof data.name).toBe("string");
+        expect(data.related).toBeDefined();
+        const related = data.related as Record<string, number>;
+        expect(typeof related.users).toBe("number");
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
   describe("awx-list-jobs", () => {
     it("returns structured response with count and results", async () => {
       const hooks = await createPlugin(ENV_AWX_TOKEN);
