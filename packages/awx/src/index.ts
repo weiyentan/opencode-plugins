@@ -43,6 +43,7 @@ import { createListTools } from "./tools/list.js";
 import { createJobLifecycleTools } from "./tools/job-lifecycle.js";
 import { createCrudTools } from "./tools/crud.js";
 import { createRunCommandTool } from "./tools/run-command.js";
+import { createLaunchWorkflowTool } from "./tools/launch-workflow.js";
 
 /**
  * Plugin server function — the single entry point.
@@ -189,6 +190,7 @@ async function server(input: PluginInput): Promise<Hooks> {
       "awx-attach-credential": createAttachCredentialTool(getAwxClient),
       "awx-detach-credential": createDetachCredentialTool(getAwxClient),
       "awx-run-command": createRunCommandTool(getAwxClient),
+      ...createLaunchWorkflowTool(getAwxClient),
     },
   };
 }
