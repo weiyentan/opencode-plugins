@@ -18,6 +18,8 @@ import { buildPipeTable } from "../utils.js";
 import { listOrganizations, type Organization } from "../list-organizations.js";
 import { listCredentials, type Credential } from "../list-credentials.js";
 import { listInventories, type Inventory } from "../list-inventories.js";
+import { listExecutionEnvironments, type ExecutionEnvironment } from "../list-execution-environments.js";
+import { listInstanceGroups, type InstanceGroup } from "../list-instance-groups.js";
           const result = await listLabels(awxClient, {
           const result = await listNotificationTemplates(awxClient, {
           const result = await listSchedules(awxClient, {
@@ -698,6 +700,37 @@ export function createListTools(
      * Results are sorted by name. Supports page size override and
      * returns a warning when the page cap limits results.
      */
+
+
+    /**
+     * List AWX instance groups with pagination.
+     *
+     * Fetches instance groups from the AWX /api/v2/instance_groups/ endpoint,
+     * consolidating results across multiple pages up to a configurable
+     * page cap. Results are sorted alphabetically by name.
+     *
+     * Pagination behavior:
+     * - Default: up to 5 pages × 50 items/page = 250 items max
+     * - If more pages exist beyond the cap, returns a warning field
+     * - Per-page timeout: total tool timeout / (maxPages + 1)
+     */
+    "awx-list-instance-groups": tool({
+
+
+    /**
+     * List AWX execution environments with pagination.
+     *
+     * Fetches execution environments from the AWX /api/v2/execution_environments/
+     * endpoint, consolidating results across multiple pages up to a configurable
+     * page cap. Results are sorted alphabetically by name.
+     *
+     * Pagination behavior:
+     * - Default: up to 5 pages × 50 items/page = 250 items max
+     * - If more pages exist beyond the cap, returns a warning field
+     * - Per-page timeout: total tool timeout / (maxPages + 1)
+     */
+    "awx-list-execution-environments": tool({
+
     "awx-list-templates-by-credential": tool({
       description: [
         "Reverse-lookup job templates by credential ID.",
