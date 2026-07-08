@@ -18,6 +18,9 @@ import { buildPipeTable } from "../utils.js";
 import { listOrganizations, type Organization } from "../list-organizations.js";
 import { listCredentials, type Credential } from "../list-credentials.js";
 import { listInventories, type Inventory } from "../list-inventories.js";
+import { listSchedules, type Schedule } from "../list-schedules.js";
+import { listNotificationTemplates, type NotificationTemplate } from "../list-notification-templates.js";
+import { listLabels, type Label } from "../list-labels.js";
 
 export function createListTools(
   getAwxClient: () => Promise<AwxClient>,
@@ -514,6 +517,295 @@ export function createListTools(
           const message = err instanceof Error ? err.message : String(err);
           return {
             output: `Failed to list credentials: ${message}`,
+            metadata: { error: message },
+          };
+        }
+      },
+    }),
+
+    /**
+     * List AWX schedules with pagination.
+     *
+     * Fetches schedules from the AWX /api/v2/schedules/ endpoint,
+     * consolidating results across multiple pages up to a configurable
+     * page cap. Results are sorted alphabetically by name. Supports
+     * server-side filtering and optional unified_job_template_id filter.
+     *
+     * Pagination behavior:
+     * - Default: up to 5 pages × 50 items/page = 250 items max
+     * - If more pages exist beyond the cap, returns a warning field
+     * - Per-page timeout: total tool timeout / (maxPages + 1)
+     */
+    "awx-list-schedules": tool({
+      description: [
+        "List AWX schedules with pagination. Fetches schedules from",
+        "the AWX /api/v2/schedules/ endpoint, consolidating results",
+        "across multiple pages up to a configurable page cap.",
+        "Results are sorted alphabetically by name. Supports",
+        "server-side filtering and optional unified_job_template_id filter.",
+      ].join(" "),
+      args: {
+        maxPages: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Maximum pages to fetch (default: 5, max: 100)."),
+        pageSize: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Items per page (default: 50, max: 200)."),
+        timeout: z
+          .number()
+          .int()
+          .min(1_000)
+          .optional()
+          .describe("Total tool timeout in milliseconds (default: 30000)."),
+        filter: z
+          .array(z.string())
+          .optional()
+          .describe("Filter schedules by field (e.g., --filter name__icontains=daily)"),
+        unified_job_template_id: z
+          .number()
+          .int()
+          .optional()
+          .describe("Filter by unified job template ID (server-side: unified_job_template__id=X)"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await listSchedules(awxClient, {
+            maxPages: args.maxPages,
+            pageSize: args.pageSize,
+            timeout: args.timeout,
+            abortSignal: context.abort,
+            filters: args.filter,
+            unified_job_template_id: args.unified_job_template_id,
+          });
+
+          const table = buildPipeTable(result.results, [
+            { header: "ID", value: (s: Schedule) => String(s.id) },
+            { header: "Name", value: (s: Schedule) => s.name },
+            { header: "Description", value: (s: Schedule) => s.description },
+            { header: "Template ID", value: (s: Schedule) => String(s.unified_job_template) },
+            { header: "Template", value: (s: Schedule) => s.summary_fields?.unified_job_template?.name ?? "" },
+          ]);
+
+          const output = `Found ${result.count} schedule(s).\n\n${table}`;
+          return {
+            output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
+            metadata: result as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to list schedules: ${message}`,
+            metadata: { error: message },
+          };
+        }
+      },
+    }),
+
+    /**
+     * List AWX notification templates with pagination.
+     *
+     * Fetches notification templates from the AWX /api/v2/notification_templates/ endpoint,
+     * consolidating results across multiple pages up to a configurable
+     * page cap. Results are sorted alphabetically by name. Supports
+     * server-side filtering.
+     *
+     * Pagination behavior:
+     * - Default: up to 5 pages × 50 items/page = 250 items max
+     * - If more pages exist beyond the cap, returns a warning field
+     * - Per-page timeout: total tool timeout / (maxPages + 1)
+     */
+    "awx-list-notification-templates": tool({
+      description: [
+        "List AWX notification templates with pagination. Fetches",
+        "notification templates from the AWX",
+        "/api/v2/notification_templates/ endpoint, consolidating",
+        "results across multiple pages up to a configurable page cap.",
+        "Results are sorted alphabetically by name. Supports",
+        "server-side filtering.",
+      ].join(" "),
+      args: {
+        maxPages: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Maximum pages to fetch (default: 5, max: 100)."),
+        pageSize: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Items per page (default: 50, max: 200)."),
+        timeout: z
+          .number()
+          .int()
+          .min(1_000)
+          .optional()
+          .describe("Total tool timeout in milliseconds (default: 30000)."),
+        filter: z
+          .array(z.string())
+          .optional()
+          .describe("Filter notification templates by field (e.g., --filter name__icontains=slack)"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await listNotificationTemplates(awxClient, {
+            maxPages: args.maxPages,
+            pageSize: args.pageSize,
+            timeout: args.timeout,
+            abortSignal: context.abort,
+            filters: args.filter,
+          });
+
+          const table = buildPipeTable(result.results, [
+            { header: "ID", value: (n: NotificationTemplate) => String(n.id) },
+            { header: "Name", value: (n: NotificationTemplate) => n.name },
+            { header: "Description", value: (n: NotificationTemplate) => n.description },
+            { header: "Type", value: (n: NotificationTemplate) => n.notification_type },
+            { header: "Org", value: (n: NotificationTemplate) => n.summary_fields?.organization?.name ?? "" },
+          ]);
+
+          const output = `Found ${result.count} notification template(s).\n\n${table}`;
+          return {
+            output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
+            metadata: result as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to list notification templates: ${message}`,
+            metadata: { error: message },
+          };
+        }
+      },
+    }),
+
+    /**
+     * List AWX labels with pagination.
+     *
+     * Fetches labels from the AWX /api/v2/labels/ endpoint,
+     * consolidating results across multiple pages up to a configurable
+     * page cap. Results are sorted alphabetically by name. Supports
+     * server-side filtering and optional organization_id filter.
+     *
+     * Pagination behavior:
+     * - Default: up to 5 pages × 50 items/page = 250 items max
+     * - If more pages exist beyond the cap, returns a warning field
+     * - Per-page timeout: total tool timeout / (maxPages + 1)
+     */
+    "awx-list-labels": tool({
+      description: [
+        "List AWX labels with pagination. Fetches labels from",
+        "the AWX /api/v2/labels/ endpoint, consolidating results",
+        "across multiple pages up to a configurable page cap.",
+        "Results are sorted alphabetically by name. Supports",
+        "server-side filtering and optional organization_id filter.",
+      ].join(" "),
+      args: {
+        maxPages: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe("Maximum pages to fetch (default: 5, max: 100)."),
+        pageSize: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe("Items per page (default: 50, max: 200)."),
+        timeout: z
+          .number()
+          .int()
+          .min(1_000)
+          .optional()
+          .describe("Total tool timeout in milliseconds (default: 30000)."),
+        filter: z
+          .array(z.string())
+          .optional()
+          .describe("Filter labels by field (e.g., --filter name__icontains=prod)"),
+        organization_id: z
+          .number()
+          .int()
+          .optional()
+          .describe("Filter by organization ID (server-side: organization__id=X)"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await listLabels(awxClient, {
+            maxPages: args.maxPages,
+            pageSize: args.pageSize,
+            timeout: args.timeout,
+            abortSignal: context.abort,
+            filters: args.filter,
+            organization_id: args.organization_id,
+          });
+
+          const table = buildPipeTable(result.results, [
+            { header: "ID", value: (l: Label) => String(l.id) },
+            { header: "Name", value: (l: Label) => l.name },
+            { header: "Description", value: (l: Label) => l.description },
+            { header: "Org ID", value: (l: Label) => String(l.organization) },
+            { header: "Org", value: (l: Label) => l.summary_fields?.organization?.name ?? "" },
+          ]);
+
+          const output = `Found ${result.count} label(s).\n\n${table}`;
+          return {
+            output: result.warning ? `Warning: ${result.warning}\n\n${output}` : output,
+            metadata: result as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to list labels: ${message}`,
             metadata: { error: message },
           };
         }
