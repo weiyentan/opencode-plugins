@@ -18,6 +18,12 @@ import { buildPipeTable } from "../utils.js";
 import { listOrganizations, type Organization } from "../list-organizations.js";
 import { listCredentials, type Credential } from "../list-credentials.js";
 import { listInventories, type Inventory } from "../list-inventories.js";
+          const result = await listLabels(awxClient, {
+          const result = await listNotificationTemplates(awxClient, {
+          const result = await listSchedules(awxClient, {
+import { listLabels, type Label } from "../list-labels.js";
+import { listNotificationTemplates, type NotificationTemplate } from "../list-notification-templates.js";
+import { listSchedules, type Schedule } from "../list-schedules.js";
 import { listTemplatesByCredential } from "../list-templates-by-credential.js";
 import { listUsers, type User } from "../list-users.js";
 import { listTeams, type Team } from "../list-teams.js";
@@ -538,6 +544,55 @@ export function createListTools(
      * - If more pages exist beyond the cap, returns a warning field
      * - Per-page timeout: total tool timeout / (maxPages + 1)
      */
+
+
+    /**
+     * List AWX schedules with pagination.
+     *
+     * Fetches schedules from the AWX /api/v2/schedules/ endpoint,
+     * consolidating results across multiple pages up to a configurable
+     * page cap. Results are sorted alphabetically by name. Supports
+     * server-side filtering and optional unified_job_template_id filter.
+     *
+     * Pagination behavior:
+     * - Default: up to 5 pages × 50 items/page = 250 items max
+     * - If more pages exist beyond the cap, returns a warning field
+     * - Per-page timeout: total tool timeout / (maxPages + 1)
+     */
+    "awx-list-schedules": tool({
+
+
+    /**
+     * List AWX notification templates with pagination.
+     *
+     * Fetches notification templates from the AWX /api/v2/notification_templates/ endpoint,
+     * consolidating results across multiple pages up to a configurable
+     * page cap. Results are sorted alphabetically by name. Supports
+     * server-side filtering.
+     *
+     * Pagination behavior:
+     * - Default: up to 5 pages × 50 items/page = 250 items max
+     * - If more pages exist beyond the cap, returns a warning field
+     * - Per-page timeout: total tool timeout / (maxPages + 1)
+     */
+    "awx-list-notification-templates": tool({
+
+
+    /**
+     * List AWX labels with pagination.
+     *
+     * Fetches labels from the AWX /api/v2/labels/ endpoint,
+     * consolidating results across multiple pages up to a configurable
+     * page cap. Results are sorted alphabetically by name. Supports
+     * server-side filtering and optional organization_id filter.
+     *
+     * Pagination behavior:
+     * - Default: up to 5 pages × 50 items/page = 250 items max
+     * - If more pages exist beyond the cap, returns a warning field
+     * - Per-page timeout: total tool timeout / (maxPages + 1)
+     */
+    "awx-list-labels": tool({
+
     "awx-list-inventories": tool({
       description: [
         "List AWX inventories with pagination. Fetches inventories from",
