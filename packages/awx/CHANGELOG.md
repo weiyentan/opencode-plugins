@@ -4,6 +4,12 @@ All notable changes to the AWX plugin are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-07-08
+
+### Fixed
+
+- **Version bump alignment**: The `v0.6.1` tag was prematurely created before the version in `package.json` was bumped from `0.6.0` to `0.6.1`. The tag has been recreated at the correct commit with the version properly set to `0.6.1`.
+
 ### Added
 
 - **New list tools**: Added `awx-list-organizations`, `awx-list-credentials`, and `awx-list-inventories` tools — paginated listing with timeout budgeting, page cap enforcement, name sorting, and server-side filtering. Closes P0 gaps from tool-gap-audit (list organizations, list credentials, list inventories).
