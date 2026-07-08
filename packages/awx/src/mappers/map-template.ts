@@ -39,12 +39,21 @@ interface RawAwxTemplate {
   last_job_run: string | null;
   status: string;
   next_schedule: unknown;
+  timeout?: number;
+  job_tags?: string;
+  skip_tags?: string;
+  ask_tags_on_launch?: boolean;
+  ask_skip_tags_on_launch?: boolean;
+  extra_vars?: string;
   summary_fields?: {
     inventory?: { id?: number; name?: string } | null;
     project?: { id?: number; name?: string } | null;
     organization?: { id?: number; name?: string } | null;
     labels?: {
       results?: Array<{ id?: number; name?: string }>;
+    } | null;
+    credentials?: {
+      results?: Array<{ id?: number; name?: string; credential_type_id?: number; kind?: string }>;
     } | null;
   };
 }
@@ -86,6 +95,18 @@ export function mapTemplate(raw: unknown): TemplateDetailOutput {
         ? (t.next_schedule as { name?: string }).name ?? null
         : null),
     labels: sf.labels?.results?.map((l) => l.name ?? "").filter(Boolean) ?? [],
+    credentials: sf.credentials?.results?.map((c) => ({
+      id: c.id ?? 0,
+      name: c.name ?? "",
+      credential_type_id: c.credential_type_id ?? 0,
+      kind: c.kind ?? "",
+    })) ?? [],
+    extra_vars: t.extra_vars ?? "",
+    timeout: t.timeout ?? 0,
+    job_tags: t.job_tags ?? "",
+    skip_tags: t.skip_tags ?? "",
+    ask_tags_on_launch: t.ask_tags_on_launch ?? false,
+    ask_skip_tags_on_launch: t.ask_skip_tags_on_launch ?? false,
   };
 
   return {

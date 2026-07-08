@@ -112,15 +112,30 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
       ].join("\n");
     }
     case "template": {
-      const d = result.data;
+      const d = result.data as Record<string, unknown>;
+      const creds = Array.isArray(d.credentials)
+        ? (d.credentials as Array<{ name: string }>)
+        : [];
+      const credSummary =
+        creds.length > 0
+          ? `${creds.length} credential(s): ${creds.map((c) => c.name).join(", ")}`
+          : "(none)";
       return [
         `Template ${d.id}: ${d.name}`,
-        `  Job Type:  ${d.job_type}`,
-        `  Playbook:  ${d.playbook}`,
-        `  Status:    ${d.status}`,
-        `  Inventory: ${d.inventory_name}`,
-        `  Project:   ${d.project_name}`,
-        `  Last Run:  ${d.last_job_run ?? "(never)"}`,
+        `  Description:         ${d.description ?? ""}`,
+        `  Job Type:            ${d.job_type}`,
+        `  Playbook:            ${d.playbook}`,
+        `  Status:              ${d.status}`,
+        `  Inventory:           ${d.inventory_name}`,
+        `  Project:             ${d.project_name}`,
+        `  Credentials:         ${credSummary}`,
+        `  Extra Vars:          ${(d.extra_vars as string) ? ((d.extra_vars as string).length > 60 ? (d.extra_vars as string).slice(0, 60) + "…" : d.extra_vars) : "(none)"}`,
+        `  Timeout:             ${d.timeout != null ? d.timeout : "(default)"}`,
+        `  Job Tags:            ${d.job_tags || "(none)"}`,
+        `  Skip Tags:           ${d.skip_tags || "(none)"}`,
+        `  Ask Tags On Launch:  ${d.ask_tags_on_launch != null ? String(d.ask_tags_on_launch) : "false"}`,
+        `  Ask Skip On Launch:  ${d.ask_skip_tags_on_launch != null ? String(d.ask_skip_tags_on_launch) : "false"}`,
+        `  Last Run:            ${d.last_job_run ?? "(never)"}`,
       ].join("\n");
     }
     case "inventory": {

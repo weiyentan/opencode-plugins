@@ -27,8 +27,6 @@ function loadRawInventoryFixture(): Record<string, unknown> {
 // ─── Test Helpers ─────────────────────────────────────────────
 
 const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
-
-
   id: 7,
   name: "Deploy Web Stack — Production",
   description: "Deploy the web application stack to production servers",
@@ -44,6 +42,12 @@ const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
   last_job_run: "2025-06-15T14:32:00Z",
   status: "successful",
   next_schedule: null,
+  timeout: 300,
+  job_tags: "deploy,healthcheck",
+  skip_tags: "debug",
+  ask_tags_on_launch: true,
+  ask_skip_tags_on_launch: false,
+  extra_vars: "---\naws_region: us-east-1\nenvironment: production\n",
   summary_fields: {
     organization: { id: 1, name: "Default" },
     inventory: { id: 1, name: "Production" },
@@ -53,6 +57,12 @@ const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
         { id: 1, name: "production" },
         { id: 2, name: "web" },
         { id: 3, name: "deploy" },
+      ],
+    },
+    credentials: {
+      results: [
+        { id: 5, name: "Production SSH", credential_type_id: 1, kind: "ssh" },
+        { id: 8, name: "Vault Token", credential_type_id: 4, kind: "vault" },
       ],
     },
   },
@@ -180,15 +190,43 @@ describe("awx-get-resource tool", () => {
     expect((metadata.data as Record<string, unknown>).inventory_name).toBe("Production");
     expect((metadata.data as Record<string, unknown>).project_name).toBe("Web Stack Deploy");
     expect((metadata.data as Record<string, unknown>).labels).toEqual(["production", "web", "deploy"]);
+    expect((metadata.data as Record<string, unknown>).timeout).toBe(300);
+    expect((metadata.data as Record<string, unknown>).job_tags).toBe("deploy,healthcheck");
+    expect((metadata.data as Record<string, unknown>).skip_tags).toBe("debug");
+    expect((metadata.data as Record<string, unknown>).ask_tags_on_launch).toBe(true);
+    expect((metadata.data as Record<string, unknown>).ask_skip_tags_on_launch).toBe(false);
+    expect((metadata.data as Record<string, unknown>).extra_vars).toBe("---\naws_region: us-east-1\nenvironment: production\n");
+    expect((metadata.data as Record<string, unknown>).credentials).toEqual([
+      { id: 5, name: "Production SSH", credential_type_id: 1, kind: "ssh" },
+      { id: 8, name: "Vault Token", credential_type_id: 4, kind: "vault" },
+    ]);
 
     const output = (result as { output: string }).output;
     expect(output).toContain("Template 7: Deploy Web Stack — Production");
-    expect(output).toContain("Job Type:  run");
-    expect(output).toContain("Playbook:  deploy-web-stack.yml");
-    expect(output).toContain("Status:    successful");
-    expect(output).toContain("Inventory: Production");
-    expect(output).toContain("Project:   Web Stack Deploy");
-    expect(output).toContain("Last Run:  2025-06-15T14:32:00Z");
+    expect(output).toContain("Description:");
+    expect(output).toContain("Job Type:");
+    expect(output).toContain("run");
+    expect(output).toContain("deploy-web-stack.yml");
+    expect(output).toContain("successful");
+    expect(output).toContain("Inventory:");
+    expect(output).toContain("Production");
+    expect(output).toContain("Web Stack Deploy");
+    expect(output).toContain("Production SSH");
+    expect(output).toContain("Vault Token");
+    expect(output).toContain("Extra Vars:");
+    expect(output).toContain("aws_region: us-east-1");
+    expect(output).toContain("Timeout:");
+    expect(output).toContain("300");
+    expect(output).toContain("Job Tags:");
+    expect(output).toContain("deploy,healthcheck");
+    expect(output).toContain("Skip Tags:");
+    expect(output).toContain("debug");
+    expect(output).toContain("Ask Tags On Launch:");
+    expect(output).toContain("true");
+    expect(output).toContain("Ask Skip On Launch:");
+    expect(output).toContain("false");
+    expect(output).toContain("Last Run:");
+    expect(output).toContain("2025-06-15T14:32:00Z");
   });
 
   /* ══════════════════════════════════════════════════════════════

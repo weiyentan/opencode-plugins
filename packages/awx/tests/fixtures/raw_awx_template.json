@@ -14,6 +14,12 @@
   "last_job_run": "2025-06-15T14:32:00Z",
   "status": "successful",
   "next_schedule": null,
+  "timeout": 300,
+  "job_tags": "deploy,healthcheck",
+  "skip_tags": "debug",
+  "ask_tags_on_launch": true,
+  "ask_skip_tags_on_launch": false,
+  "extra_vars": "---\naws_region: us-east-1\nenvironment: production\n",
   "summary_fields": {
     "organization": { "id": 1, "name": "Default" },
     "inventory": { "id": 1, "name": "Production" },
@@ -22,6 +28,10 @@
       { "id": 1, "name": "production" },
       { "id": 2, "name": "web" },
       { "id": 3, "name": "deploy" }
+    ]},
+    "credentials": { "results": [
+      { "id": 5, "name": "Production SSH", "credential_type_id": 1, "kind": "ssh" },
+      { "id": 8, "name": "Vault Token", "credential_type_id": 4, "kind": "vault" }
     ]},
     "recent_jobs": [
       { "id": 142, "name": "Deploy Web Stack — Production", "status": "successful", "finished": "2025-06-15T14:33:42.123456Z" }
