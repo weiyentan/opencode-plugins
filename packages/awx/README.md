@@ -27,10 +27,11 @@ The AWX plugin delivers these modules:
 | **Tool: get-resource** | `src/tools/get-resource.ts` | `awx-get-resource` tool factory |
 | **Tool: sync-project** | `src/tools/sync-project.ts` | `awx-sync-project` tool factory |
 | **Tool: attach-credential** | `src/tools/attach-credential.ts` | `awx-attach-credential` tool factory |
+| **Tool: detach-credential** | `src/tools/detach-credential.ts` | `awx-detach-credential` tool factory |
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) is complete — all 21 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
+Tool implementation (Phase 2) is complete — all 22 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
 ### Tool Output Formats
 
@@ -46,17 +47,18 @@ Tool implementation (Phase 2) is complete — all 21 AWX tools are implemented a
 | `awx-get-job-events` | Plain text message + structured metadata | — |
 | `awx-configure` | Plain text confirmation message | — |
 | `awx-debug-env` | JSON string | — |
-| `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope. Project data includes SCM Revision, Credential (name + ID), and Default Environment (name + ID). | `type` (template\|project\|inventory) + `id` |
+| `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope. Template data includes credentials (with id, name, credential_type_id, kind), extra_vars, timeout, job_tags, skip_tags, ask_tags_on_launch, and ask_skip_tags_on_launch. Project data includes SCM Revision, Credential (name + ID), and Default Environment (name + ID). | `type` (template\|project\|inventory) + `id` |
 | `awx-create-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-create-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-create-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-update-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
-| `awx-update-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-template` | Plain text confirmation message + `ResourceMutationOutput` metadata. Accepts optional `extra_vars` (record of key-value pairs). | — |
 | `awx-update-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-delete-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-delete-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-delete-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-attach-credential` | Plain text confirmation message + metadata (raw AWX API response body) | — |
+| `awx-detach-credential` | Plain text confirmation message + metadata (composite response with count and results for multi-credential, or raw AWX API response body for single) | — |
 
 Both `awx-list-templates` and `awx-list-projects` accept `--timeout` (total tool timeout in ms, default 30000).
 
@@ -282,7 +284,8 @@ packages/awx/
 │   │   ├── list.ts           # awx-list-templates, awx-list-projects, awx-list-jobs tool factories
 │   │   ├── get-resource.ts   # awx-get-resource tool factory
 │   │   ├── sync-project.ts   # awx-sync-project tool factory
-│   │   └── attach-credential.ts # awx-attach-credential tool factory
+│   │   ├── attach-credential.ts # awx-attach-credential tool factory
+│   │   └── detach-credential.ts # awx-detach-credential tool factory
 │   ├── contracts/
 │   │   ├── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
 │   │   ├── resource-mutation.ts # ResourceMutationOutput v1.0 contract
