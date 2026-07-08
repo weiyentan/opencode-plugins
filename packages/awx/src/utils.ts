@@ -148,5 +148,31 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
         `  Org:        ${d.organization_name}`,
       ].join("\n");
     }
+    case "credential": {
+      const d = result.data as Record<string, unknown>;
+      return [
+        `Credential ${d.id}: ${d.name}`,
+        `  Description:          ${d.description ?? ""}`,
+        `  Credential Type:      ${d.credential_type_name} (ID: ${d.credential_type_id})`,
+        `  Kind:                 ${d.kind || "(none)"}`,
+        `  Organization:         ${d.organization_name || "(none)"}`,
+        `  Managed:              ${String(d.managed)}`,
+      ].join("\n");
+    }
+    case "organization": {
+      const d = result.data as Record<string, unknown>;
+      const rel = (d.related as Record<string, number>) ?? {};
+      return [
+        `Organization ${d.id}: ${d.name}`,
+        `  Description:          ${d.description ?? ""}`,
+        `  Users:                ${rel.users ?? 0}`,
+        `  Teams:                ${rel.teams ?? 0}`,
+        `  Job Templates:        ${rel.job_templates ?? 0}`,
+        `  Projects:             ${rel.projects ?? 0}`,
+        `  Inventories:          ${rel.inventories ?? 0}`,
+        `  Created:              ${d.created ?? ""}`,
+        `  Modified:             ${d.modified ?? ""}`,
+      ].join("\n");
+    }
   }
 }

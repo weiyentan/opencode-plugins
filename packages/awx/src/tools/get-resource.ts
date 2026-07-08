@@ -17,7 +17,7 @@ export function createGetResourceTool(getAwxClient: () => Promise<AwxClient>) {
     description: [
       "Get individual resource detail from AWX.",
       "Generalized resource detail getter with type→endpoint dispatch.",
-      "Supports 'template', 'project', and 'inventory' resource types.",
+      "Supports 'template', 'project', 'inventory', 'credential', and 'organization' resource types.",
       "Returns structured output in a standard envelope:",
       "{ schema_version, resource_type, id, data }.",
       "For templates: name, description, job_type, resolved names,",
@@ -31,11 +31,18 @@ export function createGetResourceTool(getAwxClient: () => Promise<AwxClient>) {
       "For inventories: name, description, kind, host_count,",
       "total_groups, has_inventory_sources, total_inventory_sources,",
       "organization_name, and variables.",
+      "For credentials: id, name, description, credential_type_id,",
+      "credential_type_name (resolved), kind, organization_name",
+      "(resolved), and managed flag. Sensitive input values are",
+      "never exposed.",
+      "For organizations: id, name, description, related resource",
+      "counts (users, teams, job_templates, projects, inventories),",
+      "created, and modified.",
     ].join(" "),
     args: {
       type: z
-        .enum(["template", "project", "inventory"])
-        .describe("Resource type to fetch. Supports: template, project, inventory"),
+        .enum(["template", "project", "inventory", "credential", "organization"])
+        .describe("Resource type to fetch. Supports: template, project, inventory, credential, organization"),
       id: z
         .number()
         .int()
