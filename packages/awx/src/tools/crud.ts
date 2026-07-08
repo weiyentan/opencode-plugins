@@ -822,5 +822,1277 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
         }
       },
     }),
+
+    /* ══════════════════════════════════════════════════════════════
+       Host CRUD
+       ══════════════════════════════════════════════════════════════ */
+
+    /**
+     * Create a new AWX host.
+     *
+     * Creates a host in AWX via POST /api/v2/hosts/.
+     * Requires name and inventory_id (resolved inventory ID).
+     * Hosts are inventory-scoped.
+     */
+    "awx-create-host": tool({
+      description: [
+        "Create a new AWX host.",
+        "Requires name and inventory_id (resolved inventory ID).",
+        "Hosts are inventory-scoped. Supports optional description,",
+        "enabled flag, and variables.",
+        "Returns created host detail in a standard mutation envelope.",
+      ].join(" "),
+      args: {
+        name: z
+          .string()
+          .min(1)
+          .describe("The name of the new host."),
+        inventory_id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The resolved AWX inventory ID to assign this host to."),
+        description: z
+          .string()
+          .optional()
+          .describe("Optional description for the host."),
+        enabled: z
+          .boolean()
+          .optional()
+          .describe("Whether the host is enabled (default true)."),
+        variables: z
+          .string()
+          .optional()
+          .describe("Optional host variables (JSON or YAML string)."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {
+            name: args.name,
+            inventory: args.inventory_id,
+          };
+          if (args.description !== undefined) body.description = args.description;
+          if (args.enabled !== undefined) body.enabled = args.enabled;
+          if (args.variables !== undefined) body.variables = args.variables;
+
+          const result = await executeCrud(
+            awxClient,
+            "host",
+            "create",
+            undefined,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Host ${result.id} created. Name: ${args.name}`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to create host: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "created",
+              resource_type: "host",
+              id: 0,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Update an existing AWX host.
+     *
+     * Modifies a host by PATCHing the specified fields.
+     * Only provided fields are updated (partial update semantics).
+     */
+    "awx-update-host": tool({
+      description: [
+        "Update an existing AWX host by ID. Partial update — only",
+        "provided fields are modified. Supports updating name,",
+        "description, enabled flag, inventory_id, and variables.",
+        "Returns the updated host detail in the standard mutation envelope.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the host to update."),
+        name: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("New name for the host."),
+        description: z
+          .string()
+          .optional()
+          .describe("New description for the host."),
+        inventory_id: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("New resolved inventory ID for the host."),
+        enabled: z
+          .boolean()
+          .optional()
+          .describe("Whether the host is enabled."),
+        variables: z
+          .string()
+          .optional()
+          .describe("Host variables (JSON or YAML string)."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {};
+          if (args.name !== undefined) body.name = args.name;
+          if (args.description !== undefined) body.description = args.description;
+          if (args.inventory_id !== undefined) body.inventory = args.inventory_id;
+          if (args.enabled !== undefined) body.enabled = args.enabled;
+          if (args.variables !== undefined) body.variables = args.variables;
+
+          const result = await executeCrud(
+            awxClient,
+            "host",
+            "update",
+            args.id,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Host ${args.id} updated.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to update host ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "updated",
+              resource_type: "host",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Delete an AWX host.
+     *
+     * Removes a host from AWX via DELETE /api/v2/hosts/<id>/.
+     * This action is irreversible.
+     */
+    "awx-delete-host": tool({
+      description: [
+        "Delete an AWX host by ID. This action is irreversible.",
+        "The host must exist and the user must have sufficient",
+        "permissions. Returns the standard mutation envelope",
+        "with data: null on success.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the host to delete."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await executeCrud(
+            awxClient,
+            "host",
+            "delete",
+            args.id,
+            undefined,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Host ${args.id} deleted.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to delete host ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "deleted",
+              resource_type: "host",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /* ══════════════════════════════════════════════════════════════
+       Group CRUD
+       ══════════════════════════════════════════════════════════════ */
+
+    /**
+     * Create a new AWX group.
+     *
+     * Creates a group in AWX via POST /api/v2/groups/.
+     * Requires name and inventory_id (resolved inventory ID).
+     * Groups are inventory-scoped and may have parent group hierarchies.
+     */
+    "awx-create-group": tool({
+      description: [
+        "Create a new AWX group.",
+        "Requires name and inventory_id (resolved inventory ID).",
+        "Groups are inventory-scoped. Supports optional description",
+        "and variables.",
+        "Returns created group detail in a standard mutation envelope.",
+      ].join(" "),
+      args: {
+        name: z
+          .string()
+          .min(1)
+          .describe("The name of the new group."),
+        inventory_id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The resolved AWX inventory ID to assign this group to."),
+        description: z
+          .string()
+          .optional()
+          .describe("Optional description for the group."),
+        variables: z
+          .string()
+          .optional()
+          .describe("Optional group variables (JSON or YAML string)."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {
+            name: args.name,
+            inventory: args.inventory_id,
+          };
+          if (args.description !== undefined) body.description = args.description;
+          if (args.variables !== undefined) body.variables = args.variables;
+
+          const result = await executeCrud(
+            awxClient,
+            "group",
+            "create",
+            undefined,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Group ${result.id} created. Name: ${args.name}`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to create group: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "created",
+              resource_type: "group",
+              id: 0,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Update an existing AWX group.
+     *
+     * Modifies a group by PATCHing the specified fields.
+     * Only provided fields are updated (partial update semantics).
+     */
+    "awx-update-group": tool({
+      description: [
+        "Update an existing AWX group by ID. Partial update — only",
+        "provided fields are modified. Supports updating name,",
+        "description, inventory_id, and variables.",
+        "Returns the updated group detail in the standard mutation envelope.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the group to update."),
+        name: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("New name for the group."),
+        description: z
+          .string()
+          .optional()
+          .describe("New description for the group."),
+        inventory_id: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("New resolved inventory ID for the group."),
+        variables: z
+          .string()
+          .optional()
+          .describe("Group variables (JSON or YAML string)."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {};
+          if (args.name !== undefined) body.name = args.name;
+          if (args.description !== undefined) body.description = args.description;
+          if (args.inventory_id !== undefined) body.inventory = args.inventory_id;
+          if (args.variables !== undefined) body.variables = args.variables;
+
+          const result = await executeCrud(
+            awxClient,
+            "group",
+            "update",
+            args.id,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Group ${args.id} updated.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to update group ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "updated",
+              resource_type: "group",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Delete an AWX group.
+     *
+     * Removes a group from AWX via DELETE /api/v2/groups/<id>/.
+     * This action is irreversible.
+     */
+    "awx-delete-group": tool({
+      description: [
+        "Delete an AWX group by ID. This action is irreversible.",
+        "The group must exist and the user must have sufficient",
+        "permissions. Returns the standard mutation envelope",
+        "with data: null on success.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the group to delete."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await executeCrud(
+            awxClient,
+            "group",
+            "delete",
+            args.id,
+            undefined,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Group ${args.id} deleted.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to delete group ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "deleted",
+              resource_type: "group",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /* ══════════════════════════════════════════════════════════════
+       Label CRUD
+       ══════════════════════════════════════════════════════════════ */
+
+    /**
+     * Create a new AWX label.
+     *
+     * Creates a label in AWX via POST /api/v2/labels/.
+     * Requires name and organization_id (resolved organization ID).
+     * Labels are organization-scoped.
+     */
+    "awx-create-label": tool({
+      description: [
+        "Create a new AWX label.",
+        "Requires name and organization_id (resolved organization ID).",
+        "Labels are organization-scoped. Supports optional description.",
+        "Returns created label detail in a standard mutation envelope.",
+      ].join(" "),
+      args: {
+        name: z
+          .string()
+          .min(1)
+          .describe("The name of the new label."),
+        organization_id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The resolved AWX organization ID to assign this label to."),
+        description: z
+          .string()
+          .optional()
+          .describe("Optional description for the label."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {
+            name: args.name,
+            organization: args.organization_id,
+          };
+          if (args.description !== undefined) body.description = args.description;
+
+          const result = await executeCrud(
+            awxClient,
+            "label",
+            "create",
+            undefined,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Label ${result.id} created. Name: ${args.name}`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to create label: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "created",
+              resource_type: "label",
+              id: 0,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Update an existing AWX label.
+     *
+     * Modifies a label by PATCHing the specified fields.
+     * Only provided fields are updated (partial update semantics).
+     */
+    "awx-update-label": tool({
+      description: [
+        "Update an existing AWX label by ID. Partial update — only",
+        "provided fields are modified. Supports updating name,",
+        "description, and organization_id.",
+        "Returns the updated label detail in the standard mutation envelope.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the label to update."),
+        name: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("New name for the label."),
+        description: z
+          .string()
+          .optional()
+          .describe("New description for the label."),
+        organization_id: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("New resolved organization ID for the label."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {};
+          if (args.name !== undefined) body.name = args.name;
+          if (args.description !== undefined) body.description = args.description;
+          if (args.organization_id !== undefined) body.organization = args.organization_id;
+
+          const result = await executeCrud(
+            awxClient,
+            "label",
+            "update",
+            args.id,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Label ${args.id} updated.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to update label ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "updated",
+              resource_type: "label",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Delete an AWX label.
+     *
+     * Removes a label from AWX via DELETE /api/v2/labels/<id>/.
+     * This action is irreversible.
+     */
+    "awx-delete-label": tool({
+      description: [
+        "Delete an AWX label by ID. This action is irreversible.",
+        "The label must exist and the user must have sufficient",
+        "permissions. Returns the standard mutation envelope",
+        "with data: null on success.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the label to delete."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await executeCrud(
+            awxClient,
+            "label",
+            "delete",
+            args.id,
+            undefined,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Label ${args.id} deleted.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to delete label ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "deleted",
+              resource_type: "label",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /* ══════════════════════════════════════════════════════════════
+       Instance Group CRUD
+       ══════════════════════════════════════════════════════════════ */
+
+    /**
+     * Create a new AWX instance group.
+     *
+     * Creates an instance group in AWX via POST /api/v2/instance_groups/.
+     * Requires name. Supports optional description.
+     */
+    "awx-create-instance-group": tool({
+      description: [
+        "Create a new AWX instance group.",
+        "Requires name. Instance groups manage job execution capacity",
+        "across one or more AWX instances.",
+        "Supports optional description.",
+        "Returns created instance group detail in a standard mutation envelope.",
+      ].join(" "),
+      args: {
+        name: z
+          .string()
+          .min(1)
+          .describe("The name of the new instance group."),
+        description: z
+          .string()
+          .optional()
+          .describe("Optional description for the instance group."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {
+            name: args.name,
+          };
+          if (args.description !== undefined) body.description = args.description;
+
+          const result = await executeCrud(
+            awxClient,
+            "instance_group",
+            "create",
+            undefined,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Instance group ${result.id} created. Name: ${args.name}`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to create instance group: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "created",
+              resource_type: "instance_group",
+              id: 0,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Update an existing AWX instance group.
+     *
+     * Modifies an instance group by PATCHing the specified fields.
+     * Only provided fields are updated (partial update semantics).
+     */
+    "awx-update-instance-group": tool({
+      description: [
+        "Update an existing AWX instance group by ID. Partial update — only",
+        "provided fields are modified. Supports updating name and description.",
+        "Returns the updated instance group detail in the standard mutation envelope.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the instance group to update."),
+        name: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("New name for the instance group."),
+        description: z
+          .string()
+          .optional()
+          .describe("New description for the instance group."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {};
+          if (args.name !== undefined) body.name = args.name;
+          if (args.description !== undefined) body.description = args.description;
+
+          const result = await executeCrud(
+            awxClient,
+            "instance_group",
+            "update",
+            args.id,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Instance group ${args.id} updated.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to update instance group ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "updated",
+              resource_type: "instance_group",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Delete an AWX instance group.
+     *
+     * Removes an instance group from AWX via DELETE /api/v2/instance_groups/<id>/.
+     * This action is irreversible.
+     */
+    "awx-delete-instance-group": tool({
+      description: [
+        "Delete an AWX instance group by ID. This action is irreversible.",
+        "The instance group must exist and the user must have sufficient",
+        "permissions. Returns the standard mutation envelope",
+        "with data: null on success.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the instance group to delete."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await executeCrud(
+            awxClient,
+            "instance_group",
+            "delete",
+            args.id,
+            undefined,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Instance group ${args.id} deleted.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to delete instance group ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "deleted",
+              resource_type: "instance_group",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /* ══════════════════════════════════════════════════════════════
+       Execution Environment CRUD
+       ══════════════════════════════════════════════════════════════ */
+
+    /**
+     * Create a new AWX execution environment.
+     *
+     * Creates an execution environment in AWX via POST /api/v2/execution_environments/.
+     * Requires name and image. Supports optional description, credential, and pull policy.
+     */
+    "awx-create-execution-environment": tool({
+      description: [
+        "Create a new AWX execution environment.",
+        "Requires name and image (container image reference).",
+        "Supports optional description, credential_id (resolved credential ID",
+        "for pulling the image), and pull policy (always, missing, never).",
+        "Returns created EE detail in a standard mutation envelope.",
+      ].join(" "),
+      args: {
+        name: z
+          .string()
+          .min(1)
+          .describe("The name of the new execution environment."),
+        image: z
+          .string()
+          .min(1)
+          .describe("Container image reference (e.g., quay.io/ansible/awx-ee:latest)."),
+        description: z
+          .string()
+          .optional()
+          .describe("Optional description for the execution environment."),
+        credential_id: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("Resolved credential ID for pulling the image."),
+        pull: z
+          .enum(["always", "missing", "never"])
+          .optional()
+          .describe("Image pull policy (always, missing, never)."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {
+            name: args.name,
+            image: args.image,
+          };
+          if (args.description !== undefined) body.description = args.description;
+          if (args.credential_id !== undefined) body.credential = args.credential_id;
+          if (args.pull !== undefined) body.pull = args.pull;
+
+          const result = await executeCrud(
+            awxClient,
+            "execution_environment",
+            "create",
+            undefined,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Execution environment ${result.id} created. Name: ${args.name}`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to create execution environment: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "created",
+              resource_type: "execution_environment",
+              id: 0,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Update an existing AWX execution environment.
+     *
+     * Modifies an execution environment by PATCHing the specified fields.
+     * Only provided fields are updated (partial update semantics).
+     */
+    "awx-update-execution-environment": tool({
+      description: [
+        "Update an existing AWX execution environment by ID.",
+        "Partial update — only provided fields are modified.",
+        "Supports updating name, image, description, credential_id,",
+        "and pull policy.",
+        "Returns the updated EE detail in the standard mutation envelope.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the execution environment to update."),
+        name: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("New name for the execution environment."),
+        image: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("New container image reference."),
+        description: z
+          .string()
+          .optional()
+          .describe("New description for the execution environment."),
+        credential_id: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("New resolved credential ID for pulling the image."),
+        pull: z
+          .enum(["always", "missing", "never"])
+          .optional()
+          .describe("Image pull policy (always, missing, never)."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {};
+          if (args.name !== undefined) body.name = args.name;
+          if (args.image !== undefined) body.image = args.image;
+          if (args.description !== undefined) body.description = args.description;
+          if (args.credential_id !== undefined) body.credential = args.credential_id;
+          if (args.pull !== undefined) body.pull = args.pull;
+
+          const result = await executeCrud(
+            awxClient,
+            "execution_environment",
+            "update",
+            args.id,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Execution environment ${args.id} updated.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to update execution environment ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "updated",
+              resource_type: "execution_environment",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
+
+    /**
+     * Delete an AWX execution environment.
+     *
+     * Removes an execution environment from AWX via
+     * DELETE /api/v2/execution_environments/<id>/.
+     * This action is irreversible.
+     */
+    "awx-delete-execution-environment": tool({
+      description: [
+        "Delete an AWX execution environment by ID.",
+        "This action is irreversible. The execution environment",
+        "must exist and the user must have sufficient permissions.",
+        "Returns the standard mutation envelope with data: null on success.",
+      ].join(" "),
+      args: {
+        id: z
+          .number()
+          .int()
+          .positive()
+          .describe("The numeric ID of the execution environment to delete."),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const result = await executeCrud(
+            awxClient,
+            "execution_environment",
+            "delete",
+            args.id,
+            undefined,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(result);
+          return {
+            output: `Execution environment ${args.id} deleted.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `Failed to delete execution environment ${args.id}: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "deleted",
+              resource_type: "execution_environment",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            } as unknown as Record<string, unknown>,
+          };
+        }
+      },
+    }),
   };
 }

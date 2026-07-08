@@ -174,5 +174,7 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
         `  Modified:             ${d.modified ?? ""}`,
       ].join("\n");
     }
+    default:
+      return JSON.stringify(result);
   }
 }

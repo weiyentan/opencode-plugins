@@ -17,7 +17,8 @@ export function createGetResourceTool(getAwxClient: () => Promise<AwxClient>) {
     description: [
       "Get individual resource detail from AWX.",
       "Generalized resource detail getter with type→endpoint dispatch.",
-      "Supports 'template', 'project', 'inventory', 'credential', and 'organization' resource types.",
+      "Supports 'template', 'project', 'inventory', 'credential', 'organization',",
+      "'host', 'group', 'label', 'instance_group', and 'execution_environment' resource types.",
       "Returns structured output in a standard envelope:",
       "{ schema_version, resource_type, id, data }.",
       "For templates: name, description, job_type, resolved names,",
@@ -38,11 +39,33 @@ export function createGetResourceTool(getAwxClient: () => Promise<AwxClient>) {
       "For organizations: id, name, description, related resource",
       "counts (users, teams, job_templates, projects, inventories),",
       "created, and modified.",
+      "For hosts: id, name, description, enabled, inventory_name",
+      "(resolved), variables, created, and modified.",
+      "For groups: id, name, description, inventory_name (resolved),",
+      "variables, hosts (resolved names), parent_group_names,",
+      "created, and modified.",
+      "For labels: id, name, description, organization_name (resolved),",
+      "created, and modified.",
+      "For instance groups: id, name, description, capacity,",
+      "consumed_capacity, remaining_capacity, created, and modified.",
+      "For execution environments: id, name, description, image,",
+      "credential_name (resolved), pull policy, created, and modified.",
     ].join(" "),
-    args: {
-      type: z
-        .enum(["template", "project", "inventory", "credential", "organization"])
-        .describe("Resource type to fetch. Supports: template, project, inventory, credential, organization"),
+      args: {
+        type: z
+          .enum([
+            "template",
+            "project",
+            "inventory",
+            "credential",
+            "organization",
+            "host",
+            "group",
+            "label",
+            "instance_group",
+            "execution_environment",
+          ])
+          .describe("Resource type to fetch. Supports: template, project, inventory, credential, organization, host, group, label, instance_group, execution_environment"),
       id: z
         .number()
         .int()
