@@ -36,18 +36,6 @@ interface RawAwxOrganization {
   };
 }
 
-/** Default related counts when fields are missing */
-const DEFAULT_RELATED = {
-  users: 0,
-  teams: 0,
-  job_templates: 0,
-  projects: 0,
-  inventories: 0,
-};
-
-/** Fields to extract from the related section */
-const RELATED_FIELDS = ["users", "teams", "job_templates", "projects", "inventories"] as const;
-
 /**
  * Extract a numeric count from a related resource entry.
  * The AWX API returns `{ count: N, results: [...] }` for each related type.

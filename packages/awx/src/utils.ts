@@ -149,7 +149,7 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
       ].join("\n");
     }
     case "credential": {
-      const d = result.data as Record<string, unknown>;
+      const d = result.data as unknown as Record<string, unknown>;
       return [
         `Credential ${d.id}: ${d.name}`,
         `  Description:          ${d.description ?? ""}`,
@@ -160,7 +160,7 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
       ].join("\n");
     }
     case "organization": {
-      const d = result.data as Record<string, unknown>;
+      const d = result.data as unknown as Record<string, unknown>;
       const rel = (d.related as Record<string, number>) ?? {};
       return [
         `Organization ${d.id}: ${d.name}`,
