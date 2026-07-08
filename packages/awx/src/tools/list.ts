@@ -91,14 +91,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return {
-            output: message,
-            metadata: {
-              count: 0,
-              results: [],
-              warning: message,
-            },
-          };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -133,11 +126,7 @@ export function createListTools(
           const message = err instanceof Error ? err.message : String(err);
           return {
             output: `Failed to fetch templates: ${message}`,
-            metadata: {
-              count: 0,
-              results: [],
-              warning: `Failed to fetch templates: ${message}`,
-            },
+            metadata: { error: message },
           };
         }
       },
@@ -199,7 +188,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -295,16 +284,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return {
-            output: message,
-            metadata: {
-              schema_version: "1.0",
-              total_jobs: 0,
-              results: [],
-              pages_fetched: 0,
-              warning: message,
-            },
-          };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -339,13 +319,7 @@ export function createListTools(
           const message = err instanceof Error ? err.message : String(err);
           return {
             output: `Failed to fetch jobs: ${message}`,
-            metadata: {
-              schema_version: "1.0",
-              total_jobs: 0,
-              results: [],
-              pages_fetched: 0,
-              warning: `Failed to fetch jobs: ${message}`,
-            },
+            metadata: { error: message },
           };
         }
       },
@@ -407,7 +381,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -496,7 +470,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -594,7 +568,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -690,7 +664,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -789,7 +763,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -870,7 +844,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -906,45 +880,6 @@ export function createListTools(
         }
       },
     }),
-
-    /**
-     * List AWX users with pagination.
-     *
-     * Fetches users from the AWX /api/v2/users/ endpoint,
-     * consolidating results across multiple pages up to a configurable
-     * page cap. Results are sorted alphabetically by username. Supports
-     * server-side filtering.
-     *
-     * Pagination behavior:
-     * - Default: up to 5 pages × 50 items/page = 250 items max
-     * - If more pages exist beyond the cap, returns a warning field
-     * - Per-page timeout: total tool timeout / (maxPages + 1)
-     */
-
-
-    /**
-     * Reverse-lookup job templates by credential.
-     *
-     * Fetches job templates from the AWX
-     * /api/v2/credentials/{credential_id}/job_templates/ endpoint,
-     * consolidating results across pages up to a configurable page cap.
-     * Results are sorted by name. Supports page size override and
-     * returns a warning when the page cap limits results.
-     */
-
-
-    /**
-     * List AWX instance groups with pagination.
-     *
-     * Fetches instance groups from the AWX /api/v2/instance_groups/ endpoint,
-     * consolidating results across multiple pages up to a configurable
-     * page cap. Results are sorted alphabetically by name.
-     *
-     * Pagination behavior:
-     * - Default: up to 5 pages × 50 items/page = 250 items max
-     * - If more pages exist beyond the cap, returns a warning field
-     * - Per-page timeout: total tool timeout / (maxPages + 1)
-     */
 
     /**
      * List AWX instance groups with pagination.
@@ -1002,7 +937,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -1098,7 +1033,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -1182,14 +1117,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return {
-            output: message,
-            metadata: {
-              count: 0,
-              results: [],
-              warning: message,
-            },
-          };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -1225,11 +1153,7 @@ export function createListTools(
           const message = err instanceof Error ? err.message : String(err);
           return {
             output: message,
-            metadata: {
-              count: 0,
-              results: [],
-              warning: message,
-            },
+            metadata: { error: message },
           };
         }
       },
@@ -1279,7 +1203,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -1377,14 +1301,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return {
-            output: message,
-            metadata: {
-              count: 0,
-              results: [],
-              warning: message,
-            },
-          };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -1412,17 +1329,11 @@ export function createListTools(
           const message = err instanceof Error ? err.message : String(err);
           return {
             output: `Failed to list hosts: ${message}`,
-            metadata: {
-              count: 0,
-              results: [],
-              warning: `Failed to list hosts: ${message}`,
-            },
+            metadata: { error: message },
           };
         }
       },
     }),
-
-
 
     /**
      * List AWX workflow job templates with pagination.
@@ -1480,7 +1391,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -1575,14 +1486,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return {
-            output: message,
-            metadata: {
-              count: 0,
-              results: [],
-              warning: message,
-            },
-          };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
@@ -1610,16 +1514,11 @@ export function createListTools(
           const message = err instanceof Error ? err.message : String(err);
           return {
             output: `Failed to list groups: ${message}`,
-            metadata: {
-              count: 0,
-              results: [],
-              warning: `Failed to list groups: ${message}`,
-            },
+            metadata: { error: message },
           };
         }
       },
     }),
-
 
     /**
      * List AWX teams with pagination.
@@ -1678,7 +1577,7 @@ export function createListTools(
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return { output: message, metadata: { error: message } };
         }
 
         try {
