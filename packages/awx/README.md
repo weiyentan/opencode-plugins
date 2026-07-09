@@ -20,7 +20,7 @@ The AWX plugin delivers these modules:
 | **Shared utilities** | `src/utils.ts` | Shared helpers: `formatErrorResponse`, `wrapMutationResult`, `buildPipeTable`, `formatResourceOutput` |
 | **Tool: hello** | `src/tools/hello.ts` | `hello` tool factory |
 | **Tool: configure** | `src/tools/configure.ts` | `awx-debug-env` and `awx-configure` tool factories |
-| **Tool: CRUD** | `src/tools/crud.ts` | 9 CRUD tool factories (`awx-create-*`, `awx-update-*`, `awx-delete-*`) |
+| **Tool: CRUD** | `src/tools/crud.ts` | 29 CRUD tool factories (`awx-create-*`, `awx-update-*`, `awx-delete-*`, `awx-get-*` for project/template/inventory/host/group/label/instance-group/execution-environment) |
 | **Tool: job lifecycle** | `src/tools/job-lifecycle.ts` | `awx-launch-job`, `awx-job-status`, `awx-wait-job` tool factories |
 | **Tool: job events** | `src/tools/job-events.ts` | `awx-get-job-events` tool factory |
 | **Tool: list** | `src/tools/list.ts` | 17 `awx-list-*` tool factories (templates, projects, jobs, organizations, credentials, inventories, schedules, notification-templates, labels, instance-groups, execution-environments, templates-by-credential, users, hosts, workflow-templates, groups, teams) |
@@ -34,7 +34,7 @@ The AWX plugin delivers these modules:
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) is complete — all 40 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
+Tool implementation (Phase 2) is complete — all 60 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
 ### Tool Output Formats
 
@@ -53,7 +53,7 @@ Tool implementation (Phase 2) is complete — all 40 AWX tools are implemented a
 | `awx-get-job-events` | Plain text message + structured metadata | — |
 | `awx-configure` | Plain text confirmation message | — |
 | `awx-debug-env` | JSON string | — |
-| `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope. Project data includes SCM Revision, Credential (name + ID), and Default Environment (name + ID). | `type` (template\|project\|inventory\|credential\|organization) + `id` |
+| `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope. Project data includes SCM Revision, Credential (name + ID), and Default Environment (name + ID). | `type` (template\|project\|inventory\|credential\|organization\|host\|group\|label\|instance-group\|execution-environment) + `id` |
 | `awx-create-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-create-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-create-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
@@ -63,6 +63,26 @@ Tool implementation (Phase 2) is complete — all 40 AWX tools are implemented a
 | `awx-delete-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-delete-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-delete-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-get-host` | Plain text structured summary + metadata with host detail envelope | — |
+| `awx-create-host` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-host` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-host` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-get-group` | Plain text structured summary + metadata with group detail envelope | — |
+| `awx-create-group` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-group` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-group` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-get-label` | Plain text structured summary + metadata with label detail envelope | — |
+| `awx-create-label` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-label` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-label` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-get-instance-group` | Plain text structured summary + metadata with instance group detail envelope | — |
+| `awx-create-instance-group` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-instance-group` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-instance-group` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-get-execution-environment` | Plain text structured summary + metadata with execution environment detail envelope | — |
+| `awx-create-execution-environment` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-execution-environment` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-execution-environment` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-attach-credential` | Plain text confirmation message + metadata (raw AWX API response body) | — |
 | `awx-detach-credential` | Plain text confirmation message + metadata (raw AWX API response body) | — |
 | `awx-run-command` | Plain text confirmation message + metadata (raw AWX API response body) | inventory_id (required), credential_id (required), module_name (required), module_args, limit |
@@ -291,7 +311,7 @@ packages/awx/
 │   ├── tools/
 │   │   ├── hello.ts          # hello tool factory
 │   │   ├── configure.ts      # awx-debug-env, awx-configure tool factories
-│   │   ├── crud.ts           # 9 CRUD tool factories (create/update/delete for project/template/inventory)
+│   │   ├── crud.ts           # 29 CRUD tool factories (create/update/delete/get for prj/tpl/inv/host/group/label/ig/ee)
 │   │   ├── job-lifecycle.ts  # awx-launch-job, awx-job-status, awx-wait-job tool factories
 │   │   ├── job-events.ts     # awx-get-job-events tool factory
 │   │   ├── list.ts           # awx-list-* (17: templates, projects, jobs, organizations, credentials, inventories, schedules, notification-templates, labels, instance-groups, execution-environments, templates-by-credential, users, hosts, workflow-templates, groups, teams) tool factories
@@ -309,13 +329,23 @@ packages/awx/
 │   │   ├── project-detail.ts  # ProjectDetailOutput contract
 │   │   ├── inventory-detail.ts # InventoryDetailOutput contract
 │   │   ├── credential-detail.ts # CredentialDetailOutput contract
-│   │   └── organization-detail.ts # OrganizationDetailOutput contract
+│   │   ├── organization-detail.ts # OrganizationDetailOutput contract
+│   │   ├── host-detail.ts     # HostDetailOutput contract
+│   │   ├── group-detail.ts    # GroupDetailOutput contract
+│   │   ├── label-detail.ts    # LabelDetailOutput contract
+│   │   ├── instance-group-detail.ts # InstanceGroupDetailOutput contract
+│   │   └── execution-environment-detail.ts # ExecutionEnvironmentDetailOutput contract
 │   └── mappers/
 │       ├── map-template.ts   # Raw AWX API response → TemplateDetailOutput
 │       ├── map-project.ts    # Raw AWX API response → ProjectDetailOutput
 │       ├── map-inventory.ts  # Raw AWX API response → InventoryDetailOutput
 │       ├── map-credential.ts # Raw AWX API response → CredentialDetailOutput
-│       └── map-organization.ts # Raw AWX API response → OrganizationDetailOutput
+│       ├── map-organization.ts # Raw AWX API response → OrganizationDetailOutput
+│       ├── map-host.ts       # Raw AWX API response → HostDetailOutput
+│       ├── map-group.ts      # Raw AWX API response → GroupDetailOutput
+│       ├── map-label.ts      # Raw AWX API response → LabelDetailOutput
+│       ├── map-instance-group.ts # Raw AWX API response → InstanceGroupDetailOutput
+│       └── map-execution-environment.ts # Raw AWX API response → ExecutionEnvironmentDetailOutput
 ├── tests/
 │   ├── plugin.test.ts            # Plugin registration and lifecycle tests
 │   ├── client.test.ts            # Client middleware pipeline tests
@@ -326,6 +356,16 @@ packages/awx/
 │   ├── crud-project.test.ts      # CRUD create/update/delete tests for projects
 │   ├── crud-template.test.ts     # CRUD create/update/delete tests for templates
 │   ├── crud-inventory.test.ts    # CRUD create/update/delete tests for inventories
+│   ├── crud-host.test.ts         # CRUD create/update/delete tests for hosts
+│   ├── crud-group.test.ts        # CRUD create/update/delete tests for groups
+│   ├── crud-label.test.ts        # CRUD create/update/delete tests for labels
+│   ├── crud-instance-group.test.ts # CRUD create/update/delete tests for instance groups
+│   ├── crud-execution-environment.test.ts # CRUD create/update/delete tests for execution environments
+│   ├── map-host.test.ts          # Host mapper unit tests
+│   ├── map-group.test.ts         # Group mapper unit tests
+│   ├── map-label.test.ts         # Label mapper unit tests
+│   ├── map-instance-group.test.ts # Instance group mapper unit tests
+│   ├── map-execution-environment.test.ts # Execution environment mapper unit tests
 │   ├── get-resource.test.ts      # getResource orchestrator unit tests
 │   ├── get-resource-tool.test.ts # awx-get-resource tool integration tests
 │   ├── launch.test.ts            # awx-launch-job unit tests
