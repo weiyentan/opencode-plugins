@@ -1107,6 +1107,301 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
       },
     }),
 
+    // ─── Workflow Template CRUD ──────────────────────────────────
+
+    /**
+     * Create a new AWX workflow job template.
+     *
+     * Creates a workflow job template in AWX via POST /api/v2/workflow_job_templates/.
+     * Requires name and organization_id. Optional fields include description,
+     * inventory_id, limit, verbosity, extra_vars, job_tags, skip_tags, timeout,
+     * and various ask_* / survey / allow_simultaneous flags.
+     *
+     * Note: Workflow templates are different from regular job templates —
+     * they have no project, playbook, or job_type fields.
+     *
+     * Returns the created workflow template detail in the standard mutation envelope.
+     */
+    "awx-create-workflow-template": tool({
+      description: [
+        "Create a new AWX workflow job template.",
+        "Requires name and organization_id (resolved organization ID).",
+        "Optional fields: description, inventory_id, limit, verbosity,",
+        "extra_vars (object), job_tags, skip_tags, timeout, and various",
+        "ask_* / survey_enabled / allow_simultaneous flags.",
+        "Workflow templates have no project, playbook, or job_type fields.",
+        "Returns the created workflow template detail in the standard",
+        "ResourceMutationOutput envelope.",
+      ].join(" "),
+      args: {
+        name: z.string().min(1).describe("Workflow template name"),
+        organization_id: z.number().int().positive().describe("Resolved AWX organization ID"),
+        description: z.string().optional().describe("Optional workflow template description"),
+        inventory_id: z.number().int().positive().optional().describe("Resolved AWX inventory ID"),
+        limit: z.string().optional().describe("Host limit pattern (e.g., webservers)"),
+        verbosity: z.number().int().min(0).max(5).optional().describe("Verbosity level (0-5)"),
+        extra_vars: z.record(z.string(), z.unknown()).optional().describe("Extra variables (will be serialized to JSON string)"),
+        job_tags: z.string().optional().describe("Comma-separated list of job tags to run"),
+        skip_tags: z.string().optional().describe("Comma-separated list of job tags to skip"),
+        timeout: z.number().int().min(0).optional().describe("Job timeout in seconds (0 = no timeout)"),
+        ask_variables_on_launch: z.boolean().optional().describe("Prompt for variables on launch"),
+        ask_inventory_on_launch: z.boolean().optional().describe("Prompt for inventory on launch"),
+        ask_limit_on_launch: z.boolean().optional().describe("Prompt for limit on launch"),
+        ask_tags_on_launch: z.boolean().optional().describe("Prompt for job tags on launch"),
+        ask_skip_tags_on_launch: z.boolean().optional().describe("Prompt for skip tags on launch"),
+        ask_credential_on_launch: z.boolean().optional().describe("Prompt for credential on launch"),
+        survey_enabled: z.boolean().optional().describe("Enable survey mode"),
+        allow_simultaneous: z.boolean().optional().describe("Allow simultaneous runs"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {
+            name: args.name,
+            organization: args.organization_id,
+          };
+          if (args.description !== undefined) body.description = args.description;
+          if (args.inventory_id !== undefined) body.inventory = args.inventory_id;
+          if (args.limit !== undefined) body.limit = args.limit;
+          if (args.verbosity !== undefined) body.verbosity = args.verbosity;
+          if (args.extra_vars !== undefined) body.extra_vars = JSON.stringify(args.extra_vars);
+          if (args.job_tags !== undefined) body.job_tags = args.job_tags;
+          if (args.skip_tags !== undefined) body.skip_tags = args.skip_tags;
+          if (args.timeout !== undefined) body.timeout = args.timeout;
+          if (args.ask_variables_on_launch !== undefined) body.ask_variables_on_launch = args.ask_variables_on_launch;
+          if (args.ask_inventory_on_launch !== undefined) body.ask_inventory_on_launch = args.ask_inventory_on_launch;
+          if (args.ask_limit_on_launch !== undefined) body.ask_limit_on_launch = args.ask_limit_on_launch;
+          if (args.ask_tags_on_launch !== undefined) body.ask_tags_on_launch = args.ask_tags_on_launch;
+          if (args.ask_skip_tags_on_launch !== undefined) body.ask_skip_tags_on_launch = args.ask_skip_tags_on_launch;
+          if (args.ask_credential_on_launch !== undefined) body.ask_credential_on_launch = args.ask_credential_on_launch;
+          if (args.survey_enabled !== undefined) body.survey_enabled = args.survey_enabled;
+          if (args.allow_simultaneous !== undefined) body.allow_simultaneous = args.allow_simultaneous;
+
+          const crudResult = await executeCrud(
+            awxClient,
+            "workflow_template",
+            "create",
+            undefined,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(crudResult);
+          return {
+            output: `Workflow template ${crudResult.id} created.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `awx-create-workflow-template error: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "created",
+              resource_type: "workflow_template",
+              id: 0,
+              data: null,
+              warnings: [],
+              errors: [message],
+            },
+          };
+        }
+      },
+    }),
+
+    /**
+     * Update an existing AWX workflow job template.
+     *
+     * Modifies a workflow job template via PATCH /api/v2/workflow_job_templates/{id}/.
+     * Accepts partial fields — only the fields to change. The id parameter
+     * is required to identify the workflow template.
+     *
+     * Returns the updated workflow template detail in the standard
+     * ResourceMutationOutput envelope.
+     */
+    "awx-update-workflow-template": tool({
+      description: [
+        "Update an existing AWX workflow job template.",
+        "Accepts partial fields — only the fields to change.",
+        "The id parameter identifies the workflow template.",
+        "Supports updating name, description, organization_id,",
+        "inventory_id, limit, verbosity, extra_vars (object),",
+        "job_tags, skip_tags, timeout, and various ask_* /",
+        "survey_enabled / allow_simultaneous flags.",
+        "Returns the updated workflow template detail in the",
+        "standard ResourceMutationOutput envelope.",
+      ].join(" "),
+      args: {
+        id: z.number().int().positive().describe("The numeric ID of the workflow template to update"),
+        name: z.string().min(1).optional().describe("Workflow template name"),
+        description: z.string().optional().describe("Description"),
+        organization_id: z.number().int().positive().optional().describe("Resolved AWX organization ID"),
+        inventory_id: z.number().int().positive().optional().describe("Resolved AWX inventory ID"),
+        limit: z.string().optional().describe("Host limit pattern (e.g., webservers)"),
+        verbosity: z.number().int().min(0).max(5).optional().describe("Verbosity level (0-5)"),
+        extra_vars: z.record(z.string(), z.unknown()).optional().describe("Extra variables (will be serialized to JSON string)"),
+        job_tags: z.string().optional().describe("Comma-separated list of job tags to run"),
+        skip_tags: z.string().optional().describe("Comma-separated list of job tags to skip"),
+        timeout: z.number().int().min(0).optional().describe("Job timeout in seconds (0 = no timeout)"),
+        ask_variables_on_launch: z.boolean().optional().describe("Prompt for variables on launch"),
+        ask_inventory_on_launch: z.boolean().optional().describe("Prompt for inventory on launch"),
+        ask_limit_on_launch: z.boolean().optional().describe("Prompt for limit on launch"),
+        ask_tags_on_launch: z.boolean().optional().describe("Prompt for job tags on launch"),
+        ask_skip_tags_on_launch: z.boolean().optional().describe("Prompt for skip tags on launch"),
+        ask_credential_on_launch: z.boolean().optional().describe("Prompt for credential on launch"),
+        survey_enabled: z.boolean().optional().describe("Enable survey mode"),
+        allow_simultaneous: z.boolean().optional().describe("Allow simultaneous runs"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const body: Record<string, unknown> = {};
+          if (args.name !== undefined) body.name = args.name;
+          if (args.description !== undefined) body.description = args.description;
+          if (args.organization_id !== undefined) body.organization = args.organization_id;
+          if (args.inventory_id !== undefined) body.inventory = args.inventory_id;
+          if (args.limit !== undefined) body.limit = args.limit;
+          if (args.verbosity !== undefined) body.verbosity = args.verbosity;
+          if (args.extra_vars !== undefined) body.extra_vars = JSON.stringify(args.extra_vars);
+          if (args.job_tags !== undefined) body.job_tags = args.job_tags;
+          if (args.skip_tags !== undefined) body.skip_tags = args.skip_tags;
+          if (args.timeout !== undefined) body.timeout = args.timeout;
+          if (args.ask_variables_on_launch !== undefined) body.ask_variables_on_launch = args.ask_variables_on_launch;
+          if (args.ask_inventory_on_launch !== undefined) body.ask_inventory_on_launch = args.ask_inventory_on_launch;
+          if (args.ask_limit_on_launch !== undefined) body.ask_limit_on_launch = args.ask_limit_on_launch;
+          if (args.ask_tags_on_launch !== undefined) body.ask_tags_on_launch = args.ask_tags_on_launch;
+          if (args.ask_skip_tags_on_launch !== undefined) body.ask_skip_tags_on_launch = args.ask_skip_tags_on_launch;
+          if (args.ask_credential_on_launch !== undefined) body.ask_credential_on_launch = args.ask_credential_on_launch;
+          if (args.survey_enabled !== undefined) body.survey_enabled = args.survey_enabled;
+          if (args.allow_simultaneous !== undefined) body.allow_simultaneous = args.allow_simultaneous;
+
+          const crudResult = await executeCrud(
+            awxClient,
+            "workflow_template",
+            "update",
+            args.id,
+            body,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(crudResult);
+          return {
+            output: `Workflow template ${crudResult.id} updated.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `awx-update-workflow-template error: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "updated",
+              resource_type: "workflow_template",
+              id: args.id ?? 0,
+              data: null,
+              warnings: [],
+              errors: [message],
+            },
+          };
+        }
+      },
+    }),
+
+    /**
+     * Delete an AWX workflow job template.
+     *
+     * Deletes a workflow job template via DELETE /api/v2/workflow_job_templates/{id}/.
+     * Requires the workflow template ID. Returns the standard
+     * ResourceMutationOutput envelope with action "deleted" and data set to null.
+     */
+    "awx-delete-workflow-template": tool({
+      description: [
+        "Delete an AWX workflow job template by ID.",
+        "Delegates to the shared CRUD registry which maps to",
+        "DELETE /api/v2/workflow_job_templates/{id}/.",
+        "Returns the standard ResourceMutationOutput envelope",
+        "with action 'deleted' and data set to null.",
+      ].join(" "),
+      args: {
+        id: z.number().int().positive().describe("The numeric ID of the workflow template to delete"),
+      },
+      async execute(args, context) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let awxClient: AwxClient;
+        try {
+          awxClient = await getAwxClient();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: message };
+        }
+
+        try {
+          const crudResult = await executeCrud(
+            awxClient,
+            "workflow_template",
+            "delete",
+            args.id,
+            undefined,
+            context.abort,
+          );
+
+          const mutationOutput = wrapMutationResult(crudResult);
+          return {
+            output: `Workflow template ${args.id} deleted.`,
+            metadata: mutationOutput as unknown as Record<string, unknown>,
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return {
+            output: `awx-delete-workflow-template error: ${message}`,
+            metadata: {
+              schema_version: "1.0",
+              action: "deleted",
+              resource_type: "workflow_template",
+              id: args.id,
+              data: null,
+              warnings: [],
+              errors: [message],
+            },
+          };
+        }
+      },
+    }),
+
     // ═══════════════════════════════════════════════════════════════
     // Organization CRUD
     // ═══════════════════════════════════════════════════════════════

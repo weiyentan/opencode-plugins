@@ -43,6 +43,7 @@ import { mapProject } from "./mappers/map-project.js";
 import { mapInventory } from "./mappers/map-inventory.js";
 import { mapCredential } from "./mappers/map-credential.js";
 import { mapOrganization } from "./mappers/map-organization.js";
+import { mapWorkflowTemplate } from "./mappers/map-workflow-template.js";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ import { mapOrganization } from "./mappers/map-organization.js";
  * Supported resource type keys for CRUD operations.
  * Extend this when adding new resource types.
  */
-export type CrudResourceType = "template" | "project" | "inventory" | "credential" | "organization";
+export type CrudResourceType = "template" | "project" | "inventory" | "credential" | "organization" | "workflow_template";
 
 /**
  * Supported CRUD action keys.
@@ -128,6 +129,14 @@ export const CRUD_REGISTRY: Record<CrudResourceType, CrudEntry> = {
       delete: { path: "/api/v2/organizations/{id}/", method: "DELETE", requiresId: true },
     },
     mapper: mapOrganization,
+  },
+  workflow_template: {
+    endpoint: {
+      create: { path: "/api/v2/workflow_job_templates/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/workflow_job_templates/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/workflow_job_templates/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapWorkflowTemplate,
   },
 };
 

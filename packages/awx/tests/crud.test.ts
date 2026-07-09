@@ -233,6 +233,7 @@ describe("CRUD_REGISTRY", () => {
      Credential resource endpoints
      ══════════════════════════════════════════════════════════════ */
 
+<<<<<<< HEAD
   it("maps (credential, create) → POST /api/v2/credentials/", () => {
     expectEndpoint("credential", "create",
       "/api/v2/credentials/", "POST", false);
@@ -271,13 +272,14 @@ describe("CRUD_REGISTRY", () => {
      All 15 combinations enumerated
      ══════════════════════════════════════════════════════════════ */
 
-  it("has exactly 5 resource types registered", () => {
+  it("has exactly 6 resource types registered", () => {
     expect(Object.keys(CRUD_REGISTRY).sort()).toEqual([
       "credential",
       "inventory",
       "organization",
       "project",
       "template",
+      "workflow_template",
     ]);
   });
 
