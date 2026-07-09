@@ -2128,8 +2128,11 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
           );
 
           const mutationOutput = wrapMutationResult(result);
+          const orgName = mutationOutput.data
+            ? (mutationOutput.data as Record<string, unknown>).name as string ?? ""
+            : "";
           return {
-            output: `Organization ${result.id} created successfully.`,
+            output: `Organization ${result.id} created successfully. Name: ${orgName}`,
             metadata: mutationOutput as unknown as Record<string, unknown>,
           };
         } catch (err: unknown) {
