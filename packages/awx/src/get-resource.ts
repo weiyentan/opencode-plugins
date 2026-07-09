@@ -28,22 +28,32 @@ import { mapProject } from "./mappers/map-project.js";
 import { mapInventory } from "./mappers/map-inventory.js";
 import { mapCredential } from "./mappers/map-credential.js";
 import { mapOrganization } from "./mappers/map-organization.js";
+import { mapHost } from "./mappers/map-host.js";
+import { mapGroup } from "./mappers/map-group.js";
+import { mapLabel } from "./mappers/map-label.js";
+import { mapInstanceGroup } from "./mappers/map-instance-group.js";
+import { mapExecutionEnvironment } from "./mappers/map-execution-environment.js";
 import type { TemplateDetailOutput } from "./contracts/template-detail.js";
 import type { ProjectDetailOutput } from "./contracts/project-detail.js";
 import type { InventoryDetailOutput } from "./contracts/inventory-detail.js";
 import type { CredentialDetailOutput } from "./contracts/credential-detail.js";
 import type { OrganizationDetailOutput } from "./contracts/organization-detail.js";
+import type { HostDetailOutput } from "./contracts/host-detail.js";
+import type { GroupDetailOutput } from "./contracts/group-detail.js";
+import type { LabelDetailOutput } from "./contracts/label-detail.js";
+import type { InstanceGroupDetailOutput } from "./contracts/instance-group-detail.js";
+import type { ExecutionEnvironmentDetailOutput } from "./contracts/execution-environment-detail.js";
 
 /**
  * Union of all supported resource detail output types.
  * Extend this when adding new resource types.
  */
-export type ResourceDetailOutput = TemplateDetailOutput | ProjectDetailOutput | InventoryDetailOutput | CredentialDetailOutput | OrganizationDetailOutput;
+export type ResourceDetailOutput = TemplateDetailOutput | ProjectDetailOutput | InventoryDetailOutput | CredentialDetailOutput | OrganizationDetailOutput | HostDetailOutput | GroupDetailOutput | LabelDetailOutput | InstanceGroupDetailOutput | ExecutionEnvironmentDetailOutput;
 
 /**
  * Supported resource type keys (used by the tool args Zod schema).
  */
-export type ResourceType = "template" | "project" | "inventory" | "credential" | "organization";
+export type ResourceType = "template" | "project" | "inventory" | "credential" | "organization" | "host" | "group" | "label" | "instance-group" | "execution-environment";
 
 /**
  * Entry in the resource registry.
@@ -82,6 +92,26 @@ const RESOURCE_REGISTRY: Record<ResourceType, ResourceEntry> = {
   organization: {
     path: "/api/v2/organizations/{id}/",
     mapper: mapOrganization,
+  },
+  host: {
+    path: "/api/v2/hosts/{id}/",
+    mapper: mapHost,
+  },
+  group: {
+    path: "/api/v2/groups/{id}/",
+    mapper: mapGroup,
+  },
+  label: {
+    path: "/api/v2/labels/{id}/",
+    mapper: mapLabel,
+  },
+  "instance-group": {
+    path: "/api/v2/instance_groups/{id}/",
+    mapper: mapInstanceGroup,
+  },
+  "execution-environment": {
+    path: "/api/v2/execution_environments/{id}/",
+    mapper: mapExecutionEnvironment,
   },
 };
 

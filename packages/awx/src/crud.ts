@@ -41,6 +41,11 @@ import type { AwxClient } from "./client.js";
 import { mapTemplate } from "./mappers/map-template.js";
 import { mapProject } from "./mappers/map-project.js";
 import { mapInventory } from "./mappers/map-inventory.js";
+import { mapHost } from "./mappers/map-host.js";
+import { mapGroup } from "./mappers/map-group.js";
+import { mapLabel } from "./mappers/map-label.js";
+import { mapInstanceGroup } from "./mappers/map-instance-group.js";
+import { mapExecutionEnvironment } from "./mappers/map-execution-environment.js";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -48,7 +53,7 @@ import { mapInventory } from "./mappers/map-inventory.js";
  * Supported resource type keys for CRUD operations.
  * Extend this when adding new resource types.
  */
-export type CrudResourceType = "template" | "project" | "inventory";
+export type CrudResourceType = "template" | "project" | "inventory" | "host" | "group" | "label" | "instance-group" | "execution-environment";
 
 /**
  * Supported CRUD action keys.
@@ -110,6 +115,46 @@ export const CRUD_REGISTRY: Record<CrudResourceType, CrudEntry> = {
       delete: { path: "/api/v2/inventories/{id}/", method: "DELETE", requiresId: true },
     },
     mapper: mapInventory,
+  },
+  host: {
+    endpoint: {
+      create: { path: "/api/v2/hosts/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/hosts/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/hosts/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapHost,
+  },
+  group: {
+    endpoint: {
+      create: { path: "/api/v2/groups/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/groups/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/groups/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapGroup,
+  },
+  label: {
+    endpoint: {
+      create: { path: "/api/v2/labels/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/labels/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/labels/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapLabel,
+  },
+  "instance-group": {
+    endpoint: {
+      create: { path: "/api/v2/instance_groups/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/instance_groups/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/instance_groups/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapInstanceGroup,
+  },
+  "execution-environment": {
+    endpoint: {
+      create: { path: "/api/v2/execution_environments/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/execution_environments/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/execution_environments/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapExecutionEnvironment,
   },
 };
 
