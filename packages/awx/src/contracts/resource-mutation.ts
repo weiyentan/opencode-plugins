@@ -33,6 +33,9 @@ export const ResourceMutationResourceTypeSchema = z.enum([
   "label",
   "instance-group",
   "execution-environment",
+  "credential",
+  "organization",
+  "workflow_template",
 ]);
 
 /** Full mutation output envelope schema */
