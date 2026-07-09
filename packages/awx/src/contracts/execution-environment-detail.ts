@@ -2,8 +2,8 @@
  * AWX Execution Environment Detail Output Contract — v1.0
  *
  * TypeScript interface defining the structured output for execution
- * environment detail requests. Used by `mapExecutionEnvironment()` to
- * shape raw AWX API responses into the canonical format.
+ * environment detail requests. Used by `mapExecutionEnvironment()`
+ * to shape raw AWX API responses into the canonical format.
  *
  * ## Schema Fields
  *
@@ -15,11 +15,13 @@
  * ## Field Naming Convention
  *
  * - Related resource names are resolved from `summary_fields` (not raw IDs)
+ * - `organization_id` is the raw organization ID from the AWX API
  * - `organization_name` is resolved from `summary_fields.organization.name`
- * - `image` is the container image URL (e.g., quay.io/ansible/awx-ee:latest)
+ * - `image` is the container image URL
+ * - `created` and `modified` are ISO 8601 timestamps
  */
 
-// ─── Execution Environment Data ──────────────────────────────
+// ─── Execution Environment Data ────────────────────────────
 
 export interface ExecutionEnvironmentData {
   id: number;
@@ -27,6 +29,8 @@ export interface ExecutionEnvironmentData {
   description: string;
   /** Container image URL */
   image: string;
+  /** Raw organization ID from the AWX API, or null */
+  organization_id: number | null;
   /** Resolved from summary_fields.organization.name */
   organization_name: string;
   /** ISO 8601 timestamp */
@@ -35,7 +39,7 @@ export interface ExecutionEnvironmentData {
   modified: string;
 }
 
-// ─── Top-level output envelope ──────────────────────────────
+// ─── Top-level output envelope ───────────────────────────────
 
 export interface ExecutionEnvironmentDetailOutput {
   schema_version: "1.0";

@@ -7,14 +7,14 @@
  *
  * ## Key Transformations
  *
- * - **Inventory name**: Extracts inventory_name from AWX
- *   `summary_fields` rather than raw ID.
+ * - **Related names**: Extracts inventory_name from AWX `summary_fields`
+ *   rather than raw ID.
  * - **Envelope**: Wraps output in `{ schema_version, resource_type, id, data }`.
  *
  * ## Usage
  *
  * ```ts
- * const response = await fetch(client, "GET", "/api/v2/groups/5/");
+ * const response = await fetch(client, "GET", "/api/v2/groups/7/");
  * const raw = await response.json();
  * const output = mapGroup(raw);
  * ```
@@ -29,7 +29,7 @@ interface RawAwxGroup {
   id: number;
   name: string;
   description: string;
-  variables: string;
+  inventory: number | null;
   created: string;
   modified: string;
   summary_fields?: {
@@ -54,11 +54,11 @@ export function mapGroup(raw: unknown): GroupDetailOutput {
   const sf = g.summary_fields ?? {};
 
   const data: GroupData = {
-    id: g.id,
+    id: g.id ?? 0,
     name: g.name ?? "",
     description: g.description ?? "",
+    inventory_id: g.inventory ?? null,
     inventory_name: sf.inventory?.name ?? "",
-    variables: g.variables ?? "",
     created: g.created ?? "",
     modified: g.modified ?? "",
   };
@@ -66,7 +66,7 @@ export function mapGroup(raw: unknown): GroupDetailOutput {
   return {
     schema_version: "1.0",
     resource_type: "group",
-    id: g.id,
+    id: g.id ?? 0,
     data,
   };
 }

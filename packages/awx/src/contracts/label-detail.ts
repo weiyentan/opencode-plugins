@@ -15,24 +15,25 @@
  * ## Field Naming Convention
  *
  * - Related resource names are resolved from `summary_fields` (not raw IDs)
+ * - `organization_id` is the raw organization ID from the AWX API
  * - `organization_name` is resolved from `summary_fields.organization.name`
  */
 
-// ─── Label Data ──────────────────────────────────────────────
+// ─── Label Data ────────────────────────────────────────────
 
 export interface LabelData {
   id: number;
   name: string;
   description: string;
+  /** Raw organization ID from the AWX API */
+  organization_id: number | null;
   /** Resolved from summary_fields.organization.name */
   organization_name: string;
   /** ISO 8601 timestamp */
   created: string;
-  /** ISO 8601 timestamp */
-  modified: string;
 }
 
-// ─── Top-level output envelope ──────────────────────────────
+// ─── Top-level output envelope ───────────────────────────────
 
 export interface LabelDetailOutput {
   schema_version: "1.0";

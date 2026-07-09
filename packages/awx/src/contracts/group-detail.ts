@@ -15,27 +15,28 @@
  * ## Field Naming Convention
  *
  * - Related resource names are resolved from `summary_fields` (not raw IDs)
+ * - `inventory_id` is the raw inventory ID from the AWX API
  * - `inventory_name` is resolved from `summary_fields.inventory.name`
- * - `variables` is a raw JSON/YAML string, or empty if not set
+ * - `created` and `modified` are ISO 8601 timestamps
  */
 
-// ─── Group Data ──────────────────────────────────────────────
+// ─── Group Data ────────────────────────────────────────────
 
 export interface GroupData {
   id: number;
   name: string;
   description: string;
+  /** Raw inventory ID from the AWX API */
+  inventory_id: number | null;
   /** Resolved from summary_fields.inventory.name */
   inventory_name: string;
-  /** Raw variables string (JSON or YAML), empty string if not set */
-  variables: string;
   /** ISO 8601 timestamp */
   created: string;
   /** ISO 8601 timestamp */
   modified: string;
 }
 
-// ─── Top-level output envelope ──────────────────────────────
+// ─── Top-level output envelope ───────────────────────────────
 
 export interface GroupDetailOutput {
   schema_version: "1.0";
