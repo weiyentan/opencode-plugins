@@ -233,7 +233,6 @@ describe("CRUD_REGISTRY", () => {
      Credential resource endpoints
      ══════════════════════════════════════════════════════════════ */
 
-<<<<<<< HEAD
   it("maps (credential, create) → POST /api/v2/credentials/", () => {
     expectEndpoint("credential", "create",
       "/api/v2/credentials/", "POST", false);
