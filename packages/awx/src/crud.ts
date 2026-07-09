@@ -46,6 +46,9 @@ import { mapGroup } from "./mappers/map-group.js";
 import { mapLabel } from "./mappers/map-label.js";
 import { mapInstanceGroup } from "./mappers/map-instance-group.js";
 import { mapExecutionEnvironment } from "./mappers/map-execution-environment.js";
+import { mapCredential } from "./mappers/map-credential.js";
+import { mapOrganization } from "./mappers/map-organization.js";
+import { mapWorkflowTemplate } from "./mappers/map-workflow-template.js";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -53,7 +56,18 @@ import { mapExecutionEnvironment } from "./mappers/map-execution-environment.js"
  * Supported resource type keys for CRUD operations.
  * Extend this when adding new resource types.
  */
-export type CrudResourceType = "template" | "project" | "inventory" | "host" | "group" | "label" | "instance-group" | "execution-environment";
+export type CrudResourceType =
+  | "template"
+  | "project"
+  | "inventory"
+  | "host"
+  | "group"
+  | "label"
+  | "instance-group"
+  | "execution-environment"
+  | "credential"
+  | "organization"
+  | "workflow_template";
 
 /**
  * Supported CRUD action keys.
@@ -155,6 +169,30 @@ export const CRUD_REGISTRY: Record<CrudResourceType, CrudEntry> = {
       delete: { path: "/api/v2/execution_environments/{id}/", method: "DELETE", requiresId: true },
     },
     mapper: mapExecutionEnvironment,
+  },
+  credential: {
+    endpoint: {
+      create: { path: "/api/v2/credentials/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/credentials/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/credentials/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapCredential,
+  },
+  organization: {
+    endpoint: {
+      create: { path: "/api/v2/organizations/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/organizations/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/organizations/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapOrganization,
+  },
+  workflow_template: {
+    endpoint: {
+      create: { path: "/api/v2/workflow_job_templates/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/workflow_job_templates/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/workflow_job_templates/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapWorkflowTemplate,
   },
 };
 

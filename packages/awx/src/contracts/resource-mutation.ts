@@ -24,7 +24,19 @@ import { z } from "zod";
 export const ResourceMutationActionSchema = z.enum(["created", "updated", "deleted"]);
 
 /** Supported resource types for mutation */
-export const ResourceMutationResourceTypeSchema = z.enum(["template", "project", "inventory", "host", "group", "label", "instance-group", "execution-environment"]);
+export const ResourceMutationResourceTypeSchema = z.enum([
+  "template",
+  "project",
+  "inventory",
+  "host",
+  "group",
+  "label",
+  "instance-group",
+  "execution-environment",
+  "credential",
+  "organization",
+  "workflow_template",
+]);
 
 /** Full mutation output envelope schema */
 export const ResourceMutationOutputSchema = z.object({
