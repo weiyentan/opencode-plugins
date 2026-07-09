@@ -41,8 +41,8 @@ export function createGetResourceTool(getAwxClient: () => Promise<AwxClient>) {
     ].join(" "),
     args: {
       type: z
-        .enum(["template", "project", "inventory", "credential", "organization"])
-        .describe("Resource type to fetch. Supports: template, project, inventory, credential, organization"),
+        .enum(["template", "project", "inventory", "credential", "organization", "host", "group", "label", "instance-group", "execution-environment"])
+        .describe("Resource type to fetch. Supports: template, project, inventory, credential, organization, host, group, label, instance-group, execution-environment"),
       id: z
         .number()
         .int()

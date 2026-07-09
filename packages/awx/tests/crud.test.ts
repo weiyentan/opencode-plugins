@@ -271,10 +271,15 @@ describe("CRUD_REGISTRY", () => {
      All 15 combinations enumerated
      ══════════════════════════════════════════════════════════════ */
 
-  it("has exactly 6 resource types registered", () => {
+  it("has exactly 11 resource types registered", () => {
     expect(Object.keys(CRUD_REGISTRY).sort()).toEqual([
       "credential",
+      "execution-environment",
+      "group",
+      "host",
+      "instance-group",
       "inventory",
+      "label",
       "organization",
       "project",
       "template",

@@ -112,7 +112,7 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
       ].join("\n");
     }
     case "template": {
-      const d = result.data as unknown as Record<string, unknown>;
+      const d = result.data;
       const creds = Array.isArray(d.credentials)
         ? (d.credentials as Array<{ name: string }>)
         : [];
@@ -149,7 +149,7 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
       ].join("\n");
     }
     case "credential": {
-      const d = result.data as unknown as Record<string, unknown>;
+      const d = result.data;
       return [
         `Credential ${d.id}: ${d.name}`,
         `  Description:          ${d.description ?? ""}`,
@@ -160,8 +160,8 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
       ].join("\n");
     }
     case "organization": {
-      const d = result.data as unknown as Record<string, unknown>;
-      const rel = (d.related as Record<string, number>) ?? {};
+      const d = result.data;
+      const rel = d.related;
       return [
         `Organization ${d.id}: ${d.name}`,
         `  Description:          ${d.description ?? ""}`,
@@ -172,6 +172,58 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
         `  Inventories:          ${rel.inventories ?? 0}`,
         `  Created:              ${d.created ?? ""}`,
         `  Modified:             ${d.modified ?? ""}`,
+      ].join("\n");
+    }
+    case "host": {
+      const d = result.data;
+      return [
+        `Host ${d.id}: ${d.name}`,
+        `  Description:     ${d.description ?? ""}`,
+        `  Inventory:       ${d.inventory_name ?? ""}`,
+        `  Variables:       ${(d.variables as string) ? ((d.variables as string).length > 60 ? (d.variables as string).slice(0, 60) + "…" : d.variables) : "(none)"}`,
+        `  Created:         ${d.created ?? ""}`,
+        `  Modified:        ${d.modified ?? ""}`,
+      ].join("\n");
+    }
+    case "group": {
+      const d = result.data;
+      return [
+        `Group ${d.id}: ${d.name}`,
+        `  Description:     ${d.description ?? ""}`,
+        `  Inventory:       ${d.inventory_name ?? ""}`,
+        `  Variables:       ${(d.variables as string) ? ((d.variables as string).length > 60 ? (d.variables as string).slice(0, 60) + "…" : d.variables) : "(none)"}`,
+        `  Created:         ${d.created ?? ""}`,
+        `  Modified:        ${d.modified ?? ""}`,
+      ].join("\n");
+    }
+    case "label": {
+      const d = result.data;
+      return [
+        `Label ${d.id}: ${d.name}`,
+        `  Description:     ${d.description ?? ""}`,
+        `  Organization:    ${d.organization_name ?? ""}`,
+        `  Created:         ${d.created ?? ""}`,
+        `  Modified:        ${d.modified ?? ""}`,
+      ].join("\n");
+    }
+    case "instance-group": {
+      const d = result.data;
+      return [
+        `Instance Group ${d.id}: ${d.name}`,
+        `  Description:     ${d.description ?? ""}`,
+        `  Created:         ${d.created ?? ""}`,
+        `  Modified:        ${d.modified ?? ""}`,
+      ].join("\n");
+    }
+    case "execution-environment": {
+      const d = result.data;
+      return [
+        `Execution Environment ${d.id}: ${d.name}`,
+        `  Description:     ${d.description ?? ""}`,
+        `  Image:           ${d.image ?? ""}`,
+        `  Organization:    ${d.organization_name ?? ""}`,
+        `  Created:         ${d.created ?? ""}`,
+        `  Modified:        ${d.modified ?? ""}`,
       ].join("\n");
     }
   }

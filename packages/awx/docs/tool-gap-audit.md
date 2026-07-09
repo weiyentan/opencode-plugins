@@ -1,14 +1,14 @@
 # AWX Tool Gap Audit (ARCHIVED)
 
-**Date:** 2026-07-08  
+**Date:** 2026-07-09  
 **Plugin:** `@weiyentan/opencode-plugin-awx`  
-**Version:** 0.6.1+  
+**Version:** 0.7.1+  
 
 > **All gaps documented below have been resolved.** See `tool-action-mapping.md` for the current 100% coverage status. This document is retained for historical reference.
 
 ## Current AWX Tool Coverage
 
-The following 40 tools are currently registered in the AWX plugin:
+The following 60 tools are currently registered in the AWX plugin:
 
 | # | Tool Name | Description | Endpoint |
 |---|-----------|-------------|----------|
@@ -35,7 +35,7 @@ The following 40 tools are currently registered in the AWX plugin:
 | 21 | `awx-job-status` | Fetch detailed job status | `GET /api/v2/jobs/{id}/` |
 | 22 | `awx-wait-job` | Non-blocking job status check | `GET /api/v2/jobs/{id}/` |
 | 23 | `awx-get-job-events` | Get job events | `GET /api/v2/jobs/{id}/job_events/` |
-| 24 | `awx-get-resource` | Get resource detail (template/project/inventory/credential/organization) | `GET /api/v2/{resources}/{id}/` |
+| 24 | `awx-get-resource` | Get resource detail (template/project/inventory/credential/organization/host/group/label/instance-group/execution-environment) | `GET /api/v2/{resources}/{id}/` |
 | 25 | `awx-create-project` | Create a project | `POST /api/v2/projects/` |
 | 26 | `awx-create-template` | Create a job template | `POST /api/v2/job_templates/` |
 | 27 | `awx-create-inventory` | Create an inventory | `POST /api/v2/inventories/` |
@@ -45,17 +45,37 @@ The following 40 tools are currently registered in the AWX plugin:
 | 31 | `awx-delete-project` | Delete a project | `DELETE /api/v2/projects/{id}/` |
 | 32 | `awx-delete-template` | Delete a job template | `DELETE /api/v2/job_templates/{id}/` |
 | 33 | `awx-delete-inventory` | Delete an inventory | `DELETE /api/v2/inventories/{id}/` |
-| 34 | `awx-debug-env` | Debug environment configuration | (none) |
-| 35 | `awx-configure` | Configure AWX connection settings | (none) |
-| 36 | `awx-attach-credential` | Attach credential to job template | `POST /api/v2/job_templates/{id}/credentials/` |
-| 37 | `awx-detach-credential` | Detach credential from job template | `POST /api/v2/job_templates/{id}/credentials/` (disassociate) |
-| 38 | `awx-run-command` | Run ad-hoc Ansible command | `POST /api/v2/ad_hoc_commands/` |
-| 39 | `awx-launch-workflow` | Launch a workflow job template | `POST /api/v2/workflow_job_templates/{id}/launch/` |
-| 40 | `awx-ping` | AWX health check / ping | `GET /api/v2/ping/` |
+| 34 | `awx-get-host` | Get host detail | `GET /api/v2/hosts/{id}/` |
+| 35 | `awx-create-host` | Create a host | `POST /api/v2/hosts/` |
+| 36 | `awx-update-host` | Update a host | `PATCH /api/v2/hosts/{id}/` |
+| 37 | `awx-delete-host` | Delete a host | `DELETE /api/v2/hosts/{id}/` |
+| 38 | `awx-get-group` | Get group detail | `GET /api/v2/groups/{id}/` |
+| 39 | `awx-create-group` | Create a group | `POST /api/v2/groups/` |
+| 40 | `awx-update-group` | Update a group | `PATCH /api/v2/groups/{id}/` |
+| 41 | `awx-delete-group` | Delete a group | `DELETE /api/v2/groups/{id}/` |
+| 42 | `awx-get-label` | Get label detail | `GET /api/v2/labels/{id}/` |
+| 43 | `awx-create-label` | Create a label | `POST /api/v2/labels/` |
+| 44 | `awx-update-label` | Update a label | `PATCH /api/v2/labels/{id}/` |
+| 45 | `awx-delete-label` | Delete a label | `DELETE /api/v2/labels/{id}/` |
+| 46 | `awx-get-instance-group` | Get instance group detail | `GET /api/v2/instance_groups/{id}/` |
+| 47 | `awx-create-instance-group` | Create an instance group | `POST /api/v2/instance_groups/` |
+| 48 | `awx-update-instance-group` | Update an instance group | `PATCH /api/v2/instance_groups/{id}/` |
+| 49 | `awx-delete-instance-group` | Delete an instance group | `DELETE /api/v2/instance_groups/{id}/` |
+| 50 | `awx-get-execution-environment` | Get execution environment detail | `GET /api/v2/execution_environments/{id}/` |
+| 51 | `awx-create-execution-environment` | Create an execution environment | `POST /api/v2/execution_environments/` |
+| 52 | `awx-update-execution-environment` | Update an execution environment | `PATCH /api/v2/execution_environments/{id}/` |
+| 53 | `awx-delete-execution-environment` | Delete an execution environment | `DELETE /api/v2/execution_environments/{id}/` |
+| 54 | `awx-debug-env` | Debug environment configuration | (none) |
+| 55 | `awx-configure` | Configure AWX connection settings | (none) |
+| 56 | `awx-attach-credential` | Attach credential to job template | `POST /api/v2/job_templates/{id}/credentials/` |
+| 57 | `awx-detach-credential` | Detach credential from job template | `POST /api/v2/job_templates/{id}/credentials/` (disassociate) |
+| 58 | `awx-run-command` | Run ad-hoc Ansible command | `POST /api/v2/ad_hoc_commands/` |
+| 59 | `awx-launch-workflow` | Launch a workflow job template | `POST /api/v2/workflow_job_templates/{id}/launch/` |
+| 60 | `awx-ping` | AWX health check / ping | `GET /api/v2/ping/` |
 
 ## Gap Analysis
 
-**All gaps have been resolved.** The following were filled in this enhancement:
+**All gaps have been resolved.** The following were filled in past enhancements:
 
 | Priority | Gaps Resolved |
 |----------|---------------|
@@ -67,19 +87,19 @@ The following 40 tools are currently registered in the AWX plugin:
 
 | Priority | Open Gaps |
 |----------|-----------|
-| **All** | **0** ✅ *(100% coverage — all 33 mapped AWX operations have first-class tools)* |
+| **All** | **0** ✅ *(100% coverage — all 53 mapped AWX operations have first-class tools)* |
 
 ## Coverage Statistics
 
 | Metric | Value |
 |--------|-------|
-| Current tools | 40 |
+| Current tools | 60 |
 | Documented gaps (original) | 15 — all resolved |
-| Mapped AWX operations | 33 — all covered |
+| Mapped AWX operations | 53 — all covered |
 | Estimated coverage | 100% |
 
 ## Notes
 
 - The `hello`, `awx-debug-env`, and `awx-configure` tools are infrastructure/utility tools, not mapped to AWX API operations.
-- The `awx-get-resource` tool now supports template, project, inventory, credential, and organization types.
+- The `awx-get-resource` tool now supports template, project, inventory, credential, organization, host, group, label, instance-group, and execution-environment types.
 - The plugin uses the AWX API v2 throughout. There is no v1 API coverage and none is planned.
