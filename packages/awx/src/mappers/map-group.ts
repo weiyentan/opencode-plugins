@@ -54,7 +54,7 @@ export function mapGroup(raw: unknown): GroupDetailOutput {
   const sf = g.summary_fields ?? {};
 
   const data: GroupData = {
-    id: g.id ?? 0,
+    id: g.id,
     name: g.name ?? "",
     description: g.description ?? "",
     inventory_name: sf.inventory?.name ?? "",
@@ -66,7 +66,7 @@ export function mapGroup(raw: unknown): GroupDetailOutput {
   return {
     schema_version: "1.0",
     resource_type: "group",
-    id: g.id ?? 0,
+    id: g.id,
     data,
   };
 }

@@ -53,7 +53,7 @@ export function mapLabel(raw: unknown): LabelDetailOutput {
   const sf = l.summary_fields ?? {};
 
   const data: LabelData = {
-    id: l.id ?? 0,
+    id: l.id,
     name: l.name ?? "",
     description: l.description ?? "",
     organization_name: sf.organization?.name ?? "",
@@ -64,7 +64,7 @@ export function mapLabel(raw: unknown): LabelDetailOutput {
   return {
     schema_version: "1.0",
     resource_type: "label",
-    id: l.id ?? 0,
+    id: l.id,
     data,
   };
 }

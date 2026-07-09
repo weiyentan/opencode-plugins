@@ -463,4 +463,25 @@ describe("Host CRUD tools", () => {
 
     await localHooks.dispose?.();
   });
+
+  it("get returns error when AWX client is not available", async () => {
+    const input = mockPluginInput();
+    const localHooks = await createHooks(input, {
+      baseUrl: "https://aap.example.com",
+    });
+
+    const result = await localHooks.tool!["awx-get-host"]!.execute(
+      { id: 42 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("PAT");
+    const meta = (result as { metadata?: Record<string, unknown> }).metadata;
+    expect(meta).toBeDefined();
+    expect((meta!.errors as string[]).length).toBeGreaterThan(0);
+
+    await localHooks.dispose?.();
+  });
+
 });

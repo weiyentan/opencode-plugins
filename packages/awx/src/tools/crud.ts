@@ -851,7 +851,10 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return {
+            output: message,
+            metadata: { schema_version: "1.0", resource_type: "host", id: args.id, data: null, warnings: [], errors: [message] },
+          };
         }
         try {
           const result = await getResource(awxClient, "host", args.id, context.abort);
@@ -861,7 +864,10 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
             return { output: "Request was aborted." };
           }
           const message = err instanceof Error ? err.message : String(err);
-          return { output: `awx-get-host error: ${message}` };
+          return {
+            output: `awx-get-host error: ${message}`,
+            metadata: { schema_version: "1.0", resource_type: "host", id: args.id, data: null, warnings: [], errors: [message] },
+          };
         }
       },
     }),
@@ -1042,7 +1048,10 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return {
+            output: message,
+            metadata: { schema_version: "1.0", resource_type: "group", id: args.id, data: null, warnings: [], errors: [message] },
+          };
         }
         try {
           const result = await getResource(awxClient, "group", args.id, context.abort);
@@ -1052,7 +1061,10 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
             return { output: "Request was aborted." };
           }
           const message = err instanceof Error ? err.message : String(err);
-          return { output: `awx-get-group error: ${message}` };
+          return {
+            output: `awx-get-group error: ${message}`,
+            metadata: { schema_version: "1.0", resource_type: "group", id: args.id, data: null, warnings: [], errors: [message] },
+          };
         }
       },
     }),
@@ -1233,7 +1245,10 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return {
+            output: message,
+            metadata: { schema_version: "1.0", resource_type: "label", id: args.id, data: null, warnings: [], errors: [message] },
+          };
         }
         try {
           const result = await getResource(awxClient, "label", args.id, context.abort);
@@ -1243,7 +1258,10 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
             return { output: "Request was aborted." };
           }
           const message = err instanceof Error ? err.message : String(err);
-          return { output: `awx-get-label error: ${message}` };
+          return {
+            output: `awx-get-label error: ${message}`,
+            metadata: { schema_version: "1.0", resource_type: "label", id: args.id, data: null, warnings: [], errors: [message] },
+          };
         }
       },
     }),
@@ -1419,7 +1437,10 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return {
+            output: message,
+            metadata: { schema_version: "1.0", resource_type: "instance-group", id: args.id, data: null, warnings: [], errors: [message] },
+          };
         }
         try {
           const result = await getResource(awxClient, "instance-group", args.id, context.abort);
@@ -1429,7 +1450,10 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
             return { output: "Request was aborted." };
           }
           const message = err instanceof Error ? err.message : String(err);
-          return { output: `awx-get-instance-group error: ${message}` };
+          return {
+            output: `awx-get-instance-group error: ${message}`,
+            metadata: { schema_version: "1.0", resource_type: "instance-group", id: args.id, data: null, warnings: [], errors: [message] },
+          };
         }
       },
     }),
@@ -1603,7 +1627,10 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
           awxClient = await getAwxClient();
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          return { output: message };
+          return {
+            output: message,
+            metadata: { schema_version: "1.0", resource_type: "execution-environment", id: args.id, data: null, warnings: [], errors: [message] },
+          };
         }
         try {
           const result = await getResource(awxClient, "execution-environment", args.id, context.abort);
@@ -1613,7 +1640,10 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
             return { output: "Request was aborted." };
           }
           const message = err instanceof Error ? err.message : String(err);
-          return { output: `awx-get-execution-environment error: ${message}` };
+          return {
+            output: `awx-get-execution-environment error: ${message}`,
+            metadata: { schema_version: "1.0", resource_type: "execution-environment", id: args.id, data: null, warnings: [], errors: [message] },
+          };
         }
       },
     }),

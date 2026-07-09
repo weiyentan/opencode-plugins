@@ -55,7 +55,7 @@ export function mapExecutionEnvironment(raw: unknown): ExecutionEnvironmentDetai
   const sf = ee.summary_fields ?? {};
 
   const data: ExecutionEnvironmentData = {
-    id: ee.id ?? 0,
+    id: ee.id,
     name: ee.name ?? "",
     description: ee.description ?? "",
     image: ee.image ?? "",
@@ -67,7 +67,7 @@ export function mapExecutionEnvironment(raw: unknown): ExecutionEnvironmentDetai
   return {
     schema_version: "1.0",
     resource_type: "execution-environment",
-    id: ee.id ?? 0,
+    id: ee.id,
     data,
   };
 }

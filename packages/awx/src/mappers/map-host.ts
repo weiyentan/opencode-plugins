@@ -54,7 +54,7 @@ export function mapHost(raw: unknown): HostDetailOutput {
   const sf = h.summary_fields ?? {};
 
   const data: HostData = {
-    id: h.id ?? 0,
+    id: h.id,
     name: h.name ?? "",
     description: h.description ?? "",
     inventory_name: sf.inventory?.name ?? "",
@@ -66,7 +66,7 @@ export function mapHost(raw: unknown): HostDetailOutput {
   return {
     schema_version: "1.0",
     resource_type: "host",
-    id: h.id ?? 0,
+    id: h.id,
     data,
   };
 }

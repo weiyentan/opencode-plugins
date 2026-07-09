@@ -47,7 +47,7 @@ export function mapInstanceGroup(raw: unknown): InstanceGroupDetailOutput {
   const ig = raw as RawAwxInstanceGroup;
 
   const data: InstanceGroupData = {
-    id: ig.id ?? 0,
+    id: ig.id,
     name: ig.name ?? "",
     description: ig.description ?? "",
     created: ig.created ?? "",
@@ -57,7 +57,7 @@ export function mapInstanceGroup(raw: unknown): InstanceGroupDetailOutput {
   return {
     schema_version: "1.0",
     resource_type: "instance-group",
-    id: ig.id ?? 0,
+    id: ig.id,
     data,
   };
 }
