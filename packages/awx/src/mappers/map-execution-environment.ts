@@ -7,9 +7,8 @@
  *
  * ## Key Transformations
  *
- * - **Organization name**: Extracts organization_name from AWX
- *   `summary_fields` rather than raw ID.
- * - **Image**: Preserves the container image URL.
+ * - **Related names**: Extracts organization_name from AWX `summary_fields`
+ *   rather than raw ID.
  * - **Envelope**: Wraps output in `{ schema_version, resource_type, id, data }`.
  *
  * ## Usage
@@ -31,6 +30,7 @@ interface RawAwxExecutionEnvironment {
   name: string;
   description: string;
   image: string;
+  organization: number | null;
   created: string;
   modified: string;
   summary_fields?: {
@@ -55,10 +55,11 @@ export function mapExecutionEnvironment(raw: unknown): ExecutionEnvironmentDetai
   const sf = ee.summary_fields ?? {};
 
   const data: ExecutionEnvironmentData = {
-    id: ee.id,
+    id: ee.id ?? 0,
     name: ee.name ?? "",
     description: ee.description ?? "",
     image: ee.image ?? "",
+    organization_id: ee.organization ?? null,
     organization_name: sf.organization?.name ?? "",
     created: ee.created ?? "",
     modified: ee.modified ?? "",
@@ -67,7 +68,7 @@ export function mapExecutionEnvironment(raw: unknown): ExecutionEnvironmentDetai
   return {
     schema_version: "1.0",
     resource_type: "execution-environment",
-    id: ee.id,
+    id: ee.id ?? 0,
     data,
   };
 }

@@ -1,9 +1,9 @@
 /**
  * AWX Instance Group Detail Output Contract — v1.0
  *
- * TypeScript interface defining the structured output for instance group
- * detail requests. Used by `mapInstanceGroup()` to shape raw AWX API responses
- * into the canonical format.
+ * TypeScript interface defining the structured output for instance
+ * group detail requests. Used by `mapInstanceGroup()` to shape raw
+ * AWX API responses into the canonical format.
  *
  * ## Schema Fields
  *
@@ -11,9 +11,13 @@
  * - **resource_type**: Always "instance-group"
  * - **id**: The numeric resource ID
  * - **data**: Core instance group data
+ *
+ * ## Field Naming Convention
+ *
+ * - `created` and `modified` are ISO 8601 timestamps
  */
 
-// ─── Instance Group Data ─────────────────────────────────────
+// ─── Instance Group Data ────────────────────────────────────
 
 export interface InstanceGroupData {
   id: number;
@@ -25,7 +29,7 @@ export interface InstanceGroupData {
   modified: string;
 }
 
-// ─── Top-level output envelope ──────────────────────────────
+// ─── Top-level output envelope ───────────────────────────────
 
 export interface InstanceGroupDetailOutput {
   schema_version: "1.0";

@@ -1,8 +1,8 @@
 # AWX Plugin — Tool-Action Mapping Table
 
-**Date:** 2026-07-09  
+**Date:** 2026-07-08  
 **Plugin:** `@weiyentan/opencode-plugin-awx`  
-**Version:** 0.7.1+  
+**Version:** 0.6.1+  
 **Purpose:** This document maps every AWX API operation that an OpenCode subagent (e.g., awx-operator) might need to its corresponding first-class plugin tool, ensuring subagents never need to write raw `Invoke-RestMethod` calls that handle `AWX_TOKEN` directly. All 53 operations are now fully covered.
 
 ## Mapping Table
@@ -43,12 +43,62 @@
 | List inventory hosts | `GET /api/v2/inventories/{id}/hosts/` | `awx-list-hosts` | ✅ Covered | Filterable by inventory_id |
 | List inventory groups | `GET /api/v2/inventories/{id}/groups/` | `awx-list-groups` | ✅ Covered | Filterable by inventory_id |
 
+### Hosts
+
+| AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
+|---------------|-------------|-------------|--------|-------|
+| List hosts | `GET /api/v2/hosts/` | `awx-list-hosts` | ✅ Covered | Filterable by inventory_id, name |
+| Get host detail | `GET /api/v2/hosts/{id}/` | `awx-get-resource` (type=host) | ✅ Covered | Returns HostDetailOutput |
+| Create host | `POST /api/v2/hosts/` | `awx-create-host` | ✅ Covered | Name, inventory_id required; optional description |
+| Update host | `PATCH /api/v2/hosts/{id}/` | `awx-update-host` | ✅ Covered | Partial update semantics (name, description, inventory_id) |
+| Delete host | `DELETE /api/v2/hosts/{id}/` | `awx-delete-host` | ✅ Covered | |
+
+### Groups
+
+| AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
+|---------------|-------------|-------------|--------|-------|
+| List groups | `GET /api/v2/groups/` | `awx-list-groups` | ✅ Covered | Filterable by inventory_id, name |
+| Get group detail | `GET /api/v2/groups/{id}/` | `awx-get-resource` (type=group) | ✅ Covered | Returns GroupDetailOutput |
+| Create group | `POST /api/v2/groups/` | `awx-create-group` | ✅ Covered | Name, inventory_id required; optional description |
+| Update group | `PATCH /api/v2/groups/{id}/` | `awx-update-group` | ✅ Covered | Partial update semantics (name, description, inventory_id) |
+| Delete group | `DELETE /api/v2/groups/{id}/` | `awx-delete-group` | ✅ Covered | |
+
 ### Organizations
 
 | AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
 |---------------|-------------|-------------|--------|-------|
 | List organizations | `GET /api/v2/organizations/` | `awx-list-organizations` | ✅ Covered | **NEW** — added in issue #108 |
 | Get org detail | `GET /api/v2/organizations/{id}/` | `awx-get-resource` (type=organization) | ✅ Covered | Returns full OrganizationDetailOutput |
+
+### Labels
+
+| AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
+|---------------|-------------|-------------|--------|-------|
+| List labels | `GET /api/v2/labels/` | `awx-list-labels` | ✅ Covered | Filterable by organization_id |
+| Get label detail | `GET /api/v2/labels/{id}/` | `awx-get-resource` (type=label) | ✅ Covered | Returns LabelDetailOutput |
+| Create label | `POST /api/v2/labels/` | `awx-create-label` | ✅ Covered | Name, organization_id required; optional description |
+| Update label | `PATCH /api/v2/labels/{id}/` | `awx-update-label` | ✅ Covered | Partial update semantics (name, organization_id, description) |
+| Delete label | `DELETE /api/v2/labels/{id}/` | `awx-delete-label` | ✅ Covered | |
+
+### Instance Groups
+
+| AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
+|---------------|-------------|-------------|--------|-------|
+| List instance groups | `GET /api/v2/instance_groups/` | `awx-list-instance-groups` | ✅ Covered | |
+| Get instance group detail | `GET /api/v2/instance_groups/{id}/` | `awx-get-resource` (type=instance-group) | ✅ Covered | Returns InstanceGroupDetailOutput |
+| Create instance group | `POST /api/v2/instance_groups/` | `awx-create-instance-group` | ✅ Covered | Name required; optional description |
+| Update instance group | `PATCH /api/v2/instance_groups/{id}/` | `awx-update-instance-group` | ✅ Covered | Partial update semantics (name, description) |
+| Delete instance group | `DELETE /api/v2/instance_groups/{id}/` | `awx-delete-instance-group` | ✅ Covered | |
+
+### Execution Environments
+
+| AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
+|---------------|-------------|-------------|--------|-------|
+| List execution environments | `GET /api/v2/execution_environments/` | `awx-list-execution-environments` | ✅ Covered | |
+| Get execution environment detail | `GET /api/v2/execution_environments/{id}/` | `awx-get-resource` (type=execution-environment) | ✅ Covered | Returns ExecutionEnvironmentDetailOutput |
+| Create execution environment | `POST /api/v2/execution_environments/` | `awx-create-execution-environment` | ✅ Covered | Name, image, organization_id required; optional description |
+| Update execution environment | `PATCH /api/v2/execution_environments/{id}/` | `awx-update-execution-environment` | ✅ Covered | Partial update semantics (name, image, organization_id, description) |
+| Delete execution environment | `DELETE /api/v2/execution_environments/{id}/` | `awx-delete-execution-environment` | ✅ Covered | |
 
 ### Credentials
 
@@ -82,62 +132,13 @@
 | List workflows | `GET /api/v2/workflow_job_templates/` | `awx-list-workflow-templates` | ✅ Covered | Distinct from job templates |
 | Launch workflow | `POST /api/v2/workflow_job_templates/{id}/launch/` | `awx-launch-workflow` | ✅ Covered | Supports extra_vars |
 
-### Execution Environments
-
-| AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
-|---------------|-------------|-------------|--------|-------|
-| List execution environments | `GET /api/v2/execution_environments/` | `awx-list-execution-environments` | ✅ Covered | |
-| Get execution environment detail | `GET /api/v2/execution_environments/{id}/` | `awx-get-execution-environment` | ✅ Covered | Returns full ExecutionEnvironmentDetailOutput |
-| Create execution environment | `POST /api/v2/execution_environments/` | `awx-create-execution-environment` | ✅ Covered | Name, image, organization_id |
-| Update execution environment | `PATCH /api/v2/execution_environments/{id}/` | `awx-update-execution-environment` | ✅ Covered | Partial update semantics |
-| Delete execution environment | `DELETE /api/v2/execution_environments/{id}/` | `awx-delete-execution-environment` | ✅ Covered | |
-
-### Groups
-
-| AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
-|---------------|-------------|-------------|--------|-------|
-| List groups | `GET /api/v2/groups/` | `awx-list-groups` | ✅ Covered | Filterable by inventory_id |
-| Get group detail | `GET /api/v2/groups/{id}/` | `awx-get-group` | ✅ Covered | Returns full GroupDetailOutput |
-| Create group | `POST /api/v2/groups/` | `awx-create-group` | ✅ Covered | Name, inventory_id |
-| Update group | `PATCH /api/v2/groups/{id}/` | `awx-update-group` | ✅ Covered | Partial update semantics |
-| Delete group | `DELETE /api/v2/groups/{id}/` | `awx-delete-group` | ✅ Covered | |
-
-### Hosts
-
-| AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
-|---------------|-------------|-------------|--------|-------|
-| List hosts | `GET /api/v2/hosts/` | `awx-list-hosts` | ✅ Covered | Filterable by inventory_id |
-| Get host detail | `GET /api/v2/hosts/{id}/` | `awx-get-host` | ✅ Covered | Returns full HostDetailOutput |
-| Create host | `POST /api/v2/hosts/` | `awx-create-host` | ✅ Covered | Name, inventory_id |
-| Update host | `PATCH /api/v2/hosts/{id}/` | `awx-update-host` | ✅ Covered | Partial update semantics |
-| Delete host | `DELETE /api/v2/hosts/{id}/` | `awx-delete-host` | ✅ Covered | |
-
-### Instance Groups
-
-| AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
-|---------------|-------------|-------------|--------|-------|
-| List instance groups | `GET /api/v2/instance_groups/` | `awx-list-instance-groups` | ✅ Covered | |
-| Get instance group detail | `GET /api/v2/instance_groups/{id}/` | `awx-get-instance-group` | ✅ Covered | Returns full InstanceGroupDetailOutput |
-| Create instance group | `POST /api/v2/instance_groups/` | `awx-create-instance-group` | ✅ Covered | Name, credential_id |
-| Update instance group | `PATCH /api/v2/instance_groups/{id}/` | `awx-update-instance-group` | ✅ Covered | Partial update semantics |
-| Delete instance group | `DELETE /api/v2/instance_groups/{id}/` | `awx-delete-instance-group` | ✅ Covered | |
-
-### Labels
-
-| AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
-|---------------|-------------|-------------|--------|-------|
-| List labels | `GET /api/v2/labels/` | `awx-list-labels` | ✅ Covered | Filterable by organization_id |
-| Get label detail | `GET /api/v2/labels/{id}/` | `awx-get-label` | ✅ Covered | Returns full LabelDetailOutput |
-| Create label | `POST /api/v2/labels/` | `awx-create-label` | ✅ Covered | Name, organization_id |
-| Update label | `PATCH /api/v2/labels/{id}/` | `awx-update-label` | ✅ Covered | Partial update semantics |
-| Delete label | `DELETE /api/v2/labels/{id}/` | `awx-delete-label` | ✅ Covered | |
-
 ### Other Resources
 
 | AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
 |---------------|-------------|-------------|--------|-------|
 | List schedules | `GET /api/v2/schedules/` | `awx-list-schedules` | ✅ Covered | Filterable by unified_job_template_id |
 | List notification templates | `GET /api/v2/notification_templates/` | `awx-list-notification-templates` | ✅ Covered | |
+
 | Ping / health check | `GET /api/v2/ping/` | `awx-ping` | ✅ Covered | Returns AWX version, HA state, install UUID, instance info |
 
 ### Utility / Infrastructure (Not API-Mapped)
@@ -155,8 +156,8 @@
 | **Total AWX operations mapped** | 53 |
 | **Fully covered by tools** | 53 |
 | **Added in issue #108** | 3 (awx-list-organizations, awx-list-credentials, awx-list-inventories) |
-| **Added in issue #163** | 20 (awx-get-host/group/label/instance-group/execution-environment, awx-create/update/delete for host/group/label/instance-group/execution-environment) |
-| **Added in prior enhancement** | 14 (awx-list-schedules, awx-list-notification-templates, awx-list-labels, awx-list-instance-groups, awx-list-execution-environments, awx-list-templates-by-credential, awx-list-users, awx-list-hosts, awx-list-workflow-templates, awx-list-groups, awx-list-teams, awx-run-command, awx-launch-workflow, awx-ping) |
+| **Added previously** | 14 (awx-list-schedules, awx-list-notification-templates, awx-list-labels, awx-list-instance-groups, awx-list-execution-environments, awx-list-templates-by-credential, awx-list-users, awx-list-hosts, awx-list-workflow-templates, awx-list-groups, awx-list-teams, awx-run-command, awx-launch-workflow, awx-ping) |
+| **Added in issue #163** | 20 (CRUD + get-resource type mappings for hosts, groups, labels, instance groups, and execution environments) |
 | **Total covered** | 53 |
 | **Remaining gaps** | 0 |
 | **Estimated coverage** | 100% |
@@ -169,13 +170,15 @@
 | **P1 (High)** | 0 | All P1 gaps resolved — users, teams, ad-hoc commands, workflow templates, launch workflow |
 | **P2 (Medium)** | 0 | All P2 gaps resolved — detach credential, hosts, groups, templates-by-credential |
 | **P3 (Lower)** | 0 | All P3 gaps resolved — org detail, credential detail, schedules, notifications, instance groups, labels, execution environments, ping |
-| **P4 (Enhancement)** | 0 | All P4 gaps resolved in #163 — host/group/label/instance-group/execution-environment CRUD |
+| **New in #163** | 5 | Host CRUD, Group CRUD, Label CRUD, Instance Group CRUD, Execution Environment CRUD |
 
 ## Coverage Notes
 
 1. **Full coverage achieved.** The plugin now covers all 53 mapped AWX operations (100%). Every operation a subagent might need has a first-class plugin tool.
 
 2. **Agent fallback is safe.** All 53 operations have first-class tools — no raw PowerShell or `Invoke-RestMethod` with bare `AWX_TOKEN` should ever be needed.
+
+3. **Issue #163 additions.** Added 15 new CRUD tools (create/update/delete for hosts, groups, labels, instance groups, and execution environments) plus 5 new `awx-get-resource` type mappings for detail retrieval of the same resource types.
 
 ## Token Safety Verification
 

@@ -112,7 +112,7 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
       ].join("\n");
     }
     case "template": {
-      const d = result.data;
+      const d = result.data as unknown as Record<string, unknown>;
       const creds = Array.isArray(d.credentials)
         ? (d.credentials as Array<{ name: string }>)
         : [];
@@ -149,7 +149,7 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
       ].join("\n");
     }
     case "credential": {
-      const d = result.data;
+      const d = result.data as unknown as Record<string, unknown>;
       return [
         `Credential ${d.id}: ${d.name}`,
         `  Description:          ${d.description ?? ""}`,
@@ -160,8 +160,8 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
       ].join("\n");
     }
     case "organization": {
-      const d = result.data;
-      const rel = d.related;
+      const d = result.data as unknown as Record<string, unknown>;
+      const rel = (d.related as Record<string, number>) ?? {};
       return [
         `Organization ${d.id}: ${d.name}`,
         `  Description:          ${d.description ?? ""}`,
@@ -175,55 +175,52 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
       ].join("\n");
     }
     case "host": {
-      const d = result.data;
+      const d = result.data as unknown as Record<string, unknown>;
       return [
         `Host ${d.id}: ${d.name}`,
-        `  Description:     ${d.description ?? ""}`,
-        `  Inventory:       ${d.inventory_name ?? ""}`,
-        `  Variables:       ${(d.variables as string) ? ((d.variables as string).length > 60 ? (d.variables as string).slice(0, 60) + "…" : d.variables) : "(none)"}`,
-        `  Created:         ${d.created ?? ""}`,
-        `  Modified:        ${d.modified ?? ""}`,
+        `  Description:   ${d.description ?? ""}`,
+        `  Inventory:     ${d.inventory_name} (ID: ${d.inventory_id ?? "N/A"})`,
+        `  Created:       ${d.created ?? ""}`,
+        `  Modified:      ${d.modified ?? ""}`,
       ].join("\n");
     }
     case "group": {
-      const d = result.data;
+      const d = result.data as unknown as Record<string, unknown>;
       return [
         `Group ${d.id}: ${d.name}`,
-        `  Description:     ${d.description ?? ""}`,
-        `  Inventory:       ${d.inventory_name ?? ""}`,
-        `  Variables:       ${(d.variables as string) ? ((d.variables as string).length > 60 ? (d.variables as string).slice(0, 60) + "…" : d.variables) : "(none)"}`,
-        `  Created:         ${d.created ?? ""}`,
-        `  Modified:        ${d.modified ?? ""}`,
+        `  Description:   ${d.description ?? ""}`,
+        `  Inventory:     ${d.inventory_name} (ID: ${d.inventory_id ?? "N/A"})`,
+        `  Created:       ${d.created ?? ""}`,
+        `  Modified:      ${d.modified ?? ""}`,
       ].join("\n");
     }
     case "label": {
-      const d = result.data;
+      const d = result.data as unknown as Record<string, unknown>;
       return [
         `Label ${d.id}: ${d.name}`,
-        `  Description:     ${d.description ?? ""}`,
-        `  Organization:    ${d.organization_name ?? ""}`,
-        `  Created:         ${d.created ?? ""}`,
-        `  Modified:        ${d.modified ?? ""}`,
+        `  Description:      ${d.description ?? ""}`,
+        `  Organization:     ${d.organization_name} (ID: ${d.organization_id ?? "N/A"})`,
+        `  Created:          ${d.created ?? ""}`,
       ].join("\n");
     }
     case "instance-group": {
-      const d = result.data;
+      const d = result.data as unknown as Record<string, unknown>;
       return [
         `Instance Group ${d.id}: ${d.name}`,
-        `  Description:     ${d.description ?? ""}`,
-        `  Created:         ${d.created ?? ""}`,
-        `  Modified:        ${d.modified ?? ""}`,
+        `  Description:   ${d.description ?? ""}`,
+        `  Created:       ${d.created ?? ""}`,
+        `  Modified:      ${d.modified ?? ""}`,
       ].join("\n");
     }
     case "execution-environment": {
-      const d = result.data;
+      const d = result.data as unknown as Record<string, unknown>;
       return [
         `Execution Environment ${d.id}: ${d.name}`,
-        `  Description:     ${d.description ?? ""}`,
-        `  Image:           ${d.image ?? ""}`,
-        `  Organization:    ${d.organization_name ?? ""}`,
-        `  Created:         ${d.created ?? ""}`,
-        `  Modified:        ${d.modified ?? ""}`,
+        `  Description:      ${d.description ?? ""}`,
+        `  Image:            ${d.image ?? ""}`,
+        `  Organization:     ${d.organization_name} (ID: ${d.organization_id ?? "N/A"})`,
+        `  Created:          ${d.created ?? ""}`,
+        `  Modified:         ${d.modified ?? ""}`,
       ].join("\n");
     }
   }

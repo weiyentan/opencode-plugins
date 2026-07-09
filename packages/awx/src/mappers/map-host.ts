@@ -7,14 +7,14 @@
  *
  * ## Key Transformations
  *
- * - **Inventory name**: Extracts inventory_name from AWX
- *   `summary_fields` rather than raw ID.
+ * - **Related names**: Extracts inventory_name from AWX `summary_fields`
+ *   rather than raw ID.
  * - **Envelope**: Wraps output in `{ schema_version, resource_type, id, data }`.
  *
  * ## Usage
  *
  * ```ts
- * const response = await fetch(client, "GET", "/api/v2/hosts/5/");
+ * const response = await fetch(client, "GET", "/api/v2/hosts/7/");
  * const raw = await response.json();
  * const output = mapHost(raw);
  * ```
@@ -29,7 +29,7 @@ interface RawAwxHost {
   id: number;
   name: string;
   description: string;
-  variables: string;
+  inventory: number | null;
   created: string;
   modified: string;
   summary_fields?: {
@@ -54,11 +54,11 @@ export function mapHost(raw: unknown): HostDetailOutput {
   const sf = h.summary_fields ?? {};
 
   const data: HostData = {
-    id: h.id,
+    id: h.id ?? 0,
     name: h.name ?? "",
     description: h.description ?? "",
+    inventory_id: h.inventory ?? null,
     inventory_name: sf.inventory?.name ?? "",
-    variables: h.variables ?? "",
     created: h.created ?? "",
     modified: h.modified ?? "",
   };
@@ -66,7 +66,7 @@ export function mapHost(raw: unknown): HostDetailOutput {
   return {
     schema_version: "1.0",
     resource_type: "host",
-    id: h.id,
+    id: h.id ?? 0,
     data,
   };
 }

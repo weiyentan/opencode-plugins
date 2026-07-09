@@ -1,40 +1,47 @@
 /**
  * Execution Environment CRUD Tool Integration Tests
  *
- * Tests for the awx-get-execution-environment, awx-create-execution-environment,
- * awx-update-execution-environment, and awx-delete-execution-environment tools:
- * tool registration, Zod schema validation, endpoint dispatch,
+ * Tests for the awx-create-execution-environment, awx-update-execution-environment,
+ * and awx-delete-execution-environment tools: tool registration, endpoint dispatch,
  * error handling, and abort signals.
+ *
+ * Follows TDD: one behavior at a time, minimal implementation per test.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
 import { AwxPlugin } from "../src/index.js";
 
-// ─── Test Helpers ─────────────────────────────────────────────
+// ─── Mock Data ────────────────────────────────────────────────
 
 const MOCK_RAW_EE: Record<string, unknown> = {
-  id: 2,
-  name: "AWX EE 2.4",
+  id: 1,
+  name: "AWX EE 2.9",
   description: "Default AWX execution environment",
   image: "quay.io/ansible/awx-ee:latest",
-  created: "2025-01-01T00:00:00Z",
-  modified: "2025-06-15T08:00:00Z",
+  managed: true,
+  organization: 1,
+  created: "2025-06-25T12:00:00Z",
+  modified: "2025-06-25T13:00:00Z",
   summary_fields: {
     organization: { id: 1, name: "Default" },
   },
 };
 
 const MOCK_RAW_EE_CREATED: Record<string, unknown> = {
-  id: 55,
+  id: 99,
   name: "Custom EE",
-  description: "Custom execution environment",
-  image: "quay.io/custom/ee:latest",
-  created: "2025-07-01T00:00:00Z",
-  modified: "2025-07-01T00:00:00Z",
+  description: "My custom execution environment",
+  image: "registry.example.com/my-ee:latest",
+  managed: false,
+  organization: 2,
+  created: "2025-06-26T12:00:00Z",
+  modified: "2025-06-26T12:00:00Z",
   summary_fields: {
     organization: { id: 2, name: "Staging Org" },
   },
 };
+
+// ─── Test Helpers ─────────────────────────────────────────────
 
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   return {
@@ -51,15 +58,19 @@ function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
 }
 
 function mockPluginInput(overrides?: Partial<PluginInput>): PluginInput {
+  const mockLog = vi.fn();
+  const mockGetSecret = vi.fn().mockResolvedValue(null);
   return {
     client: {
-      app: { log: vi.fn() },
-      getSecret: vi.fn().mockResolvedValue(null),
+      app: { log: mockLog },
+      getSecret: mockGetSecret,
     } as unknown as PluginInput["client"],
     project: {} as PluginInput["project"],
     directory: "/mock/dir",
     worktree: "/mock/worktree",
-    experimental_workspace: { register: vi.fn() },
+    experimental_workspace: {
+      register: vi.fn(),
+    },
     serverUrl: new URL("http://localhost:0"),
     $: {} as PluginInput["$"],
     ...overrides,
@@ -111,156 +122,244 @@ describe("Execution Environment CRUD tools", () => {
      Cycle 1: Tools are registered
      ══════════════════════════════════════════════════════════════ */
 
-  it("registers awx-get-execution-environment tool", () => {
-    expect(hooks.tool!["awx-get-execution-environment"]).toBeDefined();
-  });
-
-  it("registers awx-create-execution-environment tool", () => {
+  it("registers awx-create-execution-environment tool", async () => {
     expect(hooks.tool!["awx-create-execution-environment"]).toBeDefined();
+    expect(typeof hooks.tool!["awx-create-execution-environment"]!.description).toBe("string");
   });
 
-  it("registers awx-update-execution-environment tool", () => {
+  it("registers awx-update-execution-environment tool", async () => {
     expect(hooks.tool!["awx-update-execution-environment"]).toBeDefined();
+    expect(typeof hooks.tool!["awx-update-execution-environment"]!.description).toBe("string");
   });
 
-  it("registers awx-delete-execution-environment tool", () => {
+  it("registers awx-delete-execution-environment tool", async () => {
     expect(hooks.tool!["awx-delete-execution-environment"]).toBeDefined();
+    expect(typeof hooks.tool!["awx-delete-execution-environment"]!.description).toBe("string");
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 2: Get execution environment — success
-     ══════════════════════════════════════════════════════════════ */
-
-  it("gets execution environment by id", async () => {
-    mockFetchResponse(MOCK_RAW_EE);
-    const result = await hooks.tool!["awx-get-execution-environment"]!.execute({ id: 2 }, mockToolContext());
-    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
-    expect(metadata.schema_version).toBe("1.0");
-    expect(metadata.resource_type).toBe("execution-environment");
-    expect(metadata.id).toBe(2);
-  });
-
-  it("get execution environment calls GET /api/v2/execution_environments/2/", async () => {
-    mockFetchResponse(MOCK_RAW_EE);
-    await hooks.tool!["awx-get-execution-environment"]!.execute({ id: 2 }, mockToolContext());
-    expect(fetch).toHaveBeenCalledWith(
-      "https://aap.example.com/api/v2/execution_environments/2/",
-      expect.any(Object),
-    );
-  });
-
-  /* ══════════════════════════════════════════════════════════════
-     Cycle 3: Create execution environment — success
+     Cycle 2: Create execution environment — success
      ══════════════════════════════════════════════════════════════ */
 
   it("creates execution environment with name, image, and organization_id", async () => {
     mockFetchResponse(MOCK_RAW_EE_CREATED);
+
     const result = await hooks.tool!["awx-create-execution-environment"]!.execute(
-      { name: "Custom EE", image: "quay.io/custom/ee:latest", organization_id: 2 },
+      { name: "Custom EE", image: "registry.example.com/my-ee:latest", organization_id: 2 },
       mockToolContext(),
     );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.action).toBe("created");
+    expect(metadata.resource_type).toBe("execution-environment");
+    expect(metadata.id).toBe(99);
+    expect(metadata.errors).toEqual([]);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Custom EE");
+  });
+
+  it("creates execution environment with description", async () => {
+    mockFetchResponse({
+      ...MOCK_RAW_EE_CREATED,
+      description: "My custom EE",
+    });
+
+    const result = await hooks.tool!["awx-create-execution-environment"]!.execute(
+      { name: "Custom EE", image: "registry.example.com/my-ee:latest", organization_id: 2, description: "My custom EE" },
+      mockToolContext(),
+    );
+
     const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
     expect(metadata.action).toBe("created");
     expect(metadata.resource_type).toBe("execution-environment");
-    expect(metadata.id).toBe(55);
+    expect((metadata.data as Record<string, unknown>).description).toBe("My custom EE");
   });
 
   it("create execution environment calls POST /api/v2/execution_environments/", async () => {
     mockFetchResponse(MOCK_RAW_EE_CREATED);
+
     await hooks.tool!["awx-create-execution-environment"]!.execute(
-      { name: "Custom EE", image: "quay.io/custom/ee:latest", organization_id: 2 },
+      { name: "Custom EE", image: "registry.example.com/my-ee:latest", organization_id: 2 },
       mockToolContext(),
     );
+
     expect(fetch).toHaveBeenCalledWith(
       "https://aap.example.com/api/v2/execution_environments/",
       expect.objectContaining({ method: "POST" }),
     );
   });
 
-  it("create execution environment sends body with name, image, organization", async () => {
+  it("create execution environment sends body with name, image, and organization", async () => {
     mockFetchResponse(MOCK_RAW_EE_CREATED);
+
     await hooks.tool!["awx-create-execution-environment"]!.execute(
-      { name: "Custom EE", image: "quay.io/custom/ee:latest", organization_id: 2 },
+      { name: "Custom EE", image: "registry.example.com/my-ee:latest", organization_id: 2 },
       mockToolContext(),
     );
+
     const callBody = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body;
     const parsed = JSON.parse(callBody);
     expect(parsed.name).toBe("Custom EE");
-    expect(parsed.image).toBe("quay.io/custom/ee:latest");
+    expect(parsed.image).toBe("registry.example.com/my-ee:latest");
     expect(parsed.organization).toBe(2);
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 4: Update execution environment — success
+     Cycle 3: Update execution environment — success
      ══════════════════════════════════════════════════════════════ */
 
   it("updates execution environment with id and name", async () => {
-    mockFetchResponse({ ...MOCK_RAW_EE, name: "AWX EE 2.5" });
-    const result = await hooks.tool!["awx-update-execution-environment"]!.execute({ id: 2, name: "AWX EE 2.5" }, mockToolContext());
+    mockFetchResponse({ ...MOCK_RAW_EE, name: "Updated EE" });
+
+    const result = await hooks.tool!["awx-update-execution-environment"]!.execute(
+      { id: 1, name: "Updated EE" },
+      mockToolContext(),
+    );
+
     const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
     expect(metadata.action).toBe("updated");
     expect(metadata.resource_type).toBe("execution-environment");
+    expect(metadata.id).toBe(1);
+    expect(metadata.errors).toEqual([]);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Updated EE");
   });
 
-  it("update execution environment calls PATCH /api/v2/execution_environments/2/", async () => {
+  it("update execution environment calls PATCH /api/v2/execution_environments/1/", async () => {
     mockFetchResponse(MOCK_RAW_EE);
-    await hooks.tool!["awx-update-execution-environment"]!.execute({ id: 2, name: "updated" }, mockToolContext());
+
+    await hooks.tool!["awx-update-execution-environment"]!.execute(
+      { id: 1, name: "Updated EE" },
+      mockToolContext(),
+    );
+
     expect(fetch).toHaveBeenCalledWith(
-      "https://aap.example.com/api/v2/execution_environments/2/",
+      "https://aap.example.com/api/v2/execution_environments/1/",
       expect.objectContaining({ method: "PATCH" }),
     );
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 5: Delete execution environment — success
+     Cycle 4: Delete execution environment — success
      ══════════════════════════════════════════════════════════════ */
 
   it("deletes execution environment with id", async () => {
     mockFetchResponse({});
-    const result = await hooks.tool!["awx-delete-execution-environment"]!.execute({ id: 2 }, mockToolContext());
+
+    const result = await hooks.tool!["awx-delete-execution-environment"]!.execute(
+      { id: 1 },
+      mockToolContext(),
+    );
+
     const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
     expect(metadata.action).toBe("deleted");
     expect(metadata.resource_type).toBe("execution-environment");
+    expect(metadata.id).toBe(1);
     expect(metadata.data).toBeNull();
+    expect(metadata.errors).toEqual([]);
   });
 
-  it("delete execution environment calls DELETE /api/v2/execution_environments/2/", async () => {
+  it("delete execution environment calls DELETE /api/v2/execution_environments/1/", async () => {
     mockFetchResponse({});
-    await hooks.tool!["awx-delete-execution-environment"]!.execute({ id: 2 }, mockToolContext());
+
+    await hooks.tool!["awx-delete-execution-environment"]!.execute(
+      { id: 1 },
+      mockToolContext(),
+    );
+
     expect(fetch).toHaveBeenCalledWith(
-      "https://aap.example.com/api/v2/execution_environments/2/",
+      "https://aap.example.com/api/v2/execution_environments/1/",
       expect.objectContaining({ method: "DELETE" }),
     );
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 6: Abort & error handling
+     Cycle 5: Abort signal handling
      ══════════════════════════════════════════════════════════════ */
 
   it("create returns abort message when signal is already aborted", async () => {
-    const ctrl = new AbortController();
-    ctrl.abort();
+    const abortedController = new AbortController();
+    abortedController.abort();
+
     const result = await hooks.tool!["awx-create-execution-environment"]!.execute(
-      { name: "Test", image: "test:latest", organization_id: 1 },
-      mockToolContext({ abort: ctrl.signal }),
+      { name: "Test", image: "img:latest", organization_id: 1 },
+      mockToolContext({ abort: abortedController.signal }),
     );
-    expect((result as { output: string }).output).toContain("aborted");
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("aborted");
   });
+
+  it("update returns abort message when signal is already aborted", async () => {
+    const abortedController = new AbortController();
+    abortedController.abort();
+
+    const result = await hooks.tool!["awx-update-execution-environment"]!.execute(
+      { id: 1, name: "Test" },
+      mockToolContext({ abort: abortedController.signal }),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("aborted");
+  });
+
+  it("delete returns abort message when signal is already aborted", async () => {
+    const abortedController = new AbortController();
+    abortedController.abort();
+
+    const result = await hooks.tool!["awx-delete-execution-environment"]!.execute(
+      { id: 1 },
+      mockToolContext({ abort: abortedController.signal }),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("aborted");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 6: AWX API error handling
+     ══════════════════════════════════════════════════════════════ */
 
   it("returns error when create gets API error", async () => {
     mockFetchResponse({ detail: "Bad request." }, 400);
+
     const result = await hooks.tool!["awx-create-execution-environment"]!.execute(
-      { name: "Test", image: "test:latest", organization_id: 1 },
+      { name: "Test", image: "img:latest", organization_id: 1 },
       mockToolContext(),
     );
+
     const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+    expect(metadata.errors).toBeDefined();
+    expect((metadata.errors as string[]).length).toBeGreaterThan(0);
+  });
+
+  it("returns error when update gets API error", async () => {
+    mockFetchResponse({ detail: "Not found." }, 404);
+
+    const result = await hooks.tool!["awx-update-execution-environment"]!.execute(
+      { id: 99999, name: "Test" },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+    expect(metadata.errors).toBeDefined();
     expect((metadata.errors as string[]).length).toBeGreaterThan(0);
   });
 
   it("returns error when delete gets API error", async () => {
     mockFetchResponse({ detail: "Not found." }, 404);
-    const result = await hooks.tool!["awx-delete-execution-environment"]!.execute({ id: 99999 }, mockToolContext());
+
+    const result = await hooks.tool!["awx-delete-execution-environment"]!.execute(
+      { id: 99999 },
+      mockToolContext(),
+    );
+
     const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+    expect(metadata.errors).toBeDefined();
     expect((metadata.errors as string[]).length).toBeGreaterThan(0);
   });
 
@@ -268,24 +367,49 @@ describe("Execution Environment CRUD tools", () => {
      Cycle 7: Zod schema validation
      ══════════════════════════════════════════════════════════════ */
 
-  it("create rejects missing required name", () => {
-    const parsed = hooks.tool!["awx-create-execution-environment"]!.args?.safeParse?.({ image: "test:latest", organization_id: 1 });
-    if (parsed) expect(parsed.success).toBe(false);
+  it("create rejects missing required name", async () => {
+    const schema = hooks.tool!["awx-create-execution-environment"]!.args;
+    const parsed = schema?.safeParse?.({ image: "img:latest", organization_id: 1 });
+
+    if (parsed) {
+      expect(parsed.success).toBe(false);
+    }
   });
 
-  it("create rejects missing required image", () => {
-    const parsed = hooks.tool!["awx-create-execution-environment"]!.args?.safeParse?.({ name: "Test", organization_id: 1 });
-    if (parsed) expect(parsed.success).toBe(false);
+  it("create rejects missing required image", async () => {
+    const schema = hooks.tool!["awx-create-execution-environment"]!.args;
+    const parsed = schema?.safeParse?.({ name: "Test", organization_id: 1 });
+
+    if (parsed) {
+      expect(parsed.success).toBe(false);
+    }
   });
 
-  it("create rejects missing required organization_id", () => {
-    const parsed = hooks.tool!["awx-create-execution-environment"]!.args?.safeParse?.({ name: "Test", image: "test:latest" });
-    if (parsed) expect(parsed.success).toBe(false);
+  it("create rejects missing required organization_id", async () => {
+    const schema = hooks.tool!["awx-create-execution-environment"]!.args;
+    const parsed = schema?.safeParse?.({ name: "Test", image: "img:latest" });
+
+    if (parsed) {
+      expect(parsed.success).toBe(false);
+    }
   });
 
-  it("delete requires id", () => {
-    const parsed = hooks.tool!["awx-delete-execution-environment"]!.args?.safeParse?.({});
-    if (parsed) expect(parsed.success).toBe(false);
+  it("update requires id", async () => {
+    const schema = hooks.tool!["awx-update-execution-environment"]!.args;
+    const parsed = schema?.safeParse?.({ name: "Test" });
+
+    if (parsed) {
+      expect(parsed.success).toBe(false);
+    }
+  });
+
+  it("delete requires id", async () => {
+    const schema = hooks.tool!["awx-delete-execution-environment"]!.args;
+    const parsed = schema?.safeParse?.({});
+
+    if (parsed) {
+      expect(parsed.success).toBe(false);
+    }
   });
 
   /* ══════════════════════════════════════════════════════════════
@@ -294,25 +418,52 @@ describe("Execution Environment CRUD tools", () => {
 
   it("create returns error when AWX client is not available", async () => {
     const input = mockPluginInput();
-    const localHooks = await createHooks(input, { baseUrl: "https://aap.example.com" });
+    const localHooks = await createHooks(input, {
+      baseUrl: "https://aap.example.com",
+    });
+
     const result = await localHooks.tool!["awx-create-execution-environment"]!.execute(
-      { name: "Test", image: "test:latest", organization_id: 1 },
+      { name: "Test", image: "img:latest", organization_id: 1 },
       mockToolContext(),
     );
-    expect((result as { output: string }).output).toContain("PAT");
-    await localHooks.dispose?.();
-  });
 
-  it("get returns error when AWX client is not available", async () => {
-    const input = mockPluginInput();
-    const localHooks = await createHooks(input, { baseUrl: "https://aap.example.com" });
-    const result = await localHooks.tool!["awx-get-execution-environment"]!.execute({ id: 42 }, mockToolContext());
     const out = (result as { output: string }).output;
     expect(out).toContain("PAT");
-    const meta = (result as { metadata?: Record<string, unknown> }).metadata;
-    expect(meta).toBeDefined();
-    expect((meta!.errors as string[]).length).toBeGreaterThan(0);
+
     await localHooks.dispose?.();
   });
 
+  it("update returns error when AWX client is not available", async () => {
+    const input = mockPluginInput();
+    const localHooks = await createHooks(input, {
+      baseUrl: "https://aap.example.com",
+    });
+
+    const result = await localHooks.tool!["awx-update-execution-environment"]!.execute(
+      { id: 1, name: "Test" },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("PAT");
+
+    await localHooks.dispose?.();
+  });
+
+  it("delete returns error when AWX client is not available", async () => {
+    const input = mockPluginInput();
+    const localHooks = await createHooks(input, {
+      baseUrl: "https://aap.example.com",
+    });
+
+    const result = await localHooks.tool!["awx-delete-execution-environment"]!.execute(
+      { id: 1 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("PAT");
+
+    await localHooks.dispose?.();
+  });
 });

@@ -17,7 +17,7 @@ export function createGetResourceTool(getAwxClient: () => Promise<AwxClient>) {
     description: [
       "Get individual resource detail from AWX.",
       "Generalized resource detail getter with type→endpoint dispatch.",
-      "Supports 'template', 'project', 'inventory', 'credential', and 'organization' resource types.",
+      "Supports 'template', 'project', 'inventory', 'credential', 'organization', 'host', 'group', 'label', 'instance-group', and 'execution-environment' resource types.",
       "Returns structured output in a standard envelope:",
       "{ schema_version, resource_type, id, data }.",
       "For templates: name, description, job_type, resolved names,",

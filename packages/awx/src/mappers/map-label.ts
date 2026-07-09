@@ -7,14 +7,14 @@
  *
  * ## Key Transformations
  *
- * - **Organization name**: Extracts organization_name from AWX
- *   `summary_fields` rather than raw ID.
+ * - **Related names**: Extracts organization_name from AWX `summary_fields`
+ *   rather than raw ID.
  * - **Envelope**: Wraps output in `{ schema_version, resource_type, id, data }`.
  *
  * ## Usage
  *
  * ```ts
- * const response = await fetch(client, "GET", "/api/v2/labels/5/");
+ * const response = await fetch(client, "GET", "/api/v2/labels/7/");
  * const raw = await response.json();
  * const output = mapLabel(raw);
  * ```
@@ -29,8 +29,8 @@ interface RawAwxLabel {
   id: number;
   name: string;
   description: string;
+  organization: number | null;
   created: string;
-  modified: string;
   summary_fields?: {
     organization?: { id?: number; name?: string } | null;
   };
@@ -53,18 +53,18 @@ export function mapLabel(raw: unknown): LabelDetailOutput {
   const sf = l.summary_fields ?? {};
 
   const data: LabelData = {
-    id: l.id,
+    id: l.id ?? 0,
     name: l.name ?? "",
     description: l.description ?? "",
+    organization_id: l.organization ?? null,
     organization_name: sf.organization?.name ?? "",
     created: l.created ?? "",
-    modified: l.modified ?? "",
   };
 
   return {
     schema_version: "1.0",
     resource_type: "label",
-    id: l.id,
+    id: l.id ?? 0,
     data,
   };
 }
