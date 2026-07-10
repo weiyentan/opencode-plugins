@@ -75,6 +75,41 @@ const MOCK_RAW_PROJECT: Record<string, unknown> = {
   },
 };
 
+const MOCK_RAW_CREDENTIAL: Record<string, unknown> = {
+  id: 15,
+  name: "Production SSH Key",
+  description: "SSH key for production servers",
+  credential_type: 1,
+  credential_type_name: "Machine",
+  kind: "ssh",
+  organization: 1,
+  organization_name: "Default",
+  managed: false,
+  created: "2025-01-10T08:00:00Z",
+  modified: "2025-06-18T12:00:00Z",
+  summary_fields: {
+    organization: { id: 1, name: "Default", description: "Default organization" },
+    credential_type: { id: 1, name: "Machine" },
+  },
+};
+
+const MOCK_RAW_ORGANIZATION: Record<string, unknown> = {
+  id: 1,
+  name: "Default",
+  description: "Default organization",
+  created: "2024-01-01T00:00:00Z",
+  modified: "2025-06-01T00:00:00Z",
+  summary_fields: {
+    related: {
+      users: { count: 3 },
+      teams: { count: 2 },
+      job_templates: { count: 5 },
+      projects: { count: 3 },
+      inventories: { count: 2 },
+    },
+  },
+};
+
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
   return {
     sessionID: "test-session",
@@ -182,12 +217,12 @@ describe("awx-get-resource tool", () => {
 
     const output = (result as { output: string }).output;
     expect(output).toContain("Template 7: Deploy Web Stack — Production");
-    expect(output).toContain("Job Type:  run");
-    expect(output).toContain("Playbook:  deploy-web-stack.yml");
-    expect(output).toContain("Status:    successful");
-    expect(output).toContain("Inventory: Production");
-    expect(output).toContain("Project:   Web Stack Deploy");
-    expect(output).toContain("Last Run:  2025-06-15T14:32:00Z");
+    expect(output).toContain("  Job Type:            run");
+    expect(output).toContain("  Playbook:            deploy-web-stack.yml");
+    expect(output).toContain("  Status:              successful");
+    expect(output).toContain("  Inventory:           Production");
+    expect(output).toContain("  Project:             Web Stack Deploy");
+    expect(output).toContain("  Last Run:            2025-06-15T14:32:00Z");
   });
 
   /* ══════════════════════════════════════════════════════════════
@@ -274,12 +309,12 @@ describe("awx-get-resource tool", () => {
 
     const output = (result as { output: string }).output;
     expect(output).toContain("Project 5: Web Stack Deploy");
-    expect(output).toContain("SCM Type: git");
-    expect(output).toContain("SCM URL:  https://github.com/example/web-stack-deploy.git");
-    expect(output).toContain("Branch:   main");
-    expect(output).toContain("Status:   successful");
-    expect(output).toContain("Org:      Default");
-    expect(output).toContain("Updated:  2025-06-20T10:15:00Z");
+    expect(output).toContain("  SCM Type:        git");
+    expect(output).toContain("  SCM URL:         https://github.com/example/web-stack-deploy.git");
+    expect(output).toContain("  Branch:          main");
+    expect(output).toContain("  Status:          successful");
+    expect(output).toContain("  Org:             Default");
+    expect(output).toContain("  Updated:         2025-06-20T10:15:00Z");
   });
 
   /* ══════════════════════════════════════════════════════════════
@@ -505,10 +540,10 @@ describe("awx-get-resource tool", () => {
 
     const output = (result as { output: string }).output;
     expect(output).toContain("Credential 15: Production SSH Key");
-    expect(output).toContain("Description:");
-    expect(output).toContain("Machine");
+    expect(output).toContain("SSH key for production servers");
+    expect(output).toContain("Machine (ID: 1)");
     expect(output).toContain("Kind:");
-    expect(output).toContain("Organization:");
+    expect(output).toContain("Default");
     expect(output).toContain("Managed:");
   });
 
@@ -562,14 +597,14 @@ describe("awx-get-resource tool", () => {
 
     const output = (result as { output: string }).output;
     expect(output).toContain("Organization 1: Default");
-    expect(output).toContain("Description:");
-    expect(output).toContain("Users:");
-    expect(output).toContain("Teams:");
-    expect(output).toContain("Job Templates:");
-    expect(output).toContain("Projects:");
-    expect(output).toContain("Inventories:");
-    expect(output).toContain("Created:");
-    expect(output).toContain("Modified:");
+    expect(output).toContain("Default organization");
+    expect(output).toContain("Users:                3");
+    expect(output).toContain("Teams:                2");
+    expect(output).toContain("Job Templates:        5");
+    expect(output).toContain("Projects:             3");
+    expect(output).toContain("Inventories:          2");
+    expect(output).toContain("Created:              2024-01-01T00:00:00Z");
+    expect(output).toContain("Modified:             2025-06-01T00:00:00Z");
   });
 
   /* ══════════════════════════════════════════════════════════════
@@ -596,10 +631,6 @@ describe("awx-get-resource tool", () => {
 
   /* ══════════════════════════════════════════════════════════════
      Cycle 18: Successful schedule detail retrieval
-     ══════════════════════════════════════════════════════════════ */
-
-  it("returns schedule details in the standard envelope", async () => {
-    const rawSchedule = {
      ══════════════════════════════════════════════════════════════ */
 
   it("returns schedule details in the standard envelope", async () => {

@@ -23,16 +23,11 @@
  * ```
  */
 import type { PluginInput, Hooks, Plugin } from "@opencode-ai/plugin";
-import { tool } from "@opencode-ai/plugin";
-
-const z = tool.schema;
 
 import { createAwxAuthHook, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
 import { createClient, createTimeoutSignal } from "./client.js";
 import type { AwxClient } from "./client.js";
-import { executeCrud } from "./crud.js";
-import { wrapMutationResult } from "./utils.js";
 
 import { getCustomConfig } from "./runtime-config.js";
 
