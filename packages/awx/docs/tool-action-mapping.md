@@ -106,7 +106,7 @@
 |---------------|-------------|-------------|--------|-------|
 | List credentials | `GET /api/v2/credentials/` | `awx-list-credentials` | ✅ Covered | **NEW** — added in issue #108; filtering by name, kind, organization |
 | Get credential detail | `GET /api/v2/credentials/{id}/` | `awx-get-resource` (type=credential) | ✅ Covered | Returns full CredentialDetailOutput |
-| Templates by credential | `GET /api/v2/credentials/{id}/job_templates/` | `awx-list-templates-by-credential` | ✅ Covered | Reverse lookup for impact analysis |
+| Templates by credential | `GET /api/v2/job_templates/?credentials__id={id}` | `awx-list-templates-by-credential` | ✅ Covered | Reverse lookup for impact analysis |
 
 ### Jobs
 

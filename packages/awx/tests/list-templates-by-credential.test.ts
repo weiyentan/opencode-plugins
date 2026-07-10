@@ -119,7 +119,7 @@ describe("listTemplatesByCredential", () => {
     expect(client.request).toHaveBeenCalledTimes(1);
     expect(client.request).toHaveBeenCalledWith(
       "awx-list-templates-by-credential",
-      "/api/v2/credentials/42/job_templates/?page=1&page_size=50",
+      "/api/v2/job_templates/?page=1&page_size=50&credentials__id=42",
       expect.any(Object),
       expect.any(AbortSignal),
     );
@@ -147,17 +147,17 @@ describe("listTemplatesByCredential", () => {
     expect(result.results).toEqual([]);
     expect(client.request).toHaveBeenCalledWith(
       "awx-list-templates-by-credential",
-      "/api/v2/credentials/999/job_templates/?page=1&page_size=50",
+      "/api/v2/job_templates/?page=1&page_size=50&credentials__id=999",
       expect.any(Object),
       expect.any(AbortSignal),
     );
   });
 
   /* ══════════════════════════════════════════════════════════════════
-     Error handling — non-existent credential
+     Error handling — non-existent credential (generic AWX API error)
      ══════════════════════════════════════════════════════════════════ */
 
-  it("throws descriptive error for non-existent credential (404)", async () => {
+  it("throws generic AWX API error for 404 from job_templates endpoint", async () => {
     const client = createMockClient();
 
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
@@ -165,7 +165,7 @@ describe("listTemplatesByCredential", () => {
     );
 
     await expect(listTemplatesByCredential(client, 999)).rejects.toThrow(
-      "Credential 999 not found",
+      "AWX API error: 404 Error",
     );
   });
 
@@ -198,7 +198,7 @@ describe("listTemplatesByCredential", () => {
     (client.request as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(
         createMockResponse({
-          data: { count: 3, results: page1, next: "/api/v2/credentials/42/job_templates/?page=2" },
+          data: { count: 3, results: page1, next: "/api/v2/job_templates/?page=2&credentials__id=42" },
         }),
       )
       .mockResolvedValueOnce(
@@ -226,7 +226,7 @@ describe("listTemplatesByCredential", () => {
           data: {
             count: 30,
             results: [createRawTemplate({ id: i + 1, name: `template-${String.fromCharCode(97 + i)}` })],
-            next: i < 2 ? `/api/v2/credentials/42/job_templates/?page=${i + 2}` : null,
+            next: i < 2 ? `/api/v2/job_templates/?page=${i + 2}&credentials__id=42` : null,
           },
         }),
       );
@@ -278,7 +278,7 @@ describe("listTemplatesByCredential", () => {
 
     expect(client.request).toHaveBeenCalledWith(
       "awx-list-templates-by-credential",
-      "/api/v2/credentials/42/job_templates/?page=1&page_size=10",
+      "/api/v2/job_templates/?page=1&page_size=10&credentials__id=42",
       expect.any(Object),
       expect.any(AbortSignal),
     );

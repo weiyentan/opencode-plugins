@@ -25,7 +25,7 @@ The following 60 tools are currently registered in the AWX plugin:
 | 11 | `awx-list-labels` | List labels with pagination | `GET /api/v2/labels/` |
 | 12 | `awx-list-instance-groups` | List instance groups with pagination | `GET /api/v2/instance_groups/` |
 | 13 | `awx-list-execution-environments` | List execution environments with pagination | `GET /api/v2/execution_environments/` |
-| 14 | `awx-list-templates-by-credential` | List templates using a given credential | `GET /api/v2/credentials/{id}/job_templates/` |
+| 14 | `awx-list-templates-by-credential` | List templates using a given credential | `GET /api/v2/job_templates/?credentials__id={id}` |
 | 15 | `awx-list-users` | List users with pagination | `GET /api/v2/users/` |
 | 16 | `awx-list-hosts` | List hosts in an inventory | `GET /api/v2/inventories/{id}/hosts/` |
 | 17 | `awx-list-workflow-templates` | List workflow job templates | `GET /api/v2/workflow_job_templates/` |

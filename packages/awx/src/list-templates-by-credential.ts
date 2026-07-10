@@ -2,7 +2,7 @@
  * list-templates-by-credential.ts — Reverse-lookup templates by credential.
  *
  * Fetches job templates associated with a given credential from the AWX
- * /api/v2/credentials/{credentialId}/job_templates/ endpoint, iterating
+ * /api/v2/job_templates/?credentials__id={credentialId} endpoint, iterating
  * through pages up to a configurable cap, sorting results by name, and
  * enforcing a per-page timeout budget.
  *
@@ -15,7 +15,7 @@ import type { TemplateResult } from "./list-templates.js";
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
-/** AWX paginated response shape for /api/v2/credentials/{id}/job_templates/ */
+/** AWX paginated response shape for /api/v2/job_templates/?credentials__id= */
 interface AwxTemplateResponseItem {
   id: number;
   name: string;
@@ -68,7 +68,7 @@ function mapTemplate(item: AwxTemplateResponseItem): TemplateResult {
 /**
  * List AWX job templates associated with a given credential.
  *
- * Fetches templates from `/api/v2/credentials/{credentialId}/job_templates/`,
+ * Fetches templates from `/api/v2/job_templates/?credentials__id={credentialId}`,
  * iterating through pages up to the configured `maxPages` cap. Each page
  * request gets a timeout budget of `timeout / (maxPages + 1)`.
  *
@@ -116,10 +116,10 @@ export async function listTemplatesByCredential(
 
     try {
       const path = buildPaginatedUrl(
-        `/api/v2/credentials/${credentialId}/job_templates/`,
+        "/api/v2/job_templates/",
         page,
         pageSize,
-        options?.filters,
+        [...(options?.filters ?? []), `credentials__id=${credentialId}`],
       );
 
       const response = await client.request(
@@ -130,9 +130,6 @@ export async function listTemplatesByCredential(
       );
 
       if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error(`Credential ${credentialId} not found. Verify the credential ID and try again.`);
-        }
         if (response.status === 403 || response.status === 401) {
           throw new Error(`Not authorized to access credential ${credentialId}. Check your Personal Access Token permissions.`);
         }
