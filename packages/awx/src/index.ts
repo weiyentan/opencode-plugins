@@ -2973,6 +2973,9 @@ async function server(input: PluginInput): Promise<Hooks> {
               metadata: result as Record<string, unknown>,
             };
           } catch (err) {
+            if (err instanceof DOMException && err.name === "AbortError") {
+              return { output: "Request was aborted." };
+            }
             const message =
               err instanceof Error ? err.message : String(err);
             return {
