@@ -6,7 +6,7 @@
 
 ---
 
-## Existing Tools (21 + hello)
+## Existing Tools (33 + hello)
 
 | # | Tool | HTTP Method | Endpoint | Coverage |
 |---|------|-------------|----------|----------|
@@ -19,7 +19,7 @@
 | 6 | `awx-job-status` | GET | `/api/v2/jobs/{id}/` | Job detail + optional stdout — covered. |
 | 7 | `awx-wait-job` | GET | `/api/v2/jobs/{id}/` | Non-blocking status check (same endpoint) — covered. |
 | 8 | `awx-get-job-events` | GET | `/api/v2/jobs/{id}/job_events/` | Job event log — covered. |
-| 9 | `awx-get-resource` | GET | `/api/v2/{type}/{id}/` | Generic detail for template, project, inventory — covered. |
+| 9 | `awx-get-resource` | GET | `/api/v2/{type}/{id}/` | Generic detail for template, project, inventory, user, team, schedule, notification_template — covered. |
 | 10 | `awx-create-project` | POST | `/api/v2/projects/` | Project creation — covered. |
 | 11 | `awx-create-template` | POST | `/api/v2/job_templates/` | Template creation — covered. |
 | 12 | `awx-create-inventory` | POST | `/api/v2/inventories/` | Inventory creation — covered. |
@@ -31,9 +31,21 @@
 | 18 | `awx-delete-inventory` | DELETE | `/api/v2/inventories/{id}/` | Inventory deletion — covered. |
 | 19 | `awx-debug-env` | — | — | Environment diagnostic — covered. |
 | 20 | `awx-configure` | — | — | Runtime auth/baseUrl config — covered. |
-| **NEW** | `awx-attach-credential` | POST | `/api/v2/job_templates/{id}/credentials/` | **Added by issue #108.** |
+| 21 | `awx-attach-credential` | POST | `/api/v2/job_templates/{id}/credentials/` | Credential attachment — covered. |
+| 22 | `awx-create-user` | POST | `/api/v2/users/` | User creation — covered. |
+| 23 | `awx-update-user` | PATCH | `/api/v2/users/{id}/` | User update — covered. |
+| 24 | `awx-delete-user` | DELETE | `/api/v2/users/{id}/` | User deletion — covered. |
+| 25 | `awx-create-team` | POST | `/api/v2/teams/` | Team creation — covered. |
+| 26 | `awx-update-team` | PATCH | `/api/v2/teams/{id}/` | Team update — covered. |
+| 27 | `awx-delete-team` | DELETE | `/api/v2/teams/{id}/` | Team deletion — covered. |
+| 28 | `awx-create-schedule` | POST | `/api/v2/schedules/` | Schedule creation — covered. |
+| 29 | `awx-update-schedule` | PATCH | `/api/v2/schedules/{id}/` | Schedule update — covered. |
+| 30 | `awx-delete-schedule` | DELETE | `/api/v2/schedules/{id}/` | Schedule deletion — covered. |
+| 31 | `awx-create-notification-template` | POST | `/api/v2/notification_templates/` | Notification template creation — covered. |
+| 32 | `awx-update-notification-template` | PATCH | `/api/v2/notification_templates/{id}/` | Notification template update — covered. |
+| 33 | `awx-delete-notification-template` | DELETE | `/api/v2/notification_templates/{id}/` | Notification template deletion — covered. |
 
-**Total:** 22 tools (1 hello + 21 AWX operations). All are registered in `src/index.ts` via the `tool({})` pattern.
+**Total:** 34 tools (1 hello + 33 AWX operations). All are registered in `src/index.ts` via the `tool({})` pattern.
 
 ---
 
@@ -47,12 +59,13 @@
 | Jobs | ✅ | ✅ | — | — | ❌ | Events ✅, Wait ✅ |
 | Credentials | ❌ | ❌ | ❌ | ❌ | ❌ | — |
 | Organizations | ❌ | ❌ | ❌ | ❌ | ❌ | — |
-| Users / Teams | ❌ | ❌ | ❌ | ❌ | ❌ | — |
+| Users | ❌ | ✅ (via get-resource) | ✅ | ✅ | ✅ | — |
+| Teams | ❌ | ✅ (via get-resource) | ✅ | ✅ | ✅ | — |
 | Inventory Sources | ❌ | ❌ | ❌ | ❌ | ❌ | Sync ❌ |
 | Workflow JTs | ❌ | ❌ | ❌ | ❌ | ❌ | — |
-| Schedules | ❌ | ❌ | ❌ | ❌ | ❌ | — |
+| Schedules | ❌ | ✅ (via get-resource) | ✅ | ✅ | ✅ | — |
 | Surveys | ❌ | ❌ | ❌ | ❌ | ❌ | Launch with survey ❌ |
-| Notifications | ❌ | ❌ | ❌ | ❌ | ❌ | — |
+| Notification Templates | ❌ | ✅ (via get-resource) | ✅ | ✅ | ✅ | — |
 | Instance Groups | ❌ | ❌ | ❌ | ❌ | ❌ | — |
 | Labels | ❌ | ❌ | ❌ | ❌ | ❌ | — |
 | Hosts | ❌ | ❌ | ❌ | ❌ | ❌ | — |
@@ -102,9 +115,10 @@ These are the operations most likely needed by subagents and skills, ranked by e
 - **Rationale:** Dynamic inventories that pull from cloud providers need periodic sync.
 - **Proposed tool:** `awx-sync-inventory-source` — mirrors `awx-sync-project` pattern.
 
-### 8. Schedule Operations
-- `awx-list-schedules`, `awx-create-schedule`, `awx-delete-schedule`
-- **Rationale:** Automated job runs are a core AAP feature. Agents need to configure and manage schedules.
+### 8. Schedule List (`GET /api/v2/schedules/`)
+- **Risk without tool:** Agent cannot discover available schedule IDs for schedule management.
+- **Proposed tool:** `awx-list-schedules` — paginated listing with ID, name, rrule, next_run, and associated unified job template.
+- **Priority:** Medium — schedule create/update/delete already implemented; listing is the remaining gap.
 
 ---
 
@@ -112,10 +126,10 @@ These are the operations most likely needed by subagents and skills, ranked by e
 
 | Operation | Notes |
 |-----------|-------|
-| User / Team management | Rarely needed in automation. Typically pre-configured by AAP admins. |
+| User / Team management | ✅ Implemented — create, update, delete, and detail via get-resource. List still needed. |
 | Host CRUD | Can usually be managed via dynamic inventory sources. |
 | Group CRUD | Same — inventory-driven patterns dominate. |
-| Notifications | Template-level configuration, rarely automated per-instance. |
+| Notification Templates | ✅ Implemented — create, update, delete, and detail via get-resource. List still needed. |
 | Instance Groups | Cluster administration, out of scope for most agent workflows. |
 | Labels | Can be piggybacked on create/update for resources that support them. |
 | Survey management | Complex data model. A `awx-launch-with-survey` pattern may be simpler than full survey CRUD. |
@@ -128,9 +142,9 @@ These are the operations most likely needed by subagents and skills, ranked by e
 | Priority | Count | Examples |
 |----------|-------|----------|
 | High | 4 | job cancel, credential list, organization list, inventory list |
-| Medium | 4 | workflow ops, job relaunch, inventory source sync, schedules |
-| Low | 7+ | users, hosts, groups, notifications, instance groups, labels, surveys |
-| **Total uncovered** | **15+** | |
+| Medium | 3 | workflow ops, job relaunch, inventory source sync |
+| Low | 3+ | hosts, groups, instance groups, labels, surveys |
+| **Total uncovered** | **10+** | |
 
 ---
 

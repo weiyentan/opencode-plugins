@@ -359,7 +359,252 @@ describe("awx-get-resource tool", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 10: Zod schema validation rejects invalid resource types
+     Cycle 10: Successful user detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns user details in the standard envelope", async () => {
+    const rawUser = {
+      id: 42,
+      username: "jdoe",
+      first_name: "Jane",
+      last_name: "Doe",
+      email: "jane@example.com",
+      is_superuser: false,
+      is_system_auditor: false,
+      created: "2025-01-15T09:30:00Z",
+      modified: "2025-06-20T14:45:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    mockFetchResponse(rawUser);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "user", id: 42 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("user");
+    expect(metadata.id).toBe(42);
+    expect((metadata.data as Record<string, unknown>).username).toBe("jdoe");
+    expect((metadata.data as Record<string, unknown>).first_name).toBe("Jane");
+    expect((metadata.data as Record<string, unknown>).is_superuser).toBe(false);
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("User 42: jdoe");
+    expect(output).toContain("Name:      Jane Doe");
+    expect(output).toContain("Email:     jane@example.com");
+    expect(output).toContain("Superuser: no");
+    expect(output).toContain("Org:       Default");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 11: Graceful error for unknown user ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown user ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "user", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 12: Successful team detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns team details in the standard envelope", async () => {
+    const rawTeam = {
+      id: 15,
+      name: "Platform Engineers",
+      description: "Platform engineering team",
+      organization: 1,
+      created: "2025-02-01T10:00:00Z",
+      modified: "2025-06-15T12:30:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    mockFetchResponse(rawTeam);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "team", id: 15 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("team");
+    expect(metadata.id).toBe(15);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Platform Engineers");
+    expect((metadata.data as Record<string, unknown>).organization_name).toBe("Default");
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("Team 15: Platform Engineers");
+    expect(output).toContain("Description: Platform engineering team");
+    expect(output).toContain("Org:         Default");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 13: Graceful error for unknown team ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown team ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "team", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 14: Successful schedule detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns schedule details in the standard envelope", async () => {
+    const rawSchedule = {
+      id: 8,
+      name: "Daily Deploy",
+      description: "Daily production deploy",
+      rrule: "DTSTART:20250101T000000Z RRULE:FREQ=DAILY;INTERVAL=1",
+      unified_job_template: 3,
+      next_run: "2025-07-11T00:00:00Z",
+      created: "2025-01-01T00:00:00Z",
+      modified: "2025-06-30T08:00:00Z",
+      summary_fields: {
+        unified_job_template: { id: 3, name: "Deploy Web Stack - Production" },
+        organization: { id: 1, name: "Default" },
+      },
+    };
+    mockFetchResponse(rawSchedule);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "schedule", id: 8 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("schedule");
+    expect(metadata.id).toBe(8);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Daily Deploy");
+    expect((metadata.data as Record<string, unknown>).rrule).toBe("DTSTART:20250101T000000Z RRULE:FREQ=DAILY;INTERVAL=1");
+    expect((metadata.data as Record<string, unknown>).unified_job_template_name).toBe("Deploy Web Stack - Production");
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("Schedule 8: Daily Deploy");
+    expect(output).toContain("RRULE:       DTSTART:20250101T000000Z RRULE:FREQ=DAILY;INTERVAL=1");
+    expect(output).toContain("Template:    Deploy Web Stack - Production");
+    expect(output).toContain("Next Run:    2025-07-11T00:00:00Z");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 15: Graceful error for unknown schedule ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown schedule ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "schedule", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 16: Successful notification_template detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns notification template details in the standard envelope", async () => {
+    const rawNt = {
+      id: 5,
+      name: "Slack Alerts",
+      description: "Send alerts to #ops channel",
+      notification_type: "slack",
+      notification_configuration: { channels: ["#ops"] },
+      organization: 1,
+      created: "2025-03-10T11:00:00Z",
+      modified: "2025-07-01T16:20:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    mockFetchResponse(rawNt);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "notification_template", id: 5 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("notification_template");
+    expect(metadata.id).toBe(5);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Slack Alerts");
+    expect((metadata.data as Record<string, unknown>).notification_type).toBe("slack");
+    expect((metadata.data as Record<string, unknown>).organization_name).toBe("Default");
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("Notification Template 5: Slack Alerts");
+    expect(output).toContain("Description: Send alerts to #ops channel");
+    expect(output).toContain("Type:        slack");
+    expect(output).toContain("Org:         Default");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 17: Graceful error for unknown notification_template ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown notification_template ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "notification_template", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 18: Zod schema validation rejects invalid resource types
      ══════════════════════════════════════════════════════════════ */
 
   it("rejects unsupported resource types", async () => {

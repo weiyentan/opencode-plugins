@@ -1,0 +1,15 @@
+{
+  "id": 15,
+  "name": "Platform Engineers",
+  "description": "Platform engineering team",
+  "organization": 1,
+  "created": "2025-02-01T10:00:00Z",
+  "modified": "2025-06-15T12:30:00Z",
+  "summary_fields": {
+    "organization": { "id": 1, "name": "Default", "description": "Default organization" },
+    "user_capabilities": {
+      "edit": true,
+      "delete": true
+    }
+  }
+}

@@ -197,14 +197,94 @@ describe("CRUD_REGISTRY", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════
+     User resource endpoints
+     ══════════════════════════════════════════════════════════════ */
+
+  it("maps (user, create) → POST /api/v2/users/", () => {
+    expectEndpoint("user", "create",
+      "/api/v2/users/", "POST", false);
+  });
+
+  it("maps (user, update) → PATCH /api/v2/users/{id}/", () => {
+    expectEndpoint("user", "update",
+      "/api/v2/users/{id}/", "PATCH", true);
+  });
+
+  it("maps (user, delete) → DELETE /api/v2/users/{id}/", () => {
+    expectEndpoint("user", "delete",
+      "/api/v2/users/{id}/", "DELETE", true);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Team resource endpoints
+     ══════════════════════════════════════════════════════════════ */
+
+  it("maps (team, create) → POST /api/v2/teams/", () => {
+    expectEndpoint("team", "create",
+      "/api/v2/teams/", "POST", false);
+  });
+
+  it("maps (team, update) → PATCH /api/v2/teams/{id}/", () => {
+    expectEndpoint("team", "update",
+      "/api/v2/teams/{id}/", "PATCH", true);
+  });
+
+  it("maps (team, delete) → DELETE /api/v2/teams/{id}/", () => {
+    expectEndpoint("team", "delete",
+      "/api/v2/teams/{id}/", "DELETE", true);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Schedule resource endpoints
+     ══════════════════════════════════════════════════════════════ */
+
+  it("maps (schedule, create) → POST /api/v2/schedules/", () => {
+    expectEndpoint("schedule", "create",
+      "/api/v2/schedules/", "POST", false);
+  });
+
+  it("maps (schedule, update) → PATCH /api/v2/schedules/{id}/", () => {
+    expectEndpoint("schedule", "update",
+      "/api/v2/schedules/{id}/", "PATCH", true);
+  });
+
+  it("maps (schedule, delete) → DELETE /api/v2/schedules/{id}/", () => {
+    expectEndpoint("schedule", "delete",
+      "/api/v2/schedules/{id}/", "DELETE", true);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Notification template resource endpoints
+     ══════════════════════════════════════════════════════════════ */
+
+  it("maps (notification_template, create) → POST /api/v2/notification_templates/", () => {
+    expectEndpoint("notification_template", "create",
+      "/api/v2/notification_templates/", "POST", false);
+  });
+
+  it("maps (notification_template, update) → PATCH /api/v2/notification_templates/{id}/", () => {
+    expectEndpoint("notification_template", "update",
+      "/api/v2/notification_templates/{id}/", "PATCH", true);
+  });
+
+  it("maps (notification_template, delete) → DELETE /api/v2/notification_templates/{id}/", () => {
+    expectEndpoint("notification_template", "delete",
+      "/api/v2/notification_templates/{id}/", "DELETE", true);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
      All 9 combinations enumerated
      ══════════════════════════════════════════════════════════════ */
 
-  it("has exactly 3 resource types registered", () => {
+  it("has exactly 7 resource types registered", () => {
     expect(Object.keys(CRUD_REGISTRY).sort()).toEqual([
       "inventory",
+      "notification_template",
       "project",
+      "schedule",
+      "team",
       "template",
+      "user",
     ]);
   });
 
@@ -372,6 +452,241 @@ describe("executeCrud()", () => {
     expect(result.action).toBe("deleted");
     expect(result.resource_type).toBe("inventory");
     expect(result.id).toBe(12);
+    expect(result.data).toBeNull();
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     User resource dispatch
+     ══════════════════════════════════════════════════════════════ */
+
+  it("creates a user and returns the mapped result", async () => {
+    const MOCK_RAW_USER = {
+      id: 42,
+      username: "jdoe",
+      first_name: "Jane",
+      last_name: "Doe",
+      email: "jane@example.com",
+      is_superuser: false,
+      is_system_auditor: false,
+      created: "2025-01-15T09:30:00Z",
+      modified: "2025-06-20T14:45:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    const client = mockClientWithResponse(MOCK_RAW_USER);
+
+    const result = await executeCrud(client, "user", "create", undefined, MOCK_BODY);
+
+    expect(result.action).toBe("created");
+    expect(result.resource_type).toBe("user");
+    expect(result.id).toBe(42);
+    expect(result.data).not.toBeNull();
+    expect((result.data as Record<string, unknown>).schema_version).toBe("1.0");
+    expect((result.data as Record<string, unknown>).resource_type).toBe("user");
+  });
+
+  it("calls the correct endpoint for user create", async () => {
+    const MOCK_RAW_USER = {
+      id: 42, username: "jdoe", first_name: "Jane", last_name: "Doe",
+      email: "jane@example.com", is_superuser: false, is_system_auditor: false,
+      created: "2025-01-15T09:30:00Z", modified: "2025-06-20T14:45:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    const client = mockClientWithResponse(MOCK_RAW_USER);
+
+    await executeCrud(client, "user", "create", undefined, MOCK_BODY);
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-crud-user-create",
+      "/api/v2/users/",
+      expect.objectContaining({ method: "POST" }),
+      undefined,
+    );
+  });
+
+  it("deletes a user and returns null data", async () => {
+    const client = mockClientWithResponse({}, 200);
+
+    const result = await executeCrud(client, "user", "delete", 42);
+
+    expect(result.action).toBe("deleted");
+    expect(result.resource_type).toBe("user");
+    expect(result.id).toBe(42);
+    expect(result.data).toBeNull();
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Team resource dispatch
+     ══════════════════════════════════════════════════════════════ */
+
+  it("creates a team and returns the mapped result", async () => {
+    const MOCK_RAW_TEAM = {
+      id: 15,
+      name: "Platform Engineers",
+      description: "Platform engineering team",
+      organization: 1,
+      created: "2025-02-01T10:00:00Z",
+      modified: "2025-06-15T12:30:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    const client = mockClientWithResponse(MOCK_RAW_TEAM);
+
+    const result = await executeCrud(client, "team", "create", undefined, MOCK_BODY);
+
+    expect(result.action).toBe("created");
+    expect(result.resource_type).toBe("team");
+    expect(result.id).toBe(15);
+    expect(result.data).not.toBeNull();
+    expect((result.data as Record<string, unknown>).schema_version).toBe("1.0");
+    expect((result.data as Record<string, unknown>).resource_type).toBe("team");
+  });
+
+  it("calls the correct endpoint for team create", async () => {
+    const MOCK_RAW_TEAM = {
+      id: 15, name: "Platform Engineers", description: "Platform team",
+      organization: 1, created: "2025-02-01T10:00:00Z", modified: "2025-06-15T12:30:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    const client = mockClientWithResponse(MOCK_RAW_TEAM);
+
+    await executeCrud(client, "team", "create", undefined, MOCK_BODY);
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-crud-team-create",
+      "/api/v2/teams/",
+      expect.objectContaining({ method: "POST" }),
+      undefined,
+    );
+  });
+
+  it("deletes a team and returns null data", async () => {
+    const client = mockClientWithResponse({}, 200);
+
+    const result = await executeCrud(client, "team", "delete", 15);
+
+    expect(result.action).toBe("deleted");
+    expect(result.resource_type).toBe("team");
+    expect(result.id).toBe(15);
+    expect(result.data).toBeNull();
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Schedule resource dispatch
+     ══════════════════════════════════════════════════════════════ */
+
+  it("creates a schedule and returns the mapped result", async () => {
+    const MOCK_RAW_SCHEDULE = {
+      id: 8,
+      name: "Daily Deploy",
+      description: "Daily production deploy",
+      rrule: "DTSTART:20250101T000000Z RRULE:FREQ=DAILY;INTERVAL=1",
+      unified_job_template: 3,
+      next_run: "2025-07-11T00:00:00Z",
+      created: "2025-01-01T00:00:00Z",
+      modified: "2025-06-30T08:00:00Z",
+      summary_fields: {
+        unified_job_template: { id: 3, name: "Deploy Web Stack - Production" },
+        organization: { id: 1, name: "Default" },
+      },
+    };
+    const client = mockClientWithResponse(MOCK_RAW_SCHEDULE);
+
+    const result = await executeCrud(client, "schedule", "create", undefined, MOCK_BODY);
+
+    expect(result.action).toBe("created");
+    expect(result.resource_type).toBe("schedule");
+    expect(result.id).toBe(8);
+    expect(result.data).not.toBeNull();
+    expect((result.data as Record<string, unknown>).schema_version).toBe("1.0");
+    expect((result.data as Record<string, unknown>).resource_type).toBe("schedule");
+  });
+
+  it("calls the correct endpoint for schedule create", async () => {
+    const MOCK_RAW_SCHEDULE = {
+      id: 8, name: "Daily Deploy", description: "", rrule: "DTSTART:20250101T000000Z RRULE:FREQ=DAILY;INTERVAL=1",
+      unified_job_template: 3, next_run: null, created: "2025-01-01T00:00:00Z", modified: "2025-06-30T08:00:00Z",
+      summary_fields: {
+        unified_job_template: { id: 3, name: "Deploy Web Stack - Production" },
+        organization: { id: 1, name: "Default" },
+      },
+    };
+    const client = mockClientWithResponse(MOCK_RAW_SCHEDULE);
+
+    await executeCrud(client, "schedule", "create", undefined, MOCK_BODY);
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-crud-schedule-create",
+      "/api/v2/schedules/",
+      expect.objectContaining({ method: "POST" }),
+      undefined,
+    );
+  });
+
+  it("deletes a schedule and returns null data", async () => {
+    const client = mockClientWithResponse({}, 200);
+
+    const result = await executeCrud(client, "schedule", "delete", 8);
+
+    expect(result.action).toBe("deleted");
+    expect(result.resource_type).toBe("schedule");
+    expect(result.id).toBe(8);
+    expect(result.data).toBeNull();
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Notification template resource dispatch
+     ══════════════════════════════════════════════════════════════ */
+
+  it("creates a notification_template and returns the mapped result", async () => {
+    const MOCK_RAW_NT = {
+      id: 5,
+      name: "Slack Alerts",
+      description: "Send alerts to #ops channel",
+      notification_type: "slack",
+      notification_configuration: { channels: ["#ops"] },
+      organization: 1,
+      created: "2025-03-10T11:00:00Z",
+      modified: "2025-07-01T16:20:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    const client = mockClientWithResponse(MOCK_RAW_NT);
+
+    const result = await executeCrud(client, "notification_template", "create", undefined, MOCK_BODY);
+
+    expect(result.action).toBe("created");
+    expect(result.resource_type).toBe("notification_template");
+    expect(result.id).toBe(5);
+    expect(result.data).not.toBeNull();
+    expect((result.data as Record<string, unknown>).schema_version).toBe("1.0");
+    expect((result.data as Record<string, unknown>).resource_type).toBe("notification_template");
+  });
+
+  it("calls the correct endpoint for notification_template create", async () => {
+    const MOCK_RAW_NT = {
+      id: 5, name: "Slack Alerts", description: "", notification_type: "slack",
+      notification_configuration: {}, organization: 1,
+      created: "2025-03-10T11:00:00Z", modified: "2025-07-01T16:20:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    const client = mockClientWithResponse(MOCK_RAW_NT);
+
+    await executeCrud(client, "notification_template", "create", undefined, MOCK_BODY);
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-crud-notification_template-create",
+      "/api/v2/notification_templates/",
+      expect.objectContaining({ method: "POST" }),
+      undefined,
+    );
+  });
+
+  it("deletes a notification_template and returns null data", async () => {
+    const client = mockClientWithResponse({}, 200);
+
+    const result = await executeCrud(client, "notification_template", "delete", 5);
+
+    expect(result.action).toBe("deleted");
+    expect(result.resource_type).toBe("notification_template");
+    expect(result.id).toBe(5);
     expect(result.data).toBeNull();
   });
 

@@ -1,0 +1,18 @@
+{
+  "id": 42,
+  "username": "jdoe",
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "email": "jane@example.com",
+  "is_superuser": false,
+  "is_system_auditor": false,
+  "created": "2025-01-15T09:30:00Z",
+  "modified": "2025-06-20T14:45:00Z",
+  "summary_fields": {
+    "organization": { "id": 1, "name": "Default" },
+    "user_capabilities": {
+      "edit": true,
+      "delete": true
+    }
+  }
+}

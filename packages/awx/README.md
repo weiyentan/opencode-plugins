@@ -12,7 +12,7 @@ The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-list-jobs, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-get-resource, awx-debug-env, awx-configure, awx-create-project, awx-create-template, awx-create-inventory, awx-update-project, awx-update-template, awx-update-inventory, awx-delete-project, awx-delete-template, awx-delete-inventory, awx-attach-credential); wires HTTP client, metrics lifecycle, and dispose hook |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools (awx-list-templates, awx-list-projects, awx-list-jobs, awx-launch-job, awx-job-status, awx-wait-job, awx-get-job-events, awx-sync-project, awx-get-resource, awx-debug-env, awx-configure, awx-create-project, awx-create-template, awx-create-inventory, awx-create-user, awx-create-team, awx-create-schedule, awx-create-notification-template, awx-update-project, awx-update-template, awx-update-inventory, awx-update-user, awx-update-team, awx-update-schedule, awx-update-notification-template, awx-delete-project, awx-delete-template, awx-delete-inventory, awx-delete-user, awx-delete-team, awx-delete-schedule, awx-delete-notification-template, awx-attach-credential); wires HTTP client, metrics lifecycle, and dispose hook |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Client middleware** | `src/client.ts` | HTTP middleware pipeline: circuit breaker, retry/backoff, timeout via native `fetch` |
@@ -20,7 +20,7 @@ The AWX plugin delivers these modules:
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) is complete — all 21 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
+Tool implementation (Phase 2) is complete — all 33 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
 ### Tool Output Formats
 
@@ -36,7 +36,7 @@ Tool implementation (Phase 2) is complete — all 21 AWX tools are implemented a
 | `awx-get-job-events` | Plain text message + structured metadata | — |
 | `awx-configure` | Plain text confirmation message | — |
 | `awx-debug-env` | JSON string | — |
-| `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope | `type` (template\|project\|inventory) + `id` |
+| `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope | `type` (template\|project\|inventory\|user\|team\|schedule\|notification_template) + `id` |
 | `awx-create-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-create-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-create-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
@@ -47,6 +47,18 @@ Tool implementation (Phase 2) is complete — all 21 AWX tools are implemented a
 | `awx-delete-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-delete-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-attach-credential` | Plain text confirmation message + structured metadata (credential association result from AWX) | — |
+| `awx-create-user` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-create-team` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-create-schedule` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-create-notification-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-user` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-team` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-schedule` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-notification-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-user` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-team` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-schedule` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-notification-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 
 Both `awx-list-templates` and `awx-list-projects` accept `--timeout` (total tool timeout in ms, default 30000).
 
@@ -266,30 +278,46 @@ packages/awx/
 │   ├── launch.ts             # awx-launch-job orchestration (thin proxy — passes extra_vars verbatim to AWX API)
 │   ├── attach-credential.ts  # awx-attach-credential tool — POST credential association to job template
 │   ├── contracts/
-│   │   ├── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
-│   │   ├── resource-mutation.ts # ResourceMutationOutput v1.0 contract (schema_version, action, resource_type, id, data)
-│   │   ├── template-detail.ts # TemplateDetailOutput contract (schema_version, resource_type, id, data)
-│   │   ├── project-detail.ts  # ProjectDetailOutput contract
-│   │   └── inventory-detail.ts # InventoryDetailOutput contract
+│   │   ├── job-detail.ts              # JobDetailOutput v1.0 TypeScript interface
+│   │   ├── resource-mutation.ts       # ResourceMutationOutput v1.0 contract (schema_version, action, resource_type, id, data)
+│   │   ├── template-detail.ts         # TemplateDetailOutput contract (schema_version, resource_type, id, data)
+│   │   ├── project-detail.ts          # ProjectDetailOutput contract
+│   │   ├── inventory-detail.ts        # InventoryDetailOutput contract
+│   │   ├── user-detail.ts             # UserDetailOutput contract
+│   │   ├── team-detail.ts             # TeamDetailOutput contract
+│   │   ├── schedule-detail.ts         # ScheduleDetailOutput contract
+│   │   └── notification-template-detail.ts # NotificationTemplateDetailOutput contract
 │   └── mappers/
-│       ├── map-template.ts   # Raw AWX API response → TemplateDetailOutput
-│       ├── map-project.ts    # Raw AWX API response → ProjectDetailOutput
-│       └── map-inventory.ts  # Raw AWX API response → InventoryDetailOutput
+│       ├── map-template.ts            # Raw AWX API response → TemplateDetailOutput
+│       ├── map-project.ts             # Raw AWX API response → ProjectDetailOutput
+│       ├── map-inventory.ts           # Raw AWX API response → InventoryDetailOutput
+│       ├── map-user.ts                # Raw AWX API response → UserDetailOutput
+│       ├── map-team.ts                # Raw AWX API response → TeamDetailOutput
+│       ├── map-schedule.ts            # Raw AWX API response → ScheduleDetailOutput
+│       └── map-notification-template.ts # Raw AWX API response → NotificationTemplateDetailOutput
 ├── tests/
 │   ├── plugin.test.ts            # Plugin registration and lifecycle tests
 │   ├── client.test.ts            # Client middleware pipeline tests
 │   ├── lifecycle.test.ts         # Lazy client/auth lifecycle tests (no-token → token → client-created)
 │   ├── metrics.test.ts           # MetricsStore persistence & counter tests incl. concurrent serialization
 │   ├── plugin-init-timeout.test.ts  # Init-time timeout cleanup tests (clear() called after validation)
-│   ├── crud-project.test.ts      # CRUD create/update/delete integration tests for projects
-│   ├── crud-template.test.ts     # CRUD create/update/delete integration tests for templates
-│   ├── crud-inventory.test.ts    # CRUD create/update/delete integration tests for inventories
-│   ├── get-resource.test.ts      # getResource orchestrator unit tests (dispatch, error handling, registry)
-│   ├── get-resource-tool.test.ts # awx-get-resource tool integration tests (via plugin tool registration)
-│   ├── attach-credential.test.ts # awx-attach-credential tool unit tests (13 test cases)
-│   ├── map-template.test.ts      # mapTemplate mapper unit tests
-│   ├── map-project.test.ts       # mapProject mapper unit tests
-│   ├── map-inventory.test.ts     # mapInventory mapper unit tests
+│   ├── crud-project.test.ts              # CRUD create/update/delete integration tests for projects
+│   ├── crud-template.test.ts             # CRUD create/update/delete integration tests for templates
+│   ├── crud-inventory.test.ts            # CRUD create/update/delete integration tests for inventories
+│   ├── crud-user.test.ts                 # CRUD create/update/delete integration tests for users
+│   ├── crud-team.test.ts                 # CRUD create/update/delete integration tests for teams
+│   ├── crud-schedule.test.ts             # CRUD create/update/delete integration tests for schedules
+│   ├── crud-notification-template.test.ts # CRUD create/update/delete integration tests for notification templates
+│   ├── get-resource.test.ts              # getResource orchestrator unit tests (dispatch, error handling, registry)
+│   ├── get-resource-tool.test.ts         # awx-get-resource tool integration tests (via plugin tool registration)
+│   ├── attach-credential.test.ts         # awx-attach-credential tool unit tests (13 test cases)
+│   ├── map-template.test.ts              # mapTemplate mapper unit tests
+│   ├── map-project.test.ts               # mapProject mapper unit tests
+│   ├── map-inventory.test.ts             # mapInventory mapper unit tests
+│   ├── map-user.test.ts                  # mapUser mapper unit tests
+│   ├── map-team.test.ts                  # mapTeam mapper unit tests
+│   ├── map-schedule.test.ts              # mapSchedule mapper unit tests
+│   ├── map-notification-template.test.ts # mapNotificationTemplate mapper unit tests
 │   ├── contracts/
 │   │   ├── contract.test.ts      # Contract compatibility tests
 │   │   └── __snapshots__/        # Canonical contract output (ground truth)
@@ -297,9 +325,13 @@ packages/awx/
 │       ├── awx_job_success.json
 │       ├── awx_job_partial.json
 │       ├── awx_job_failure.json
-│       ├── raw_awx_template.json  # Raw AWX API response fixture (template)
-│       ├── raw_awx_project.json   # Raw AWX API response fixture (project)
-│       └── raw_awx_inventory.json # Raw AWX API response fixture (inventory)
+│       ├── raw_awx_template.json             # Raw AWX API response fixture (template)
+│       ├── raw_awx_project.json              # Raw AWX API response fixture (project)
+│       ├── raw_awx_inventory.json            # Raw AWX API response fixture (inventory)
+│       ├── raw_awx_user.json                 # Raw AWX API response fixture (user)
+│       ├── raw_awx_team.json                 # Raw AWX API response fixture (team)
+│       ├── raw_awx_schedule.json             # Raw AWX API response fixture (schedule)
+│       └── raw_awx_notification_template.json # Raw AWX API response fixture (notification template)
 └── scripts/
     └── generate-snapshots.py # Python script to regenerate snapshots
 ```

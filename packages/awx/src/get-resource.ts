@@ -26,20 +26,42 @@ import type { AwxClient } from "./client.js";
 import { mapTemplate } from "./mappers/map-template.js";
 import { mapProject } from "./mappers/map-project.js";
 import { mapInventory } from "./mappers/map-inventory.js";
+import { mapUser } from "./mappers/map-user.js";
+import { mapTeam } from "./mappers/map-team.js";
+import { mapSchedule } from "./mappers/map-schedule.js";
+import { mapNotificationTemplate } from "./mappers/map-notification-template.js";
 import type { TemplateDetailOutput } from "./contracts/template-detail.js";
 import type { ProjectDetailOutput } from "./contracts/project-detail.js";
 import type { InventoryDetailOutput } from "./contracts/inventory-detail.js";
+import type { UserDetailOutput } from "./contracts/user-detail.js";
+import type { TeamDetailOutput } from "./contracts/team-detail.js";
+import type { ScheduleDetailOutput } from "./contracts/schedule-detail.js";
+import type { NotificationTemplateDetailOutput } from "./contracts/notification-template-detail.js";
 
 /**
  * Union of all supported resource detail output types.
  * Extend this when adding new resource types.
  */
-export type ResourceDetailOutput = TemplateDetailOutput | ProjectDetailOutput | InventoryDetailOutput;
+export type ResourceDetailOutput =
+  | TemplateDetailOutput
+  | ProjectDetailOutput
+  | InventoryDetailOutput
+  | UserDetailOutput
+  | TeamDetailOutput
+  | ScheduleDetailOutput
+  | NotificationTemplateDetailOutput;
 
 /**
  * Supported resource type keys (used by the tool args Zod schema).
  */
-export type ResourceType = "template" | "project" | "inventory";
+export type ResourceType =
+  | "template"
+  | "project"
+  | "inventory"
+  | "user"
+  | "team"
+  | "schedule"
+  | "notification_template";
 
 /**
  * Entry in the resource registry.
@@ -70,6 +92,22 @@ const RESOURCE_REGISTRY: Record<ResourceType, ResourceEntry> = {
   inventory: {
     path: "/api/v2/inventories/{id}/",
     mapper: mapInventory,
+  },
+  user: {
+    path: "/api/v2/users/{id}/",
+    mapper: mapUser,
+  },
+  team: {
+    path: "/api/v2/teams/{id}/",
+    mapper: mapTeam,
+  },
+  schedule: {
+    path: "/api/v2/schedules/{id}/",
+    mapper: mapSchedule,
+  },
+  notification_template: {
+    path: "/api/v2/notification_templates/{id}/",
+    mapper: mapNotificationTemplate,
   },
 };
 
