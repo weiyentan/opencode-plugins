@@ -12,7 +12,7 @@ The AWX plugin delivers these modules:
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Thin orchestrator (~168 lines) — imports from tool factories, wires HTTP client, metrics lifecycle, auth hook, and dispose hook. |
+| **Plugin entry** | `src/index.ts` | Thin orchestrator (~168 lines) — imports from tool factories, registers all AWX tools including users, teams, schedules, and notification templates; wires HTTP client, metrics lifecycle, auth hook, and dispose hook.
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook with init-time validation |
 | **Output contract** | `src/contracts/job-detail.ts` | TypeScript types (`JobDetailOutput`) matching `awx_job_detail.py` v1.0 |
 | **Client middleware** | `src/client.ts` | HTTP middleware pipeline: circuit breaker, retry/backoff, timeout via native `fetch` |
@@ -34,7 +34,7 @@ The AWX plugin delivers these modules:
 | **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
 | **Snapshot generator** | `scripts/generate-snapshots.py` | Python script that regenerates contract snapshots from fixture data |
 
-Tool implementation (Phase 2) is complete — all 55 AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
+Tool implementation (Phase 2) is complete — all 60+ AWX tools are implemented and tested. See the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) for upcoming enhancements.
 
 ### Tool Output Formats
 
@@ -53,7 +53,7 @@ Tool implementation (Phase 2) is complete — all 55 AWX tools are implemented a
 | `awx-get-job-events` | Plain text message + structured metadata | — |
 | `awx-configure` | Plain text confirmation message | — |
 | `awx-debug-env` | JSON string | — |
-| `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope. Project data includes SCM Revision, Credential (name + ID), and Default Environment (name + ID). | `type` (template\|project\|inventory\|credential\|organization\|host\|group\|label\|instance-group\|execution-environment) + `id` |
+| `awx-get-resource` | Plain text structured summary + metadata with `{ schema_version, resource_type, id, data }` envelope. Project data includes SCM Revision, Credential (name + ID), and Default Environment (name + ID). | `type` (template\|project\|inventory\|user\|team\|schedule\|notification_template\|credential\|organization\|host\|group\|label\|instance-group\|execution-environment) + `id` |
 | `awx-create-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-create-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-create-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
@@ -63,6 +63,20 @@ Tool implementation (Phase 2) is complete — all 55 AWX tools are implemented a
 | `awx-delete-project` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-delete-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-delete-inventory` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-attach-credential` | Plain text confirmation message + metadata (raw AWX API response body) | — |
+| `awx-detach-credential` | Plain text confirmation message + metadata (raw AWX API response body) | — |
+| `awx-create-user` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-create-team` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-create-schedule` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-create-notification-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-user` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-team` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-schedule` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-update-notification-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-user` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-team` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-schedule` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
+| `awx-delete-notification-template` | Plain text confirmation message + `ResourceMutationOutput` metadata | — |
 | `awx-create-host` | Plain text confirmation message + `ResourceMutationOutput` metadata | name (required), inventory_id (required), description (optional) |
 | `awx-update-host` | Plain text confirmation message + `ResourceMutationOutput` metadata | id (required), name, description, inventory_id (all optional partial-update) |
 | `awx-delete-host` | Plain text confirmation message + `ResourceMutationOutput` metadata | id (required) |
@@ -78,8 +92,6 @@ Tool implementation (Phase 2) is complete — all 55 AWX tools are implemented a
 | `awx-create-execution-environment` | Plain text confirmation message + `ResourceMutationOutput` metadata | name (required), image (required), organization_id (required), description (optional) |
 | `awx-update-execution-environment` | Plain text confirmation message + `ResourceMutationOutput` metadata | id (required), name, image, organization_id, description (all optional partial-update) |
 | `awx-delete-execution-environment` | Plain text confirmation message + `ResourceMutationOutput` metadata | id (required) |
-| `awx-attach-credential` | Plain text confirmation message + metadata (raw AWX API response body) | — |
-| `awx-detach-credential` | Plain text confirmation message + metadata (raw AWX API response body) | — |
 | `awx-run-command` | Plain text confirmation message + metadata (raw AWX API response body) | inventory_id (required), credential_id (required), module_name (required), module_args, limit |
 | `awx-launch-workflow` | Raw AWX API response JSON | workflow_job_template_id (required), extra_vars |
 | `awx-ping` | JSON string (raw AWX `/api/v2/ping/` response) | — |
@@ -302,14 +314,14 @@ packages/awx/
 │   ├── ping.ts               # Fetch AWX /api/v2/ping/ response
 │   ├── run-command.ts        # Launch ad-hoc Ansible commands
 │   ├── launch-workflow.ts    # Launch workflow job templates
-│   ├── get-resource.ts       # Unified GET resource orchestrator (templates, projects, inventories, credentials, organizations, hosts, groups, labels, instance groups, execution environments)
+│   ├── get-resource.ts       # Unified GET resource orchestrator (templates, projects, inventories, users, teams, schedules, notification templates, credentials, organizations, hosts, groups, labels, instance groups, execution environments)
 │   ├── tools/
 │   │   ├── hello.ts          # hello tool factory
 │   │   ├── configure.ts      # awx-debug-env, awx-configure tool factories
-│   │   ├── crud.ts           # 24 CRUD tool factories (create/update/delete for project, template, inventory, host, group, label, instance-group, execution-environment)
+│   │   ├── crud.ts           # CRUD tool factories (create/update/delete for all registered resource types including users, teams, schedules, notification templates, hosts, groups, labels, instance groups, execution environments, credentials, organizations, and workflow templates)
 │   │   ├── job-lifecycle.ts  # awx-launch-job, awx-job-status, awx-wait-job tool factories
 │   │   ├── job-events.ts     # awx-get-job-events tool factory
-│   │   ├── list.ts           # awx-list-* (17: templates, projects, jobs, organizations, credentials, inventories, schedules, notification-templates, labels, instance-groups, execution-environments, templates-by-credential, users, hosts, workflow-templates, groups, teams) tool factories
+│   │   ├── list.ts           # awx-list-* tool factories
 │   │   ├── get-resource.ts   # awx-get-resource tool factory
 │   │   ├── sync-project.ts   # awx-sync-project tool factory
 │   │   ├── attach-credential.ts # awx-attach-credential tool factory
@@ -318,11 +330,15 @@ packages/awx/
 │   │   ├── launch-workflow.ts # awx-launch-workflow tool factory
 │   │   └── ping.ts           # awx-ping tool factory
 │   ├── contracts/
-│   │   ├── job-detail.ts     # JobDetailOutput v1.0 TypeScript interface
-│   │   ├── resource-mutation.ts # ResourceMutationOutput v1.0 contract
-│   │   ├── template-detail.ts # TemplateDetailOutput contract
-│   │   ├── project-detail.ts  # ProjectDetailOutput contract
-│   │   ├── inventory-detail.ts # InventoryDetailOutput contract
+│   │   ├── job-detail.ts              # JobDetailOutput v1.0 TypeScript interface
+│   │   ├── resource-mutation.ts       # ResourceMutationOutput v1.0 contract
+│   │   ├── template-detail.ts         # TemplateDetailOutput contract
+│   │   ├── project-detail.ts          # ProjectDetailOutput contract
+│   │   ├── inventory-detail.ts        # InventoryDetailOutput contract
+│   │   ├── user-detail.ts             # UserDetailOutput contract
+│   │   ├── team-detail.ts             # TeamDetailOutput contract
+│   │   ├── schedule-detail.ts         # ScheduleDetailOutput contract
+│   │   ├── notification-template-detail.ts # NotificationTemplateDetailOutput contract
 │   │   ├── credential-detail.ts # CredentialDetailOutput contract
 │   │   ├── organization-detail.ts # OrganizationDetailOutput contract
 │   │   ├── host-detail.ts        # HostDetailOutput contract
@@ -331,9 +347,13 @@ packages/awx/
 │   │   ├── instance-group-detail.ts # InstanceGroupDetailOutput contract
 │   │   └── execution-environment-detail.ts # ExecutionEnvironmentDetailOutput contract
 │   └── mappers/
-│       ├── map-template.ts   # Raw AWX API response → TemplateDetailOutput
-│       ├── map-project.ts    # Raw AWX API response → ProjectDetailOutput
-│       ├── map-inventory.ts  # Raw AWX API response → InventoryDetailOutput
+│       ├── map-template.ts            # Raw AWX API response → TemplateDetailOutput
+│       ├── map-project.ts             # Raw AWX API response → ProjectDetailOutput
+│       ├── map-inventory.ts           # Raw AWX API response → InventoryDetailOutput
+│       ├── map-user.ts                # Raw AWX API response → UserDetailOutput
+│       ├── map-team.ts                # Raw AWX API response → TeamDetailOutput
+│       ├── map-schedule.ts            # Raw AWX API response → ScheduleDetailOutput
+│       ├── map-notification-template.ts # Raw AWX API response → NotificationTemplateDetailOutput
 │       ├── map-credential.ts # Raw AWX API response → CredentialDetailOutput
 │       ├── map-organization.ts # Raw AWX API response → OrganizationDetailOutput
 │       ├── map-host.ts       # Raw AWX API response → HostDetailOutput
@@ -351,6 +371,10 @@ packages/awx/
 │   ├── crud-project.test.ts      # CRUD create/update/delete tests for projects
 │   ├── crud-template.test.ts     # CRUD create/update/delete tests for templates
 │   ├── crud-inventory.test.ts    # CRUD create/update/delete tests for inventories
+│   ├── crud-user.test.ts         # CRUD create/update/delete tests for users
+│   ├── crud-team.test.ts         # CRUD create/update/delete tests for teams
+│   ├── crud-schedule.test.ts     # CRUD create/update/delete tests for schedules
+│   ├── crud-notification-template.test.ts # CRUD create/update/delete tests for notification templates
 │   ├── crud-host.test.ts         # CRUD create/update/delete tests for hosts
 │   ├── crud-group.test.ts        # CRUD create/update/delete tests for groups
 │   ├── crud-label.test.ts        # CRUD create/update/delete tests for labels
@@ -367,13 +391,27 @@ packages/awx/
 │   ├── attach-credential.test.ts # awx-attach-credential unit tests
 │   ├── sync-project.test.ts      # awx-sync-project unit tests
 │   ├── contract.test.ts          # Contract compatibility tests
+│   ├── map-template.test.ts              # mapTemplate mapper unit tests
+│   ├── map-project.test.ts               # mapProject mapper unit tests
+│   ├── map-inventory.test.ts             # mapInventory mapper unit tests
+│   ├── map-user.test.ts                  # mapUser mapper unit tests
+│   ├── map-team.test.ts                  # mapTeam mapper unit tests
+│   ├── map-schedule.test.ts              # mapSchedule mapper unit tests
+│   ├── map-notification-template.test.ts # mapNotificationTemplate mapper unit tests
+│   ├── contracts/
+│   │   ├── contract.test.ts      # Contract compatibility tests
+│   │   └── __snapshots__/        # Canonical contract output (ground truth)
 │   └── fixtures/
 │       ├── awx_job_success.json
 │       ├── awx_job_partial.json
 │       ├── awx_job_failure.json
-│       ├── raw_awx_template.json
-│       ├── raw_awx_project.json
-│       └── raw_awx_inventory.json
+│       ├── raw_awx_template.json             # Raw AWX API response fixture (template)
+│       ├── raw_awx_project.json              # Raw AWX API response fixture (project)
+│       ├── raw_awx_inventory.json            # Raw AWX API response fixture (inventory)
+│       ├── raw_awx_user.json                 # Raw AWX API response fixture (user)
+│       ├── raw_awx_team.json                 # Raw AWX API response fixture (team)
+│       ├── raw_awx_schedule.json             # Raw AWX API response fixture (schedule)
+│       └── raw_awx_notification_template.json # Raw AWX API response fixture (notification template)
 └── scripts/
     └── generate-snapshots.py # Python script to regenerate snapshots
 ```

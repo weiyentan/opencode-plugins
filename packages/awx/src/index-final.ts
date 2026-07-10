@@ -23,11 +23,16 @@
  * ```
  */
 import type { PluginInput, Hooks, Plugin } from "@opencode-ai/plugin";
+import { tool } from "@opencode-ai/plugin";
+
+const z = tool.schema;
 
 import { createAwxAuthHook, validateToken } from "./auth.js";
 import { MetricsStore, setupMetricsPersistence } from "./metrics.js";
 import { createClient, createTimeoutSignal } from "./client.js";
 import type { AwxClient } from "./client.js";
+import { executeCrud } from "./crud.js";
+import { wrapMutationResult } from "./utils.js";
 
 import { getCustomConfig } from "./runtime-config.js";
 
@@ -45,11 +50,6 @@ import { createCrudTools } from "./tools/crud.js";
 import { createRunCommandTool } from "./tools/run-command.js";
 import { createLaunchWorkflowTool } from "./tools/launch-workflow.js";
 import { createPingTool } from "./tools/ping.js";
-import { executeCrud } from "./crud.js";
-import { wrapMutationResult } from "./utils.js";
-
-import { tool } from "@opencode-ai/plugin";
-const z = tool.schema;
 
 /**
  * Plugin server function — the single entry point.
@@ -200,8 +200,8 @@ async function server(input: PluginInput): Promise<Hooks> {
       "awx-ping": createPingTool(getAwxClient, baseUrl),
 
       // ═════════════════════════════════════════════════════════
-      // User / Team / Schedule / Notification Template CRUD tools
-      // (from PR feat/crud-users-teams-schedules-notifications)
+      // User/Team/Schedule/Notification Template CRUD tools
+      // (from PR branch feat/crud-users-teams-schedules-notifications)
       // ═════════════════════════════════════════════════════════
       "awx-create-user": tool({
         description: [
@@ -1088,6 +1088,20 @@ async function server(input: PluginInput): Promise<Hooks> {
           }
         },
       }),
+
+      /**
+       * Attach credentials to an AWX job template.
+       *
+       * Calls POST /api/v2/job_templates/{id}/credentials/ to
+       * associate one or more credentials with a job template.
+       * Accepts a job template ID and an array of credential IDs.
+       * Returns a ResourceMutationOutput-like response confirming
+       * the association.
+       */
+
+      // ─────────────────────────────────────────────────────────────────
+      // User CRUD tools (from PR branch)
+      // ─────────────────────────────────────────────────────────────────
     },
   };
 }

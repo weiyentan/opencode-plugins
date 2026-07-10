@@ -8,9 +8,9 @@ A monorepo of [OpenCode](https://opencode.ai) server plugins that extend the Ope
 
 An OpenCode plugin for [AWX](https://github.com/ansible/awx) / Ansible Automation Platform (AAP). Provides native tool access to job templates, projects, and job lifecycle operations — replacing brittle PowerShell scripts with a portable, testable TypeScript plugin.
 
-**Status:** ✅ Phase 0 (scaffolding), Phase 1 (client infrastructure), and Phase 2 core tools complete — 55 tools implemented covering project lookup, template detail, inventory detail, job lifecycle, CRUD operations (create/update/delete for projects, templates, inventories, hosts, groups, labels, instance groups, and execution environments), credential attachment and detachment, environment debugging, and interactive configuration.
+**Status:** ✅ Phase 0 (scaffolding), Phase 1 (client infrastructure), and Phase 2 core tools complete — 55+ tools implemented covering project lookup, template detail, inventory detail, job lifecycle, CRUD operations (create/update/delete for projects, templates, inventories, users, teams, schedules, notification templates, hosts, groups, labels, instance groups, execution environments, credentials, organizations, and workflow templates), credential attachment and detachment, environment debugging, and interactive configuration.
 
-**Coverage:** 53 of 53 AWX operations planned for v1 (~100%), covering the 95%+ use case. Full tool-action mapping table documented in the tool gap audit.
+**Coverage:** 53+ AWX operations covering all major resource CRUD lifecycle needs. Full tool-action mapping table documented in the tool gap audit.
 
 **Key docs:**
 - [Architecture Decision Records](docs/adr/) — 6 ADRs covering auth, output contract, resilience, polling, transforms
@@ -49,8 +49,8 @@ The AWX plugin package (`packages/awx/`) is already scaffolded with these module
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers all AWX tools (list-templates, list-projects, list-jobs, launch-job, job-status, wait-job, get-job-events, sync-project, get-resource, debug-env, configure, create-project, create-template, create-inventory, update-project, update-template, update-inventory, delete-project, delete-template, delete-inventory, attach-credential, detach-credential, create-host, update-host, delete-host, create-group, update-group, delete-group, create-label, update-label, delete-label, create-instance-group, update-instance-group, delete-instance-group, create-execution-environment, update-execution-environment, delete-execution-environment); wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
-| **CRUD dispatch** | `src/crud.ts` | Endpoint registry and dispatch for create/update/delete on templates, projects, inventories, hosts, groups, labels, instance groups, and execution environments |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools (listing, launching, CRUD operations for templates, projects, inventories, users, teams, schedules, notification templates, hosts, groups, labels, instance groups, execution environments, credentials, organizations, and workflow templates); wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
+| **CRUD dispatch** | `src/crud.ts` | Endpoint registry and dispatch for create/update/delete on all registered resource types |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook |
 | **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types matching `awx_job_detail.py` v1.0 |
 | **Mutation contract** | `src/contracts/resource-mutation.ts` | `ResourceMutationOutput` v1.0 contract for create/update/delete responses |

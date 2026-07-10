@@ -41,6 +41,10 @@ import type { AwxClient } from "./client.js";
 import { mapTemplate } from "./mappers/map-template.js";
 import { mapProject } from "./mappers/map-project.js";
 import { mapInventory } from "./mappers/map-inventory.js";
+import { mapUser } from "./mappers/map-user.js";
+import { mapTeam } from "./mappers/map-team.js";
+import { mapSchedule } from "./mappers/map-schedule.js";
+import { mapNotificationTemplate } from "./mappers/map-notification-template.js";
 import { mapHost } from "./mappers/map-host.js";
 import { mapGroup } from "./mappers/map-group.js";
 import { mapLabel } from "./mappers/map-label.js";
@@ -60,6 +64,10 @@ export type CrudResourceType =
   | "template"
   | "project"
   | "inventory"
+  | "user"
+  | "team"
+  | "schedule"
+  | "notification_template"
   | "host"
   | "group"
   | "label"
@@ -129,6 +137,38 @@ export const CRUD_REGISTRY: Record<CrudResourceType, CrudEntry> = {
       delete: { path: "/api/v2/inventories/{id}/", method: "DELETE", requiresId: true },
     },
     mapper: mapInventory,
+  },
+  user: {
+    endpoint: {
+      create: { path: "/api/v2/users/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/users/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/users/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapUser,
+  },
+  team: {
+    endpoint: {
+      create: { path: "/api/v2/teams/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/teams/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/teams/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapTeam,
+  },
+  schedule: {
+    endpoint: {
+      create: { path: "/api/v2/schedules/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/schedules/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/schedules/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapSchedule,
+  },
+  notification_template: {
+    endpoint: {
+      create: { path: "/api/v2/notification_templates/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/notification_templates/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/notification_templates/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapNotificationTemplate,
   },
   host: {
     endpoint: {

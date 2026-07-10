@@ -223,5 +223,48 @@ export function formatResourceOutput(result: ResourceDetailOutput): string {
         `  Modified:         ${d.modified ?? ""}`,
       ].join("\n");
     }
+    case "user": {
+      const d = result.data as unknown as Record<string, unknown>;
+      return [
+        `User ${d.id}: ${d.username}`,
+        `  Name:      ${d.first_name} ${d.last_name}`,
+        `  Email:     ${d.email}`,
+        `  Superuser: ${d.is_superuser ? "yes" : "no"}`,
+        `  Org:       ${d.organization_name}`,
+      ].join("\n");
+    }
+    case "team": {
+      const d = result.data as unknown as Record<string, unknown>;
+      return [
+        `Team ${d.id}: ${d.name}`,
+        `  Description: ${d.description}`,
+        `  Org:         ${d.organization_name}`,
+      ].join("\n");
+    }
+    case "schedule": {
+      const d = result.data as unknown as Record<string, unknown>;
+      return [
+        `Schedule ${d.id}: ${d.name}`,
+        `  RRULE:       ${d.rrule}`,
+        `  Template:    ${d.unified_job_template_name}`,
+        `  Next Run:    ${d.next_run ?? "(none)"}`,
+      ].join("\n");
+    }
+    case "notification_template": {
+      const d = result.data as unknown as Record<string, unknown>;
+      return [
+        `Notification Template ${d.id}: ${d.name}`,
+        `  Description: ${d.description}`,
+        `  Type:        ${d.notification_type}`,
+        `  Org:         ${d.organization_name}`,
+      ].join("\n");
+    }
+    default: {
+      const fallback = result as unknown as { resource_type: string; data: Record<string, unknown> };
+      return [
+        `${fallback.resource_type} ${fallback.data.id}: ${fallback.data.name}`,
+        `  Description:   ${fallback.data.description ?? ""}`,
+      ].join("\n");
+    }
   }
 }

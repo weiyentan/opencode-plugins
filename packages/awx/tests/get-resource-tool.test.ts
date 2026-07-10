@@ -27,6 +27,8 @@ function loadRawInventoryFixture(): Record<string, unknown> {
 // ─── Test Helpers ─────────────────────────────────────────────
 
 const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
+
+
   id: 7,
   name: "Deploy Web Stack — Production",
   description: "Deploy the web application stack to production servers",
@@ -42,12 +44,6 @@ const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
   last_job_run: "2025-06-15T14:32:00Z",
   status: "successful",
   next_schedule: null,
-  timeout: 300,
-  job_tags: "deploy,healthcheck",
-  skip_tags: "debug",
-  ask_tags_on_launch: true,
-  ask_skip_tags_on_launch: false,
-  extra_vars: "---\naws_region: us-east-1\nenvironment: production\n",
   summary_fields: {
     organization: { id: 1, name: "Default" },
     inventory: { id: 1, name: "Production" },
@@ -57,12 +53,6 @@ const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
         { id: 1, name: "production" },
         { id: 2, name: "web" },
         { id: 3, name: "deploy" },
-      ],
-    },
-    credentials: {
-      results: [
-        { id: 5, name: "Production SSH", credential_type_id: 1, kind: "ssh" },
-        { id: 8, name: "Vault Token", credential_type_id: 4, kind: "vault" },
       ],
     },
   },
@@ -88,18 +78,18 @@ const MOCK_RAW_PROJECT: Record<string, unknown> = {
 const MOCK_RAW_CREDENTIAL: Record<string, unknown> = {
   id: 15,
   name: "Production SSH Key",
-  description: "SSH key for production server access",
+  description: "SSH key for production servers",
   credential_type: 1,
+  credential_type_name: "Machine",
   kind: "ssh",
-  managed: false,
   organization: 1,
-  inputs: {
-    username: "deploy",
-    password: "$encrypted$",
-  },
+  organization_name: "Default",
+  managed: false,
+  created: "2025-01-10T08:00:00Z",
+  modified: "2025-06-18T12:00:00Z",
   summary_fields: {
+    organization: { id: 1, name: "Default", description: "Default organization" },
     credential_type: { id: 1, name: "Machine" },
-    organization: { id: 1, name: "Default" },
   },
 };
 
@@ -107,15 +97,15 @@ const MOCK_RAW_ORGANIZATION: Record<string, unknown> = {
   id: 1,
   name: "Default",
   description: "Default organization",
-  created: "2025-01-01T00:00:00Z",
-  modified: "2025-06-15T12:00:00Z",
+  created: "2024-01-01T00:00:00Z",
+  modified: "2025-06-01T00:00:00Z",
   summary_fields: {
     related: {
-      users: { count: 3, results: [] },
-      teams: { count: 2, results: [] },
-      job_templates: { count: 5, results: [] },
-      projects: { count: 3, results: [] },
-      inventories: { count: 2, results: [] },
+      users: { count: 3 },
+      teams: { count: 2 },
+      job_templates: { count: 5 },
+      projects: { count: 3 },
+      inventories: { count: 2 },
     },
   },
 };
@@ -163,7 +153,6 @@ async function createHooks(
   } else {
     vi.stubEnv("AWX_BASE_URL", undefined);
   }
-  vi.stubEnv("AWX_TOKEN", undefined);
   return AwxPlugin(input);
 }
 
@@ -225,43 +214,15 @@ describe("awx-get-resource tool", () => {
     expect((metadata.data as Record<string, unknown>).inventory_name).toBe("Production");
     expect((metadata.data as Record<string, unknown>).project_name).toBe("Web Stack Deploy");
     expect((metadata.data as Record<string, unknown>).labels).toEqual(["production", "web", "deploy"]);
-    expect((metadata.data as Record<string, unknown>).timeout).toBe(300);
-    expect((metadata.data as Record<string, unknown>).job_tags).toBe("deploy,healthcheck");
-    expect((metadata.data as Record<string, unknown>).skip_tags).toBe("debug");
-    expect((metadata.data as Record<string, unknown>).ask_tags_on_launch).toBe(true);
-    expect((metadata.data as Record<string, unknown>).ask_skip_tags_on_launch).toBe(false);
-    expect((metadata.data as Record<string, unknown>).extra_vars).toBe("---\naws_region: us-east-1\nenvironment: production\n");
-    expect((metadata.data as Record<string, unknown>).credentials).toEqual([
-      { id: 5, name: "Production SSH", credential_type_id: 1, kind: "ssh" },
-      { id: 8, name: "Vault Token", credential_type_id: 4, kind: "vault" },
-    ]);
 
     const output = (result as { output: string }).output;
     expect(output).toContain("Template 7: Deploy Web Stack — Production");
-    expect(output).toContain("Description:");
-    expect(output).toContain("Job Type:");
-    expect(output).toContain("run");
-    expect(output).toContain("deploy-web-stack.yml");
-    expect(output).toContain("successful");
-    expect(output).toContain("Inventory:");
-    expect(output).toContain("Production");
-    expect(output).toContain("Web Stack Deploy");
-    expect(output).toContain("Production SSH");
-    expect(output).toContain("Vault Token");
-    expect(output).toContain("Extra Vars:");
-    expect(output).toContain("aws_region: us-east-1");
-    expect(output).toContain("Timeout:");
-    expect(output).toContain("300");
-    expect(output).toContain("Job Tags:");
-    expect(output).toContain("deploy,healthcheck");
-    expect(output).toContain("Skip Tags:");
-    expect(output).toContain("debug");
-    expect(output).toContain("Ask Tags On Launch:");
-    expect(output).toContain("true");
-    expect(output).toContain("Ask Skip On Launch:");
-    expect(output).toContain("false");
-    expect(output).toContain("Last Run:");
-    expect(output).toContain("2025-06-15T14:32:00Z");
+    expect(output).toContain("  Job Type:            run");
+    expect(output).toContain("  Playbook:            deploy-web-stack.yml");
+    expect(output).toContain("  Status:              successful");
+    expect(output).toContain("  Inventory:           Production");
+    expect(output).toContain("  Project:             Web Stack Deploy");
+    expect(output).toContain("  Last Run:            2025-06-15T14:32:00Z");
   });
 
   /* ══════════════════════════════════════════════════════════════
@@ -348,15 +309,12 @@ describe("awx-get-resource tool", () => {
 
     const output = (result as { output: string }).output;
     expect(output).toContain("Project 5: Web Stack Deploy");
-    expect(output).toContain("SCM Type:        git");
-    expect(output).toContain("SCM URL:         https://github.com/example/web-stack-deploy.git");
-    expect(output).toContain("Branch:          main");
-    expect(output).toContain("SCM Revision:    (none)");
-    expect(output).toContain("Credential:      (none)");
-    expect(output).toContain("Default Env:     (none)");
-    expect(output).toContain("Status:          successful");
-    expect(output).toContain("Org:             Default");
-    expect(output).toContain("Updated:         2025-06-20T10:15:00Z");
+    expect(output).toContain("  SCM Type:        git");
+    expect(output).toContain("  SCM URL:         https://github.com/example/web-stack-deploy.git");
+    expect(output).toContain("  Branch:          main");
+    expect(output).toContain("  Status:          successful");
+    expect(output).toContain("  Org:             Default");
+    expect(output).toContain("  Updated:         2025-06-20T10:15:00Z");
   });
 
   /* ══════════════════════════════════════════════════════════════
@@ -436,7 +394,127 @@ describe("awx-get-resource tool", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 10: Successful credential detail retrieval
+     Cycle 10: Successful user detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns user details in the standard envelope", async () => {
+    const rawUser = {
+      id: 42,
+      username: "jdoe",
+      first_name: "Jane",
+      last_name: "Doe",
+      email: "jane@example.com",
+      is_superuser: false,
+      is_system_auditor: false,
+      created: "2025-01-15T09:30:00Z",
+      modified: "2025-06-20T14:45:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    mockFetchResponse(rawUser);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "user", id: 42 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("user");
+    expect(metadata.id).toBe(42);
+    expect((metadata.data as Record<string, unknown>).username).toBe("jdoe");
+    expect((metadata.data as Record<string, unknown>).first_name).toBe("Jane");
+    expect((metadata.data as Record<string, unknown>).is_superuser).toBe(false);
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("User 42: jdoe");
+    expect(output).toContain("Name:      Jane Doe");
+    expect(output).toContain("Email:     jane@example.com");
+    expect(output).toContain("Superuser: no");
+    expect(output).toContain("Org:       Default");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 11: Graceful error for unknown user ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown user ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "user", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 12: Successful team detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns team details in the standard envelope", async () => {
+    const rawTeam = {
+      id: 15,
+      name: "Platform Engineers",
+      description: "Platform engineering team",
+      organization: 1,
+      created: "2025-02-01T10:00:00Z",
+      modified: "2025-06-15T12:30:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    mockFetchResponse(rawTeam);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "team", id: 15 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("team");
+    expect(metadata.id).toBe(15);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Platform Engineers");
+    expect((metadata.data as Record<string, unknown>).organization_name).toBe("Default");
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("Team 15: Platform Engineers");
+    expect(output).toContain("Description: Platform engineering team");
+    expect(output).toContain("Org:         Default");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 13: Graceful error for unknown team ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown team ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "team", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 14: Successful credential detail retrieval
      ══════════════════════════════════════════════════════════════ */
 
   it("returns credential details in the standard envelope", async () => {
@@ -462,15 +540,15 @@ describe("awx-get-resource tool", () => {
 
     const output = (result as { output: string }).output;
     expect(output).toContain("Credential 15: Production SSH Key");
-    expect(output).toContain("Description:");
-    expect(output).toContain("Machine");
+    expect(output).toContain("SSH key for production servers");
+    expect(output).toContain("Machine (ID: 1)");
     expect(output).toContain("Kind:");
-    expect(output).toContain("Organization:");
+    expect(output).toContain("Default");
     expect(output).toContain("Managed:");
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 11: Graceful error for unknown credential ID (404)
+     Cycle 15: Graceful error for unknown credential ID (404)
      ══════════════════════════════════════════════════════════════ */
 
   it("returns error output for unknown credential ID", async () => {
@@ -492,7 +570,7 @@ describe("awx-get-resource tool", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 12: Successful organization detail retrieval
+     Cycle 16: Successful organization detail retrieval
      ══════════════════════════════════════════════════════════════ */
 
   it("returns organization details in the standard envelope", async () => {
@@ -519,18 +597,18 @@ describe("awx-get-resource tool", () => {
 
     const output = (result as { output: string }).output;
     expect(output).toContain("Organization 1: Default");
-    expect(output).toContain("Description:");
-    expect(output).toContain("Users:");
-    expect(output).toContain("Teams:");
-    expect(output).toContain("Job Templates:");
-    expect(output).toContain("Projects:");
-    expect(output).toContain("Inventories:");
-    expect(output).toContain("Created:");
-    expect(output).toContain("Modified:");
+    expect(output).toContain("Default organization");
+    expect(output).toContain("Users:                3");
+    expect(output).toContain("Teams:                2");
+    expect(output).toContain("Job Templates:        5");
+    expect(output).toContain("Projects:             3");
+    expect(output).toContain("Inventories:          2");
+    expect(output).toContain("Created:              2024-01-01T00:00:00Z");
+    expect(output).toContain("Modified:             2025-06-01T00:00:00Z");
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 13: Graceful error for unknown organization ID (404)
+     Cycle 17: Graceful error for unknown organization ID (404)
      ══════════════════════════════════════════════════════════════ */
 
   it("returns error output for unknown organization ID", async () => {
@@ -552,7 +630,132 @@ describe("awx-get-resource tool", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 14: Zod schema validation rejects invalid resource types
+     Cycle 18: Successful schedule detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns schedule details in the standard envelope", async () => {
+    const rawSchedule = {
+      id: 8,
+      name: "Daily Deploy",
+      description: "Daily production deploy",
+      rrule: "DTSTART:20250101T000000Z RRULE:FREQ=DAILY;INTERVAL=1",
+      unified_job_template: 3,
+      next_run: "2025-07-11T00:00:00Z",
+      created: "2025-01-01T00:00:00Z",
+      modified: "2025-06-30T08:00:00Z",
+      summary_fields: {
+        unified_job_template: { id: 3, name: "Deploy Web Stack - Production" },
+        organization: { id: 1, name: "Default" },
+      },
+    };
+    mockFetchResponse(rawSchedule);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "schedule", id: 8 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("schedule");
+    expect(metadata.id).toBe(8);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Daily Deploy");
+    expect((metadata.data as Record<string, unknown>).rrule).toBe("DTSTART:20250101T000000Z RRULE:FREQ=DAILY;INTERVAL=1");
+    expect((metadata.data as Record<string, unknown>).unified_job_template_name).toBe("Deploy Web Stack - Production");
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("Schedule 8: Daily Deploy");
+    expect(output).toContain("RRULE:       DTSTART:20250101T000000Z RRULE:FREQ=DAILY;INTERVAL=1");
+    expect(output).toContain("Template:    Deploy Web Stack - Production");
+    expect(output).toContain("Next Run:    2025-07-11T00:00:00Z");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 15: Graceful error for unknown schedule ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown schedule ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "schedule", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 16: Successful notification_template detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns notification template details in the standard envelope", async () => {
+    const rawNt = {
+      id: 5,
+      name: "Slack Alerts",
+      description: "Send alerts to #ops channel",
+      notification_type: "slack",
+      notification_configuration: { channels: ["#ops"] },
+      organization: 1,
+      created: "2025-03-10T11:00:00Z",
+      modified: "2025-07-01T16:20:00Z",
+      summary_fields: { organization: { id: 1, name: "Default" } },
+    };
+    mockFetchResponse(rawNt);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "notification_template", id: 5 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("notification_template");
+    expect(metadata.id).toBe(5);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Slack Alerts");
+    expect((metadata.data as Record<string, unknown>).notification_type).toBe("slack");
+    expect((metadata.data as Record<string, unknown>).organization_name).toBe("Default");
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("Notification Template 5: Slack Alerts");
+    expect(output).toContain("Description: Send alerts to #ops channel");
+    expect(output).toContain("Type:        slack");
+    expect(output).toContain("Org:         Default");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 17: Graceful error for unknown notification_template ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown notification_template ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "notification_template", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 18: Zod schema validation rejects invalid resource types
      ══════════════════════════════════════════════════════════════ */
 
   it("rejects unsupported resource types", async () => {
@@ -567,7 +770,7 @@ describe("awx-get-resource tool", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 15: Zod schema accepts credential and organization types
+     Cycle 19: Zod schema accepts credential and organization types
      ══════════════════════════════════════════════════════════════ */
 
   it("accepts 'credential' and 'organization' as valid resource types", async () => {

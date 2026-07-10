@@ -1,0 +1,21 @@
+{
+  "id": 5,
+  "name": "Slack Alerts",
+  "description": "Send alerts to #ops channel",
+  "notification_type": "slack",
+  "notification_configuration": {
+    "channels": ["#ops", "#alerts"],
+    "token": "xoxb-redacted",
+    "color": "danger"
+  },
+  "organization": 1,
+  "created": "2025-03-10T11:00:00Z",
+  "modified": "2025-07-01T16:20:00Z",
+  "summary_fields": {
+    "organization": { "id": 1, "name": "Default", "description": "Default organization" },
+    "user_capabilities": {
+      "edit": true,
+      "delete": true
+    }
+  }
+}

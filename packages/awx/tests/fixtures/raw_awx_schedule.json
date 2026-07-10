@@ -1,0 +1,18 @@
+{
+  "id": 8,
+  "name": "Daily Deploy",
+  "description": "Daily production deploy",
+  "rrule": "DTSTART:20250101T000000Z RRULE:FREQ=DAILY;INTERVAL=1",
+  "unified_job_template": 3,
+  "next_run": "2025-07-11T00:00:00Z",
+  "created": "2025-01-01T00:00:00Z",
+  "modified": "2025-06-30T08:00:00Z",
+  "summary_fields": {
+    "unified_job_template": { "id": 3, "name": "Deploy Web Stack - Production" },
+    "organization": { "id": 1, "name": "Default" },
+    "user_capabilities": {
+      "edit": true,
+      "delete": true
+    }
+  }
+}
