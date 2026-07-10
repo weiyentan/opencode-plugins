@@ -3,8 +3,8 @@ $env:AWX_TOKEN = $auth.awx.key
 $env:AWX_BASE_URL = "https://aap.tanscloud-internal.com"
 
 Write-Host "=== AWX Plugin Debug Test ===" -ForegroundColor Cyan
-Write-Host "AWX_TOKEN: $($env:AWX_TOKEN.Substring(0, 8))..." -ForegroundColor Yellow
 Write-Host "AWX_BASE_URL: $env:AWX_BASE_URL" -ForegroundColor Yellow
+Write-Host "AWX_TOKEN: (loaded from auth.json — value not displayed for security)" -ForegroundColor Yellow
 
 # Clean old debug logs
 Remove-Item "$env:TEMP\awx-debug.log" -Force -ErrorAction SilentlyContinue

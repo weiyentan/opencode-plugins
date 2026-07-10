@@ -1,0 +1,90 @@
+/**
+ * get-resource.ts — Resource detail tool factory.
+ *
+ * awx-get-resource: Generalized individual resource detail getter
+ * with type→endpoint dispatch.
+ */
+import { tool } from "@opencode-ai/plugin";
+
+const z = tool.schema;
+
+import type { AwxClient } from "../client.js";
+import { getResource } from "../get-resource.js";
+import { formatResourceOutput } from "../utils.js";
+
+export function createGetResourceTool(getAwxClient: () => Promise<AwxClient>) {
+  return tool({
+    description: [
+      "Get individual resource detail from AWX.",
+      "Generalized resource detail getter with type→endpoint dispatch.",
+      "Supports 'template', 'project', 'inventory', 'credential', 'organization', 'host', 'group', 'label', 'instance-group', and 'execution-environment' resource types.",
+      "Returns structured output in a standard envelope:",
+      "{ schema_version, resource_type, id, data }.",
+      "For templates: name, description, job_type, resolved names,",
+      "playbook, verbosity, launch flags, last_job_run, status,",
+      "next_schedule, labels, credentials (with id, name,",
+      "credential_type_id, kind), extra_vars, timeout, job_tags,",
+      "skip_tags, ask_tags_on_launch, and ask_skip_tags_on_launch.",
+      "For projects: id, name, scm_type, scm_url, scm_branch, status,",
+      "last_updated, resolved organization_name and created_by, derived",
+      "success/failure flags.",
+      "For inventories: name, description, kind, host_count,",
+      "total_groups, has_inventory_sources, total_inventory_sources,",
+      "organization_name, and variables.",
+      "For credentials: id, name, description, credential_type_id,",
+      "credential_type_name (resolved), kind, organization_name",
+      "(resolved), and managed flag. Sensitive input values are",
+      "never exposed.",
+      "For organizations: id, name, description, related resource",
+      "counts (users, teams, job_templates, projects, inventories),",
+      "created, and modified.",
+    ].join(" "),
+    args: {
+      type: z
+        .enum(["template", "project", "inventory", "credential", "organization", "host", "group", "label", "instance-group", "execution-environment"])
+        .describe("Resource type to fetch. Supports: template, project, inventory, credential, organization, host, group, label, instance-group, execution-environment"),
+      id: z
+        .number()
+        .int()
+        .positive()
+        .describe("The numeric ID of the resource to fetch."),
+    },
+    async execute(args, context) {
+      // Respect the abort signal
+      if (context.abort?.aborted) {
+        return { output: "Request was aborted." };
+      }
+
+      let awxClient: AwxClient;
+      try {
+        awxClient = await getAwxClient();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { output: message };
+      }
+
+      try {
+        const result = await getResource(
+          awxClient,
+          args.type,
+          args.id,
+          context.abort,
+        );
+
+        return {
+          output: formatResourceOutput(result),
+          metadata: result,
+        };
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return { output: "Request was aborted." };
+        }
+        const message =
+          err instanceof Error ? err.message : String(err);
+        return {
+          output: `awx-get-resource error: ${message}`,
+        };
+      }
+    },
+  });
+}

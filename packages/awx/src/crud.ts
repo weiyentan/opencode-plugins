@@ -45,6 +45,14 @@ import { mapUser } from "./mappers/map-user.js";
 import { mapTeam } from "./mappers/map-team.js";
 import { mapSchedule } from "./mappers/map-schedule.js";
 import { mapNotificationTemplate } from "./mappers/map-notification-template.js";
+import { mapHost } from "./mappers/map-host.js";
+import { mapGroup } from "./mappers/map-group.js";
+import { mapLabel } from "./mappers/map-label.js";
+import { mapInstanceGroup } from "./mappers/map-instance-group.js";
+import { mapExecutionEnvironment } from "./mappers/map-execution-environment.js";
+import { mapCredential } from "./mappers/map-credential.js";
+import { mapOrganization } from "./mappers/map-organization.js";
+import { mapWorkflowTemplate } from "./mappers/map-workflow-template.js";
 
 // ─── Types ─────────────────────────────────────────────────────
 
@@ -59,7 +67,15 @@ export type CrudResourceType =
   | "user"
   | "team"
   | "schedule"
-  | "notification_template";
+  | "notification_template"
+  | "host"
+  | "group"
+  | "label"
+  | "instance-group"
+  | "execution-environment"
+  | "credential"
+  | "organization"
+  | "workflow_template";
 
 /**
  * Supported CRUD action keys.
@@ -153,6 +169,70 @@ export const CRUD_REGISTRY: Record<CrudResourceType, CrudEntry> = {
       delete: { path: "/api/v2/notification_templates/{id}/", method: "DELETE", requiresId: true },
     },
     mapper: mapNotificationTemplate,
+  },
+  host: {
+    endpoint: {
+      create: { path: "/api/v2/hosts/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/hosts/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/hosts/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapHost,
+  },
+  group: {
+    endpoint: {
+      create: { path: "/api/v2/groups/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/groups/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/groups/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapGroup,
+  },
+  label: {
+    endpoint: {
+      create: { path: "/api/v2/labels/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/labels/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/labels/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapLabel,
+  },
+  "instance-group": {
+    endpoint: {
+      create: { path: "/api/v2/instance_groups/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/instance_groups/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/instance_groups/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapInstanceGroup,
+  },
+  "execution-environment": {
+    endpoint: {
+      create: { path: "/api/v2/execution_environments/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/execution_environments/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/execution_environments/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapExecutionEnvironment,
+  },
+  credential: {
+    endpoint: {
+      create: { path: "/api/v2/credentials/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/credentials/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/credentials/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapCredential,
+  },
+  organization: {
+    endpoint: {
+      create: { path: "/api/v2/organizations/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/organizations/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/organizations/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapOrganization,
+  },
+  workflow_template: {
+    endpoint: {
+      create: { path: "/api/v2/workflow_job_templates/", method: "POST", requiresId: false },
+      update: { path: "/api/v2/workflow_job_templates/{id}/", method: "PATCH", requiresId: true },
+      delete: { path: "/api/v2/workflow_job_templates/{id}/", method: "DELETE", requiresId: true },
+    },
+    mapper: mapWorkflowTemplate,
   },
 };
 

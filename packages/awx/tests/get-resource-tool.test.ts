@@ -479,7 +479,127 @@ describe("awx-get-resource tool", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════
-     Cycle 14: Successful schedule detail retrieval
+     Cycle 14: Successful credential detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns credential details in the standard envelope", async () => {
+    mockFetchResponse(MOCK_RAW_CREDENTIAL);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "credential", id: 15 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("credential");
+    expect(metadata.id).toBe(15);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Production SSH Key");
+    expect((metadata.data as Record<string, unknown>).credential_type_name).toBe("Machine");
+    expect((metadata.data as Record<string, unknown>).organization_name).toBe("Default");
+    expect((metadata.data as Record<string, unknown>).kind).toBe("ssh");
+    expect((metadata.data as Record<string, unknown>).managed).toBe(false);
+    // Sensitive inputs must not be exposed
+    expect((metadata.data as Record<string, unknown>).inputs).toBeUndefined();
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("Credential 15: Production SSH Key");
+    expect(output).toContain("Description:");
+    expect(output).toContain("Machine");
+    expect(output).toContain("Kind:");
+    expect(output).toContain("Organization:");
+    expect(output).toContain("Managed:");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 15: Graceful error for unknown credential ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown credential ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "credential", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 16: Successful organization detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns organization details in the standard envelope", async () => {
+    mockFetchResponse(MOCK_RAW_ORGANIZATION);
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "organization", id: 1 },
+      mockToolContext(),
+    );
+
+    const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+
+    expect(metadata.schema_version).toBe("1.0");
+    expect(metadata.resource_type).toBe("organization");
+    expect(metadata.id).toBe(1);
+    expect((metadata.data as Record<string, unknown>).name).toBe("Default");
+    expect((metadata.data as Record<string, unknown>).description).toBe("Default organization");
+    const related = (metadata.data as Record<string, unknown>).related as Record<string, number>;
+    expect(related.users).toBe(3);
+    expect(related.teams).toBe(2);
+    expect(related.job_templates).toBe(5);
+    expect(related.projects).toBe(3);
+    expect(related.inventories).toBe(2);
+
+    const output = (result as { output: string }).output;
+    expect(output).toContain("Organization 1: Default");
+    expect(output).toContain("Description:");
+    expect(output).toContain("Users:");
+    expect(output).toContain("Teams:");
+    expect(output).toContain("Job Templates:");
+    expect(output).toContain("Projects:");
+    expect(output).toContain("Inventories:");
+    expect(output).toContain("Created:");
+    expect(output).toContain("Modified:");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 17: Graceful error for unknown organization ID (404)
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns error output for unknown organization ID", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Not found." }), {
+        status: 404,
+        statusText: "Not Found",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await hooks.tool!["awx-get-resource"]!.execute(
+      { type: "organization", id: 99999 },
+      mockToolContext(),
+    );
+
+    const out = (result as { output: string }).output;
+    expect(out).toContain("get-resource error");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 18: Successful schedule detail retrieval
+     ══════════════════════════════════════════════════════════════ */
+
+  it("returns schedule details in the standard envelope", async () => {
+    const rawSchedule = {
      ══════════════════════════════════════════════════════════════ */
 
   it("returns schedule details in the standard envelope", async () => {
@@ -615,6 +735,23 @@ describe("awx-get-resource tool", () => {
 
     if (parsed) {
       expect(parsed.success).toBe(false);
+    }
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 19: Zod schema accepts credential and organization types
+     ══════════════════════════════════════════════════════════════ */
+
+  it("accepts 'credential' and 'organization' as valid resource types", async () => {
+    const schema = hooks.tool!["awx-get-resource"]!.args;
+    const parsedCred = schema?.safeParse?.({ type: "credential", id: 1 });
+    const parsedOrg = schema?.safeParse?.({ type: "organization", id: 1 });
+
+    if (parsedCred) {
+      expect(parsedCred.success).toBe(true);
+    }
+    if (parsedOrg) {
+      expect(parsedOrg.success).toBe(true);
     }
   });
 });

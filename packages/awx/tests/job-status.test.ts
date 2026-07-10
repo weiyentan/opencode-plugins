@@ -127,6 +127,7 @@ async function createHooks(
   } else {
     vi.stubEnv("AWX_BASE_URL", undefined);
   }
+  vi.stubEnv("AWX_TOKEN", undefined);
   return AwxPlugin(input);
 }
 
@@ -158,6 +159,7 @@ describe("awx-job-status tool", () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     await hooks.dispose?.();
   });
@@ -322,14 +324,21 @@ describe("awx-job-status tool", () => {
       ),
     );
 
-    const result = await hooks.tool!["awx-job-status"]!.execute(
+    vi.useFakeTimers();
+
+    const executePromise = hooks.tool!["awx-job-status"]!.execute(
       { job_id: 142 },
       mockToolContext(),
     );
 
+    await vi.advanceTimersByTimeAsync(11_000);
+    const result = await executePromise;
+
     const out = (result as { output: string }).output;
     expect(out).toContain("awx-job-status error");
     expect(out).toContain("AWX API error (500)");
+
+    vi.useRealTimers();
   });
 
   it("returns error when AWX client is not available", async () => {

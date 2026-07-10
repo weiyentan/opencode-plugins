@@ -8,13 +8,13 @@ A monorepo of [OpenCode](https://opencode.ai) server plugins that extend the Ope
 
 An OpenCode plugin for [AWX](https://github.com/ansible/awx) / Ansible Automation Platform (AAP). Provides native tool access to job templates, projects, and job lifecycle operations — replacing brittle PowerShell scripts with a portable, testable TypeScript plugin.
 
-**Status:** ✅ Phase 0 (scaffolding), Phase 1 (client infrastructure), and Phase 2 core tools complete — 33 tools implemented covering project lookup, template detail, inventory detail, job lifecycle, CRUD operations (create/update/delete for projects, templates, inventories, users, teams, schedules, notification templates), credential attachment, environment debugging, and interactive configuration.
+**Status:** ✅ Phase 0 (scaffolding), Phase 1 (client infrastructure), and Phase 2 core tools complete — 55+ tools implemented covering project lookup, template detail, inventory detail, job lifecycle, CRUD operations (create/update/delete for projects, templates, inventories, users, teams, schedules, notification templates, hosts, groups, labels, instance groups, execution environments, credentials, organizations, and workflow templates), credential attachment and detachment, environment debugging, and interactive configuration.
 
-**Coverage:** 33 AWX operations covering all major resource CRUD lifecycle needs. Full tool-action mapping table documented in the PRD.
+**Coverage:** 53+ AWX operations covering all major resource CRUD lifecycle needs. Full tool-action mapping table documented in the tool gap audit.
 
 **Key docs:**
-- [Refined PRD](docs/prd/plugin-awx-refined.md) — full product requirements
 - [Architecture Decision Records](docs/adr/) — 6 ADRs covering auth, output contract, resilience, polling, transforms
+- [AWX Tool Gap Audit](packages/awx/docs/tool-gap-audit.md) — full tool coverage and gap analysis
 - [Client Middleware Design](docs/client-middleware-design.md) — middleware pipeline spec
 - [Domain Glossary](CONTEXT.md) — core concepts and terminology
 
@@ -49,8 +49,8 @@ The AWX plugin package (`packages/awx/`) is already scaffolded with these module
 
 | Module | File | Purpose |
 |--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers all AWX tools (list-templates, list-projects, list-jobs, launch-job, job-status, wait-job, get-job-events, sync-project, get-resource, debug-env, configure, create-project, create-template, create-inventory, create-user, create-team, create-schedule, create-notification-template, update-project, update-template, update-inventory, update-user, update-team, update-schedule, update-notification-template, delete-project, delete-template, delete-inventory, delete-user, delete-team, delete-schedule, delete-notification-template, attach-credential); wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
-| **CRUD dispatch** | `src/crud.ts` | Endpoint registry and dispatch for create/update/delete on templates, projects, and inventories |
+| **Plugin entry** | `src/index.ts` | Registers all AWX tools (listing, launching, CRUD operations for templates, projects, inventories, users, teams, schedules, notification templates, hosts, groups, labels, instance groups, execution environments, credentials, organizations, and workflow templates); wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
+| **CRUD dispatch** | `src/crud.ts` | Endpoint registry and dispatch for create/update/delete on all registered resource types |
 | **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook |
 | **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types matching `awx_job_detail.py` v1.0 |
 | **Mutation contract** | `src/contracts/resource-mutation.ts` | `ResourceMutationOutput` v1.0 contract for create/update/delete responses |

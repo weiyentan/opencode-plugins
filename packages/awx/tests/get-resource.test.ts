@@ -15,6 +15,8 @@ import type { AwxClient } from "../src/client.js";
 import type { TemplateDetailOutput } from "../src/contracts/template-detail.js";
 import type { ProjectDetailOutput } from "../src/contracts/project-detail.js";
 import type { InventoryDetailOutput } from "../src/contracts/inventory-detail.js";
+import type { CredentialDetailOutput } from "../src/contracts/credential-detail.js";
+import type { OrganizationDetailOutput } from "../src/contracts/organization-detail.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -45,6 +47,12 @@ const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
   last_job_run: "2025-06-15T14:32:00Z",
   status: "successful",
   next_schedule: null,
+  timeout: 300,
+  job_tags: "deploy,healthcheck",
+  skip_tags: "debug",
+  ask_tags_on_launch: true,
+  ask_skip_tags_on_launch: false,
+  extra_vars: "---\naws_region: us-east-1\nenvironment: production\n",
   summary_fields: {
     organization: { id: 1, name: "Default" },
     inventory: { id: 1, name: "Production" },
@@ -54,6 +62,12 @@ const MOCK_RAW_TEMPLATE: Record<string, unknown> = {
         { id: 1, name: "production" },
         { id: 2, name: "web" },
         { id: 3, name: "deploy" },
+      ],
+    },
+    credentials: {
+      results: [
+        { id: 5, name: "Production SSH", credential_type_id: 1, kind: "ssh" },
+        { id: 8, name: "Vault Token", credential_type_id: 4, kind: "vault" },
       ],
     },
   },
@@ -67,6 +81,9 @@ const MOCK_RAW_PROJECT: Record<string, unknown> = {
   scm_type: "git",
   scm_url: "https://github.com/example/web-stack-deploy.git",
   scm_branch: "main",
+  scm_revision: "abc123def456",
+  credential: 10,
+  default_environment: 20,
   status: "successful",
   last_updated: "2025-06-20T10:15:00Z",
   created: "2025-01-10T08:00:00Z",
@@ -74,6 +91,45 @@ const MOCK_RAW_PROJECT: Record<string, unknown> = {
   summary_fields: {
     organization: { id: 1, name: "Default" },
     created_by: { id: 1, username: "admin" },
+    credential: { id: 10, name: "GitLab PAT - Production" },
+    default_environment: { id: 20, name: "Ansible Engine 2.9" },
+  },
+};
+
+/** Raw AWX credential API response */
+const MOCK_RAW_CREDENTIAL: Record<string, unknown> = {
+  id: 15,
+  name: "Production SSH Key",
+  description: "SSH key for production server access",
+  credential_type: 1,
+  kind: "ssh",
+  managed: false,
+  organization: 1,
+  inputs: {
+    username: "deploy",
+    password: "$encrypted$",
+  },
+  summary_fields: {
+    credential_type: { id: 1, name: "Machine" },
+    organization: { id: 1, name: "Default" },
+  },
+};
+
+/** Raw AWX organization API response */
+const MOCK_RAW_ORGANIZATION: Record<string, unknown> = {
+  id: 1,
+  name: "Default",
+  description: "Default organization",
+  created: "2025-01-01T00:00:00Z",
+  modified: "2025-06-15T12:00:00Z",
+  summary_fields: {
+    related: {
+      users: { count: 3, results: [] },
+      teams: { count: 2, results: [] },
+      job_templates: { count: 5, results: [] },
+      projects: { count: 3, results: [] },
+      inventories: { count: 2, results: [] },
+    },
   },
 };
 
@@ -119,6 +175,17 @@ describe("getResource()", () => {
     expect(result.data.inventory_name).toBe("Production");
     expect(result.data.project_name).toBe("Web Stack Deploy");
     expect(result.data.organization_name).toBe("Default");
+    expect(result.data.description).toBe("Deploy the web application stack to production servers");
+    expect(result.data.timeout).toBe(300);
+    expect(result.data.job_tags).toBe("deploy,healthcheck");
+    expect(result.data.skip_tags).toBe("debug");
+    expect(result.data.ask_tags_on_launch).toBe(true);
+    expect(result.data.ask_skip_tags_on_launch).toBe(false);
+    expect(result.data.extra_vars).toBe("---\naws_region: us-east-1\nenvironment: production\n");
+    expect(result.data.credentials).toEqual([
+      { id: 5, name: "Production SSH", credential_type_id: 1, kind: "ssh" },
+      { id: 8, name: "Vault Token", credential_type_id: 4, kind: "vault" },
+    ]);
   });
 
   /* ══════════════════════════════════════════════════════════════
@@ -258,6 +325,78 @@ describe("getResource()", () => {
     expect(client.request).toHaveBeenCalledWith(
       "awx-get-resource",
       "/api/v2/inventories/12/",
+      undefined,
+      undefined,
+    );
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 8: Successful credential resource fetch
+     ══════════════════════════════════════════════════════════════ */
+
+  it("fetches and maps a credential resource via the registry", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_CREDENTIAL);
+
+    const result = (await getResource(client, "credential", 15)) as CredentialDetailOutput;
+
+    expect(result.schema_version).toBe("1.0");
+    expect(result.resource_type).toBe("credential");
+    expect(result.id).toBe(15);
+    expect(result.data.name).toBe("Production SSH Key");
+    expect(result.data.credential_type_name).toBe("Machine");
+    expect(result.data.organization_name).toBe("Default");
+    expect(result.data).not.toHaveProperty("inputs");
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 9: Credential registry endpoint mapping
+     ══════════════════════════════════════════════════════════════ */
+
+  it("calls the correct API endpoint for the credential resource", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_CREDENTIAL);
+
+    await getResource(client, "credential", 15);
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-get-resource",
+      "/api/v2/credentials/15/",
+      undefined,
+      undefined,
+    );
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 10: Successful organization resource fetch
+     ══════════════════════════════════════════════════════════════ */
+
+  it("fetches and maps an organization resource via the registry", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_ORGANIZATION);
+
+    const result = (await getResource(client, "organization", 1)) as OrganizationDetailOutput;
+
+    expect(result.schema_version).toBe("1.0");
+    expect(result.resource_type).toBe("organization");
+    expect(result.id).toBe(1);
+    expect(result.data.name).toBe("Default");
+    expect(result.data.related.users).toBe(3);
+    expect(result.data.related.teams).toBe(2);
+    expect(result.data.related.job_templates).toBe(5);
+    expect(result.data.related.projects).toBe(3);
+    expect(result.data.related.inventories).toBe(2);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Cycle 11: Organization registry endpoint mapping
+     ══════════════════════════════════════════════════════════════ */
+
+  it("calls the correct API endpoint for the organization resource", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_ORGANIZATION);
+
+    await getResource(client, "organization", 1);
+
+    expect(client.request).toHaveBeenCalledWith(
+      "awx-get-resource",
+      "/api/v2/organizations/1/",
       undefined,
       undefined,
     );

@@ -35,6 +35,9 @@ import { describe, it, expect, vi } from "vitest";
 import type { PluginInput, Hooks, ToolContext, ToolResult } from "@opencode-ai/plugin";
 import { AwxPlugin } from "../../src/index.js";
 
+// Capture at module load time, before any vi.stubEnv can pollute it
+const ENV_AWX_TOKEN = process.env.AWX_TOKEN;
+
 // ── Shared Test Helpers ──────────────────────────────────────────
 
 /** Minimal mock of ToolContext for tool execute tests */
@@ -113,9 +116,7 @@ describe("Read-Only Tools — Configuration Errors", () => {
       );
 
       const parsed = getMetadata(result);
-      expect(parsed.count).toBe(0);
-      expect(parsed.results).toEqual([]);
-      expect(parsed.warning).toContain("PAT");
+      expect(parsed.error).toContain("PAT");
     } finally {
       await hooks.dispose?.();
     }
@@ -147,9 +148,157 @@ describe("Read-Only Tools — Configuration Errors", () => {
       );
 
       const metadata = getMetadata(result);
-      expect(metadata.total_jobs).toBe(0);
-      expect(metadata.results).toEqual([]);
-      expect(metadata.warning).toContain("PAT");
+      expect(metadata.error).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+
+  it("awx-list-users returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-users"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      const out = (result as { output: string }).output;
+      expect(out).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+
+  it("awx-list-teams returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-teams"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      const out = (result as { output: string }).output;
+      expect(out).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+
+  it("awx-list-workflow-templates returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-workflow-templates"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      const out = (result as { output: string }).output;
+      expect(out).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+
+
+  it("awx-list-templates-by-credential returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-templates-by-credential"]!.execute(
+        { credential_id: 1 },
+        mockToolContext(),
+      );
+
+      const parsed = getMetadata(result);
+      expect(parsed.error).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+
+
+  it("awx-list-schedules returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-schedules"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      const out = (result as { output: string }).output;
+      expect(out).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+
+
+  it("awx-list-notification-templates returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-notification-templates"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      const out = (result as { output: string }).output;
+      expect(out).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+
+
+  it("awx-list-labels returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-labels"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      const out = (result as { output: string }).output;
+      expect(out).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+
+
+  it("awx-list-instance-groups returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-instance-groups"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      const out = (result as { output: string }).output;
+      expect(out).toContain("PAT");
+    } finally {
+      await hooks.dispose?.();
+    }
+  });
+
+
+  it("awx-list-execution-environments returns configuration error when no token is configured", async () => {
+    const hooks = await createPlugin(/* no token */);
+
+    try {
+      const result = await hooks.tool!["awx-list-execution-environments"]!.execute(
+        {},
+        mockToolContext(),
+      );
+
+      const out = (result as { output: string }).output;
+      expect(out).toContain("PAT");
     } finally {
       await hooks.dispose?.();
     }
@@ -163,7 +312,7 @@ describe("Read-Only Tools — Configuration Errors", () => {
 describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integration", () => {
   describe("awx-list-templates", () => {
     it("returns structured response with count and results", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-templates"]!.execute(
@@ -196,7 +345,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
     });
 
     it("returns paginated results when page size is small", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-templates"]!.execute(
@@ -221,7 +370,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
 
   describe("awx-list-projects", () => {
     it("returns structured response with count and results", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-projects"]!.execute(
@@ -260,7 +409,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
     });
 
     it("accepts pagination options", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-projects"]!.execute(
@@ -330,9 +479,67 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
     });
   });
 
+  describe("awx-get-resource", () => {
+    it("returns structured response for credential resource", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-get-resource"]!.execute(
+          { type: "credential", id: 1 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata.schema_version).toBe("1.0");
+        expect(metadata.resource_type).toBe("credential");
+        expect(typeof metadata.id).toBe("number");
+        expect(metadata.data).toBeDefined();
+
+        const data = metadata.data as Record<string, unknown>;
+        expect(typeof data.name).toBe("string");
+        expect(typeof data.credential_type_id).toBe("number");
+        // Verify sensitive inputs are not exposed
+        expect(data.inputs).toBeUndefined();
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("returns structured response for organization resource", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-get-resource"]!.execute(
+          { type: "organization", id: 1 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata.schema_version).toBe("1.0");
+        expect(metadata.resource_type).toBe("organization");
+        expect(typeof metadata.id).toBe("number");
+        expect(metadata.data).toBeDefined();
+
+        const data = metadata.data as Record<string, unknown>;
+        expect(typeof data.name).toBe("string");
+        expect(data.related).toBeDefined();
+        const related = data.related as Record<string, number>;
+        expect(typeof related.users).toBe("number");
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
   describe("awx-list-jobs", () => {
     it("returns structured response with count and results", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-jobs"]!.execute(
@@ -371,7 +578,7 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
     });
 
     it("accepts pagination options", async () => {
-      const hooks = await createPlugin(process.env.AWX_TOKEN);
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
 
       try {
         const result = await hooks.tool!["awx-list-jobs"]!.execute(
@@ -390,6 +597,708 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
       }
     });
   });
+
+
+  describe("awx-list-schedules", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-schedules"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("unified_job_template");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("accepts pagination options", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-schedules"]!.execute(
+          { maxPages: 2, pageSize: 10, timeout: 15_000 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(Array.isArray(metadata.results)).toBe(true);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
+
+  describe("awx-list-notification-templates", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-notification-templates"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("notification_type");
+            expect(typeof item.notification_type).toBe("string");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("accepts pagination options", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-notification-templates"]!.execute(
+          { maxPages: 2, pageSize: 10, timeout: 15_000 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(Array.isArray(metadata.results)).toBe(true);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
+
+  describe("awx-list-labels", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-labels"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("organization");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("accepts pagination options", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-labels"]!.execute(
+          { maxPages: 2, pageSize: 10, timeout: 15_000 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(Array.isArray(metadata.results)).toBe(true);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
+  describe("awx-list-instance-groups", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-instance-groups"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("is_container_group");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("accepts pagination options", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-instance-groups"]!.execute(
+          { maxPages: 2, pageSize: 10, timeout: 15_000 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(Array.isArray(metadata.results)).toBe(true);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
+
+  describe("awx-list-execution-environments", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-execution-environments"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("image");
+            expect(typeof item.image).toBe("string");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("accepts pagination options", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-execution-environments"]!.execute(
+          { maxPages: 2, pageSize: 10, timeout: 15_000 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(Array.isArray(metadata.results)).toBe(true);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
+
+
+
+  describe("awx-list-templates-by-credential", () => {
+    it("returns structured response when given a valid credential ID", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        // Use a known credential ID (credential 1 is typically the AAP built-in)
+        const result = await hooks.tool!["awx-list-templates-by-credential"]!.execute(
+          { credential_id: 1 },
+          mockToolContext(),
+        );
+
+        const parsed = getMetadata(result);
+        expect(parsed).toHaveProperty("count");
+        expect(typeof parsed.count).toBe("number");
+        expect(Array.isArray(parsed.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((parsed.results as unknown[]).length > 0) {
+          for (const item of parsed.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("description");
+            expect(item).toHaveProperty("job_type");
+            expect(item).toHaveProperty("playbook");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("returns error metadata for invalid credential ID", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-templates-by-credential"]!.execute(
+          { credential_id: 999999 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = getMetadata(result);
+        expect(metadata.count).toBe(0);
+        expect(metadata.results).toEqual([]);
+        expect(metadata.warning).toBeDefined();
+        expect(typeof metadata.warning).toBe("string");
+        expect((metadata.warning as string).length).toBeGreaterThan(0);
+        expect((metadata.warning as string)).toContain("not found");
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
+
+
+  describe("awx-list-hosts", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        // Discover an inventory ID via awx-list-inventories
+        const invResult = await hooks.tool!["awx-list-inventories"]!.execute(
+          {},
+          mockToolContext(),
+        );
+        const invMeta = getMetadata(invResult);
+        const inventories = invMeta.results as Array<{ id: number }> | undefined;
+        if (!inventories || inventories.length === 0) {
+          // No inventory to test with; skip gracefully
+          return;
+        }
+        const inventoryId = inventories[0].id;
+
+        const result = await hooks.tool!["awx-list-hosts"]!.execute(
+          { inventory_id: inventoryId },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("description");
+            expect(item).toHaveProperty("inventory");
+            expect(item.inventory).toBe(inventoryId);
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("returns error metadata with invalid inventory_id", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-hosts"]!.execute(
+          { inventory_id: 99999999 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("warning");
+        expect((metadata.warning as string)).toContain("Failed to");
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
+
+  describe("awx-list-groups", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        // Discover an inventory ID via awx-list-inventories
+        const invResult = await hooks.tool!["awx-list-inventories"]!.execute(
+          {},
+          mockToolContext(),
+        );
+        const invMeta = getMetadata(invResult);
+        const inventories = invMeta.results as Array<{ id: number }> | undefined;
+        if (!inventories || inventories.length === 0) {
+          // No inventory to test with; skip gracefully
+          return;
+        }
+        const inventoryId = inventories[0].id;
+
+        const result = await hooks.tool!["awx-list-groups"]!.execute(
+          { inventory_id: inventoryId },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("description");
+            expect(item).toHaveProperty("inventory");
+            expect(item.inventory).toBe(inventoryId);
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("returns error metadata with invalid inventory_id", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-groups"]!.execute(
+          { inventory_id: 99999999 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        expect(metadata).toHaveProperty("warning");
+        expect((metadata.warning as string)).toContain("Failed to");
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
+  describe("awx-list-users", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-users"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = getMetadata(result);
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("username");
+            expect(typeof item.username).toBe("string");
+            expect(item).toHaveProperty("email");
+            expect(typeof item.email).toBe("string");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("accepts pagination options", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-users"]!.execute(
+          { maxPages: 2, pageSize: 10, timeout: 15_000 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = getMetadata(result);
+        expect(metadata).toHaveProperty("count");
+        expect(Array.isArray(metadata.results)).toBe(true);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+  describe("awx-list-workflow-templates", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-workflow-templates"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = getMetadata(result);
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("description");
+            expect(typeof item.description).toBe("string");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("accepts pagination options", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-workflow-templates"]!.execute(
+          { maxPages: 2, pageSize: 10, timeout: 15_000 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = getMetadata(result);
+        expect(metadata).toHaveProperty("count");
+        expect(Array.isArray(metadata.results)).toBe(true);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+  describe("awx-list-teams", () => {
+    it("returns structured response with count and results", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-teams"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = getMetadata(result);
+        expect(metadata).toHaveProperty("count");
+        expect(typeof metadata.count).toBe("number");
+        expect(Array.isArray(metadata.results)).toBe(true);
+
+        // Validate result shape when results are present
+        if ((metadata.results as unknown[]).length > 0) {
+          for (const item of metadata.results as Record<string, unknown>[]) {
+            expect(item).toHaveProperty("id");
+            expect(typeof item.id).toBe("number");
+            expect(item).toHaveProperty("name");
+            expect(typeof item.name).toBe("string");
+            expect(item).toHaveProperty("description");
+            expect(typeof item.description).toBe("string");
+          }
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+
+    it("accepts pagination options", async () => {
+      const hooks = await createPlugin(ENV_AWX_TOKEN);
+
+      try {
+        const result = await hooks.tool!["awx-list-teams"]!.execute(
+          { maxPages: 2, pageSize: 10, timeout: 15_000 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = getMetadata(result);
+        expect(metadata).toHaveProperty("count");
+        expect(Array.isArray(metadata.results)).toBe(true);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+  describe("auth failure (awx-list-workflow-templates)", () => {
+    it("returns error metadata with invalid token", async () => {
+      const hooks = await createPlugin(
+        "this-is-a-deliberately-invalid-token-for-testing",
+      );
+
+      try {
+        const result = await hooks.tool!["awx-list-workflow-templates"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = getMetadata(result);
+        if (metadata.error) {
+          expect(typeof metadata.error).toBe("string");
+          expect((metadata.error as string).length).toBeGreaterThan(0);
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+
+  describe("auth failure (awx-list-templates-by-credential)", () => {
+    it("returns error metadata with invalid token", async () => {
+      const hooks = await createPlugin(
+        "this-is-a-deliberately-invalid-token-for-testing",
+      );
+
+      try {
+        const result = await hooks.tool!["awx-list-templates-by-credential"]!.execute(
+          { credential_id: 1 },
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = getMetadata(result);
+        expect(metadata.count).toBe(0);
+        expect(metadata.results).toEqual([]);
+        expect(metadata.warning).toBeDefined();
+        expect(typeof metadata.warning).toBe("string");
+        expect((metadata.warning as string).length).toBeGreaterThan(0);
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
 
   describe("auth failure (awx-list-jobs)", () => {
     it("returns error metadata with invalid token", async () => {
@@ -410,6 +1319,58 @@ describe.skipIf(!process.env.AWX_TOKEN)("Read-Only Tools — Live AAP Integratio
         if (metadata.warning) {
           expect(typeof metadata.warning).toBe("string");
           expect((metadata.warning as string).length).toBeGreaterThan(0);
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+  describe("auth failure (awx-list-users)", () => {
+    it("returns error metadata with invalid token", async () => {
+      const hooks = await createPlugin(
+        "this-is-a-deliberately-invalid-token-for-testing",
+      );
+
+      try {
+        const result = await hooks.tool!["awx-list-users"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        if (metadata.error) {
+          expect(typeof metadata.error).toBe("string");
+          expect((metadata.error as string).length).toBeGreaterThan(0);
+        }
+      } finally {
+        await hooks.dispose?.();
+      }
+    });
+  });
+
+  describe("auth failure (awx-list-teams)", () => {
+    it("returns error metadata with invalid token", async () => {
+      const hooks = await createPlugin(
+        "this-is-a-deliberately-invalid-token-for-testing",
+      );
+
+      try {
+        const result = await hooks.tool!["awx-list-teams"]!.execute(
+          {},
+          mockToolContext(),
+        );
+
+        expect(result).toHaveProperty("output");
+        expect(result).toHaveProperty("metadata");
+
+        const metadata = (result as { output: string; metadata: Record<string, unknown> }).metadata;
+        if (metadata.error) {
+          expect(typeof metadata.error).toBe("string");
+          expect((metadata.error as string).length).toBeGreaterThan(0);
         }
       } finally {
         await hooks.dispose?.();

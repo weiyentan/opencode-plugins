@@ -112,6 +112,39 @@ function mockClientWithError(status: number, body?: unknown): AwxClient {
 }
 
 /** Mock request body for create/update operations */
+/** Raw AWX credential API response */
+const MOCK_RAW_CREDENTIAL: Record<string, unknown> = {
+  id: 42,
+  name: "My SSH Key",
+  description: "SSH private key",
+  credential_type: 1,
+  kind: "ssh",
+  managed: false,
+  organization: 2,
+  summary_fields: {
+    credential_type: { id: 1, name: "Machine" },
+    organization: { id: 2, name: "Default" },
+  },
+};
+
+/** Raw AWX organization API response */
+const MOCK_RAW_ORGANIZATION: Record<string, unknown> = {
+  id: 10,
+  name: "Engineering",
+  description: "Engineering department",
+  created: "2025-06-25T12:00:00Z",
+  modified: "2025-06-25T12:00:00Z",
+  summary_fields: {
+    related: {
+      users: { count: 5 },
+      teams: { count: 2 },
+      job_templates: { count: 10 },
+      projects: { count: 3 },
+      inventories: { count: 4 },
+    },
+  },
+};
+
 const MOCK_BODY: Record<string, unknown> = {
   name: "Test Resource",
   description: "Created by test",
@@ -273,18 +306,64 @@ describe("CRUD_REGISTRY", () => {
   });
 
   /* ══════════════════════════════════════════════════════════════
-     All 9 combinations enumerated
+     Credential resource endpoints
      ══════════════════════════════════════════════════════════════ */
 
-  it("has exactly 7 resource types registered", () => {
+  it("maps (credential, create) → POST /api/v2/credentials/", () => {
+    expectEndpoint("credential", "create",
+      "/api/v2/credentials/", "POST", false);
+  });
+
+  it("maps (credential, update) → PATCH /api/v2/credentials/{id}/", () => {
+    expectEndpoint("credential", "update",
+      "/api/v2/credentials/{id}/", "PATCH", true);
+  });
+
+  it("maps (credential, delete) → DELETE /api/v2/credentials/{id}/", () => {
+    expectEndpoint("credential", "delete",
+      "/api/v2/credentials/{id}/", "DELETE", true);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     Organization resource endpoints
+     ══════════════════════════════════════════════════════════════ */
+
+  it("maps (organization, create) → POST /api/v2/organizations/", () => {
+    expectEndpoint("organization", "create",
+      "/api/v2/organizations/", "POST", false);
+  });
+
+  it("maps (organization, update) → PATCH /api/v2/organizations/{id}/", () => {
+    expectEndpoint("organization", "update",
+      "/api/v2/organizations/{id}/", "PATCH", true);
+  });
+
+  it("maps (organization, delete) → DELETE /api/v2/organizations/{id}/", () => {
+    expectEndpoint("organization", "delete",
+      "/api/v2/organizations/{id}/", "DELETE", true);
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     All 15 combinations enumerated
+     ══════════════════════════════════════════════════════════════ */
+
+  it("has exactly 15 resource types registered", () => {
     expect(Object.keys(CRUD_REGISTRY).sort()).toEqual([
+      "credential",
+      "execution-environment",
+      "group",
+      "host",
+      "instance-group",
       "inventory",
+      "label",
       "notification_template",
+      "organization",
       "project",
       "schedule",
       "team",
       "template",
       "user",
+      "workflow_template",
     ]);
   });
 
@@ -355,6 +434,36 @@ describe("executeCrud()", () => {
     expect((result.data as Record<string, unknown>).resource_type).toBe("inventory");
   });
 
+  it("creates a credential and returns the mapped result", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_CREDENTIAL);
+
+    const result = await executeCrud(client, "credential", "create", undefined, MOCK_BODY);
+
+    expect(result.action).toBe("created");
+    expect(result.resource_type).toBe("credential");
+    expect(result.id).toBe(42);
+    expect(result.data).not.toBeNull();
+    expect((result.data as Record<string, unknown>).schema_version).toBe("1.0");
+    expect((result.data as Record<string, unknown>).resource_type).toBe("credential");
+
+    // Verify the sensitive inputs field is never included in the mapped output
+    const innerData = (result.data as Record<string, unknown>).data as Record<string, unknown>;
+    expect(innerData).not.toHaveProperty("inputs");
+  });
+
+  it("creates an organization and returns the mapped result", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_ORGANIZATION);
+
+    const result = await executeCrud(client, "organization", "create", undefined, MOCK_BODY);
+
+    expect(result.action).toBe("created");
+    expect(result.resource_type).toBe("organization");
+    expect(result.id).toBe(10);
+    expect(result.data).not.toBeNull();
+    expect((result.data as Record<string, unknown>).schema_version).toBe("1.0");
+    expect((result.data as Record<string, unknown>).resource_type).toBe("organization");
+  });
+
   /* ══════════════════════════════════════════════════════════════
      Update operations
      ══════════════════════════════════════════════════════════════ */
@@ -383,6 +492,37 @@ describe("executeCrud()", () => {
     );
   });
 
+  it("includes extra_vars in PATCH body when provided", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_TEMPLATE);
+    const body = {
+      name: "Updated Template",
+      extra_vars: '{"region":"us-east-1","environment":"staging"}',
+    };
+
+    await executeCrud(client, "template", "update", 7, body);
+
+    const callArgs = vi.mocked(client.request).mock.calls[0];
+    const init = callArgs[2] as RequestInit;
+    const parsedBody = JSON.parse(init.body as string);
+    expect(parsedBody).toEqual({
+      name: "Updated Template",
+      extra_vars: '{"region":"us-east-1","environment":"staging"}',
+    });
+  });
+
+  it("does not include extra_vars in PATCH body when omitted", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_TEMPLATE);
+    const body = { name: "Updated Template" };
+
+    await executeCrud(client, "template", "update", 7, body);
+
+    const callArgs = vi.mocked(client.request).mock.calls[0];
+    const init = callArgs[2] as RequestInit;
+    const parsedBody = JSON.parse(init.body as string);
+    expect(parsedBody).toEqual({ name: "Updated Template" });
+    expect(parsedBody).not.toHaveProperty("extra_vars");
+  });
+
   it("updates a project and returns the mapped result", async () => {
     const client = mockClientWithResponse(MOCK_RAW_PROJECT);
 
@@ -402,6 +542,28 @@ describe("executeCrud()", () => {
     expect(result.action).toBe("updated");
     expect(result.resource_type).toBe("inventory");
     expect(result.id).toBe(12);
+    expect(result.data).not.toBeNull();
+  });
+
+  it("updates a credential and returns the mapped result", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_CREDENTIAL);
+
+    const result = await executeCrud(client, "credential", "update", 42, MOCK_BODY);
+
+    expect(result.action).toBe("updated");
+    expect(result.resource_type).toBe("credential");
+    expect(result.id).toBe(42);
+    expect(result.data).not.toBeNull();
+  });
+
+  it("updates an organization and returns the mapped result", async () => {
+    const client = mockClientWithResponse(MOCK_RAW_ORGANIZATION);
+
+    const result = await executeCrud(client, "organization", "update", 10, MOCK_BODY);
+
+    expect(result.action).toBe("updated");
+    expect(result.resource_type).toBe("organization");
+    expect(result.id).toBe(10);
     expect(result.data).not.toBeNull();
   });
 
@@ -452,6 +614,28 @@ describe("executeCrud()", () => {
     expect(result.action).toBe("deleted");
     expect(result.resource_type).toBe("inventory");
     expect(result.id).toBe(12);
+    expect(result.data).toBeNull();
+  });
+
+  it("deletes a credential and returns null data", async () => {
+    const client = mockClientWithResponse({}, 200);
+
+    const result = await executeCrud(client, "credential", "delete", 42);
+
+    expect(result.action).toBe("deleted");
+    expect(result.resource_type).toBe("credential");
+    expect(result.id).toBe(42);
+    expect(result.data).toBeNull();
+  });
+
+  it("deletes an organization and returns null data", async () => {
+    const client = mockClientWithResponse({}, 200);
+
+    const result = await executeCrud(client, "organization", "delete", 10);
+
+    expect(result.action).toBe("deleted");
+    expect(result.resource_type).toBe("organization");
+    expect(result.id).toBe(10);
     expect(result.data).toBeNull();
   });
 

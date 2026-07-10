@@ -30,6 +30,13 @@ import { mapUser } from "./mappers/map-user.js";
 import { mapTeam } from "./mappers/map-team.js";
 import { mapSchedule } from "./mappers/map-schedule.js";
 import { mapNotificationTemplate } from "./mappers/map-notification-template.js";
+import { mapCredential } from "./mappers/map-credential.js";
+import { mapOrganization } from "./mappers/map-organization.js";
+import { mapHost } from "./mappers/map-host.js";
+import { mapGroup } from "./mappers/map-group.js";
+import { mapLabel } from "./mappers/map-label.js";
+import { mapInstanceGroup } from "./mappers/map-instance-group.js";
+import { mapExecutionEnvironment } from "./mappers/map-execution-environment.js";
 import type { TemplateDetailOutput } from "./contracts/template-detail.js";
 import type { ProjectDetailOutput } from "./contracts/project-detail.js";
 import type { InventoryDetailOutput } from "./contracts/inventory-detail.js";
@@ -37,6 +44,13 @@ import type { UserDetailOutput } from "./contracts/user-detail.js";
 import type { TeamDetailOutput } from "./contracts/team-detail.js";
 import type { ScheduleDetailOutput } from "./contracts/schedule-detail.js";
 import type { NotificationTemplateDetailOutput } from "./contracts/notification-template-detail.js";
+import type { CredentialDetailOutput } from "./contracts/credential-detail.js";
+import type { OrganizationDetailOutput } from "./contracts/organization-detail.js";
+import type { HostDetailOutput } from "./contracts/host-detail.js";
+import type { GroupDetailOutput } from "./contracts/group-detail.js";
+import type { LabelDetailOutput } from "./contracts/label-detail.js";
+import type { InstanceGroupDetailOutput } from "./contracts/instance-group-detail.js";
+import type { ExecutionEnvironmentDetailOutput } from "./contracts/execution-environment-detail.js";
 
 /**
  * Union of all supported resource detail output types.
@@ -49,7 +63,14 @@ export type ResourceDetailOutput =
   | UserDetailOutput
   | TeamDetailOutput
   | ScheduleDetailOutput
-  | NotificationTemplateDetailOutput;
+  | NotificationTemplateDetailOutput
+  | CredentialDetailOutput
+  | OrganizationDetailOutput
+  | HostDetailOutput
+  | GroupDetailOutput
+  | LabelDetailOutput
+  | InstanceGroupDetailOutput
+  | ExecutionEnvironmentDetailOutput;
 
 /**
  * Supported resource type keys (used by the tool args Zod schema).
@@ -61,7 +82,14 @@ export type ResourceType =
   | "user"
   | "team"
   | "schedule"
-  | "notification_template";
+  | "notification_template"
+  | "credential"
+  | "organization"
+  | "host"
+  | "group"
+  | "label"
+  | "instance-group"
+  | "execution-environment";
 
 /**
  * Entry in the resource registry.
@@ -108,6 +136,34 @@ const RESOURCE_REGISTRY: Record<ResourceType, ResourceEntry> = {
   notification_template: {
     path: "/api/v2/notification_templates/{id}/",
     mapper: mapNotificationTemplate,
+  },
+  credential: {
+    path: "/api/v2/credentials/{id}/",
+    mapper: mapCredential,
+  },
+  organization: {
+    path: "/api/v2/organizations/{id}/",
+    mapper: mapOrganization,
+  },
+  host: {
+    path: "/api/v2/hosts/{id}/",
+    mapper: mapHost,
+  },
+  group: {
+    path: "/api/v2/groups/{id}/",
+    mapper: mapGroup,
+  },
+  label: {
+    path: "/api/v2/labels/{id}/",
+    mapper: mapLabel,
+  },
+  "instance-group": {
+    path: "/api/v2/instance_groups/{id}/",
+    mapper: mapInstanceGroup,
+  },
+  "execution-environment": {
+    path: "/api/v2/execution_environments/{id}/",
+    mapper: mapExecutionEnvironment,
   },
 };
 

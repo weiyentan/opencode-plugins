@@ -57,6 +57,7 @@ async function createHooks(
   } else {
     vi.stubEnv("AWX_BASE_URL", undefined);
   }
+  vi.stubEnv("AWX_TOKEN", undefined);
   return AwxPlugin(input);
 }
 

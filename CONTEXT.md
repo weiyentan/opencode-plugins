@@ -30,3 +30,22 @@
 | Term | Definition |
 |------|-----------|
 | **AAP** | Ansible Automation Platform at `https://example.com`. Runs AWX 21.0.0+ (AAP 2.3+). |
+
+## GitHub / GitLab Plugin Domain
+
+### GitHub Plugin (@weiyentan/opencode-plugin-github)
+An OpenCode plugin that exposes GitHub API capabilities as plugin tools. Uses REST for CRUD operations and GraphQL for rich context queries. Developer-facing toolset — optimized for the workflows a developer or AI agent does daily: browse issues, review PRs, search code, get context.
+
+### GitLab Plugin (@weiyentan/opencode-plugin-gitlab)
+An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Follows the same architecture as the GitHub plugin but uses GitLab-native terminology (merge requests → `mr` prefix) and API semantics.
+
+### Portability Principle
+Tools are designed for platform portability. Each tool has an abstract shape (list, get, create, search) mapped to each platform's API. The tool surface is intentionally generic — only concepts that exist on both platforms are included in the initial feature set. Platform-specific tools (e.g., PR reviews, GitLab-specific features) are deferred to later iterations.
+
+### Tool Namespace Convention
+- GitHub tools use dot-notation with platform prefix: `github.issue.list`, `github.pr.create`, `github.code.search`
+- GitLab tools use dot-notation with platform prefix: `gitlab.issue.list`, `gitlab.mr.create`, `gitlab.code.search`
+- Merge requests use `mr` (not `pr`) in GitLab tool names to match GitLab's native terminology
+
+### Monorepo Structure
+All plugin packages live in a single monorepo at `github.com/weiyentan/opencode-plugins`. Each package is fully independent — no shared runtime code between packages, only shared architecture patterns. CI uses path-filtered workflows to test and publish only the package that changed. This structure reduces overhead while keeping things discoverable.
