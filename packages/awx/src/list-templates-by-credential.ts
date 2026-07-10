@@ -10,7 +10,7 @@
  * pagination helpers from pagination.ts.
  */
 import type { AwxClient } from "./client.js";
-import { calcPageBudget, pageCapWarning } from "./pagination.js";
+import { calcPageBudget, buildPaginatedUrl, pageCapWarning } from "./pagination.js";
 import type { TemplateResult } from "./list-templates.js";
 
 /* ── Types ──────────────────────────────────────────────────────── */
@@ -115,19 +115,12 @@ export async function listTemplatesByCredential(
     }
 
     try {
-      const params = new URLSearchParams();
-      params.set("page", String(page));
-      params.set("page_size", String(pageSize));
-      params.set("credentials__id", String(credentialId));
-      if (options?.filters) {
-        for (const f of options.filters) {
-          const eqIdx = f.indexOf("=");
-          if (eqIdx > 0) {
-            params.set(f.slice(0, eqIdx), f.slice(eqIdx + 1));
-          }
-        }
-      }
-      const path = `/api/v2/job_templates/?${params.toString()}`;
+      const path = buildPaginatedUrl(
+        "/api/v2/job_templates/",
+        page,
+        pageSize,
+        [...(options?.filters ?? []), `credentials__id=${credentialId}`],
+      );
 
       const response = await client.request(
         "awx-list-templates-by-credential",
