@@ -35,7 +35,7 @@ The following 60 tools are currently registered in the AWX plugin:
 | 21 | `awx-job-status` | Fetch detailed job status | `GET /api/v2/jobs/{id}/` |
 | 22 | `awx-wait-job` | Non-blocking job status check | `GET /api/v2/jobs/{id}/` |
 | 23 | `awx-get-job-events` | Get job events | `GET /api/v2/jobs/{id}/job_events/` |
-| 24 | `awx-get-resource` | Get resource detail (template/project/inventory/credential/organization/host/group/label/instance-group/execution-environment) | `GET /api/v2/{resources}/{id}/` |
+| 24 | `awx-get-resource` | Get resource detail (template/project/inventory/credential/organization/host/group/label/instance-group/execution-environment/user/team/schedule/notification_template) | `GET /api/v2/{resources}/{id}/` |
 | 25 | `awx-create-project` | Create a project | `POST /api/v2/projects/` |
 | 26 | `awx-create-template` | Create a job template | `POST /api/v2/job_templates/` |
 | 27 | `awx-create-inventory` | Create an inventory | `POST /api/v2/inventories/` |
@@ -101,5 +101,5 @@ The following 60 tools are currently registered in the AWX plugin:
 ## Notes
 
 - The `hello`, `awx-debug-env`, and `awx-configure` tools are infrastructure/utility tools, not mapped to AWX API operations.
-- The `awx-get-resource` tool now supports template, project, inventory, credential, organization, host, group, label, instance-group, and execution-environment types.
+- The `awx-get-resource` tool now supports template, project, inventory, credential, organization, host, group, label, instance-group, execution-environment, user, team, schedule, and notification_template types.
 - The plugin uses the AWX API v2 throughout. There is no v1 API coverage and none is planned.

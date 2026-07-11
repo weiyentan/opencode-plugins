@@ -3,7 +3,7 @@
 **Date:** 2026-07-08  
 **Plugin:** `@weiyentan/opencode-plugin-awx`  
 **Version:** 0.6.1+  
-**Purpose:** This document maps every AWX API operation that an OpenCode subagent (e.g., awx-operator) might need to its corresponding first-class plugin tool, ensuring subagents never need to write raw `Invoke-RestMethod` calls that handle `AWX_TOKEN` directly. All 53 operations are now fully covered.
+**Purpose:** This document maps every AWX API operation that an OpenCode subagent (e.g., awx-operator) might need to its corresponding first-class plugin tool, ensuring subagents never need to write raw `Invoke-RestMethod` calls that handle `AWX_TOKEN` directly. All 57 operations are now fully covered.
 
 ## Mapping Table
 
@@ -123,7 +123,9 @@
 | AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
 |---------------|-------------|-------------|--------|-------|
 | List users | `GET /api/v2/users/` | `awx-list-users` | ✅ Covered | Filterable by username, email, etc. |
+| Get user detail | `GET /api/v2/users/{id}/` | `awx-get-resource` (type=user) | ✅ Covered | Returns UserDetailOutput |
 | List teams | `GET /api/v2/teams/` | `awx-list-teams` | ✅ Covered | Filterable by name, organization_id |
+| Get team detail | `GET /api/v2/teams/{id}/` | `awx-get-resource` (type=team) | ✅ Covered | Returns TeamDetailOutput |
 
 ### Workflow Job Templates
 
@@ -137,7 +139,9 @@
 | AWX Operation | AWX Endpoint | Plugin Tool | Status | Notes |
 |---------------|-------------|-------------|--------|-------|
 | List schedules | `GET /api/v2/schedules/` | `awx-list-schedules` | ✅ Covered | Filterable by unified_job_template_id |
+| Get schedule detail | `GET /api/v2/schedules/{id}/` | `awx-get-resource` (type=schedule) | ✅ Covered | Returns ScheduleDetailOutput |
 | List notification templates | `GET /api/v2/notification_templates/` | `awx-list-notification-templates` | ✅ Covered | |
+| Get notification template detail | `GET /api/v2/notification_templates/{id}/` | `awx-get-resource` (type=notification_template) | ✅ Covered | Returns NotificationTemplateDetailOutput |
 
 | Ping / health check | `GET /api/v2/ping/` | `awx-ping` | ✅ Covered | Returns AWX version, HA state, install UUID, instance info |
 
@@ -153,12 +157,12 @@
 
 | Category | Count |
 |----------|-------|
-| **Total AWX operations mapped** | 53 |
-| **Fully covered by tools** | 53 |
+| **Total AWX operations mapped** | 57 |
+| **Fully covered by tools** | 57 |
 | **Added in issue #108** | 3 (awx-list-organizations, awx-list-credentials, awx-list-inventories) |
 | **Added previously** | 14 (awx-list-schedules, awx-list-notification-templates, awx-list-labels, awx-list-instance-groups, awx-list-execution-environments, awx-list-templates-by-credential, awx-list-users, awx-list-hosts, awx-list-workflow-templates, awx-list-groups, awx-list-teams, awx-run-command, awx-launch-workflow, awx-ping) |
 | **Added in issue #163** | 20 (CRUD + get-resource type mappings for hosts, groups, labels, instance groups, and execution environments) |
-| **Total covered** | 53 |
+| **Total covered** | 57 |
 | **Remaining gaps** | 0 |
 | **Estimated coverage** | 100% |
 
@@ -174,9 +178,9 @@
 
 ## Coverage Notes
 
-1. **Full coverage achieved.** The plugin now covers all 53 mapped AWX operations (100%). Every operation a subagent might need has a first-class plugin tool.
+1. **Full coverage achieved.** The plugin now covers all 57 mapped AWX operations (100%). Every operation a subagent might need has a first-class plugin tool.
 
-2. **Agent fallback is safe.** All 53 operations have first-class tools — no raw PowerShell or `Invoke-RestMethod` with bare `AWX_TOKEN` should ever be needed.
+2. **Agent fallback is safe.** All 57 operations have first-class tools — no raw PowerShell or `Invoke-RestMethod` with bare `AWX_TOKEN` should ever be needed.
 
 3. **Issue #163 additions.** Added 15 new CRUD tools (create/update/delete for hosts, groups, labels, instance groups, and execution environments) plus 5 new `awx-get-resource` type mappings for detail retrieval of the same resource types.
 
