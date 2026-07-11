@@ -37,7 +37,7 @@
     "@opencode-ai/plugin": "^1.17.8"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "publishConfig": {
     "access": "public"
