@@ -1,7 +1,7 @@
 # AWX Plugin (`@weiyentan/opencode-plugin-awx`)
 
 [![npm version](https://img.shields.io/npm/v/@weiyentan/opencode-plugin-awx)](https://www.npmjs.com/package/@weiyentan/opencode-plugin-awx)
-[![License](https://img.shields.io/npm/l/@weiyentan/opencode-plugin-awx)](https://github.com/weiyentan/opencode-plugins/blob/main/LICENSE)
+[![License](https://img.shields.io/npm/l/@weiyentan/opencode-plugin-awx)](https://github.com/weiyentan/opencode-plugins/blob/master/LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/weiyentan/opencode-plugins/ci.yml?branch=master)](https://github.com/weiyentan/opencode-plugins/actions)
 
 An [OpenCode](https://github.com/weiyentan/opencode) server plugin for [AWX](https://github.com/ansible/awx) / Ansible Automation Platform (AAP). Exposes 60+ AWX tools — job templates, projects, inventories, credentials, and full job lifecycle — within an OpenCode agent session.
