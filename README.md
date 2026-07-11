@@ -71,6 +71,8 @@ export AWX_BASE_URL="https://your-aap-instance.example.com"
 export AWX_TOKEN="your_pat_token_here"
 ```
 
+> **Security:** In production, avoid hardcoding `AWX_TOKEN` in shell history or config files. Use a secrets manager (e.g., HashiCorp Vault, Ansible Vault, your CI/CD platform's secrets store) or the OpenCode auth hook for credential injection.
+
 Launch OpenCode and the tools become available. Here are common usage examples:
 
 ```
@@ -83,6 +85,20 @@ Launch OpenCode and the tools become available. Here are common usage examples:
 ```
 
 For a complete reference of all available tools and their arguments, see `packages/awx/README.md` or the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues).
+
+### Architecture Overview
+
+The AWX plugin follows a modular architecture with dedicated source modules for each tool category:
+
+- **`src/index.ts`** — Plugin entry point that wires all tools into the Hooks shape
+- **`src/client.ts`** — HTTP middleware pipeline with timeout, circuit breaker, and retry logic
+- **`src/auth.ts`** — Bearer token / PAT authentication via `authorize()` hook
+- **`src/transforms.ts`** — SSH→HTTPS URL conversion, git branch inference, extra-vars transformations
+- **`src/contracts/`** — Zod schemas and TypeScript types for output contracts
+- **`src/tools/`** — Tool factory modules (CRUD, job lifecycle, listing, etc.)
+- **`src/tools/crud-*.ts`** — CRUD operations for individual resource types
+
+See `packages/awx/README.md` for detailed documentation of all modules.
 
 ### Running Integration Tests
 

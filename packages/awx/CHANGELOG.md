@@ -2,6 +2,17 @@
 
 All notable changes to the AWX plugin are documented in this file.
 
+## [0.7.1] - 2026-07-12
+
+### Added
+
+- **LICENSE file**: Added MIT LICENSE to repository root (PR #181).
+- **README polish**: v0.7.0 release readiness pass — badge row, license mention, CHANGELOG link, Quick Start section with usage examples, Node >=20 requirement, improved Contributing section (PR #183).
+
+### Changed
+
+- **Version bump**: `0.7.0` → `0.7.1` — release readiness for v0.7.0 finalization.
+
 ## [0.7.0] - 2026-07-12
 
 ### Added
@@ -26,6 +37,7 @@ All notable changes to the AWX plugin are documented in this file.
 - **Tool count**: Expanded from 25 tools to 60 tools across all modules.
 - **Tool-action mapping**: Updated `docs/tool-action-mapping.md` — coverage from ~76% to ~97% (32 of 33 operations covered).
 
+[0.7.1]: https://github.com/weiyentan/opencode-plugins/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/weiyentan/opencode-plugins/compare/v0.6.1...v0.7.0
 
 ## [0.6.1] - 2026-07-08
