@@ -15,10 +15,14 @@ All notable changes to the AWX plugin are documented in this file.
 - **New mappers**: `src/mappers/map-credential.ts`, `src/mappers/map-organization.ts`.
 - **Tool factories**: `src/tools/run-command.ts`, `src/tools/launch-workflow.ts`, `src/tools/ping.ts`.
 - **`awx-get-resource` enhanced**: Now supports `type="credential"` and `type="organization"` via new contracts and mappers.
+- **CRUD tools for hosts, groups, and labels** (`src/tools/crud-host.ts`, `src/tools/crud-group.ts`, `src/tools/crud-label.ts`): Full create/update/delete operations for hosts, groups, and labels (PR #164, #166).
+- **CRUD tools for instance groups and execution environments** (`src/tools/crud-instance-group.ts`, `src/tools/crud-execution-environment.ts`): Full create/update/delete operations for instance groups and execution environments (PR #164, #166).
+- **CRUD tools for credentials, organizations, and workflow templates** (`src/tools/crud-credential.ts`, `src/tools/crud-organization.ts`, `src/tools/crud-workflow-template.ts`): Full create/update/delete operations for credentials, organizations, and workflow templates (PR #165).
+- **CRUD tools for users, teams, schedules, and notification templates** (`src/tools/crud-user.ts`, `src/tools/crud-team.ts`, `src/tools/crud-schedule.ts`, `src/tools/crud-notification-template.ts`): Full create/update/delete operations for users, teams, schedules, and notification templates (PR #171).
 
 ### Changed
 
-- **Tool count**: Expanded from 25 tools to 40 tools across all modules.
+- **Tool count**: Expanded from 25 tools to 60 tools across all modules.
 - **Tool-action mapping**: Updated `docs/tool-action-mapping.md` — coverage from ~76% to ~97% (32 of 33 operations covered).
 
 ## [0.6.1] - 2026-07-08

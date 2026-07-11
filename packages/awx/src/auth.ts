@@ -152,6 +152,28 @@ export async function validateToken(
  * The `authorize()` function simply returns the user's PAT as the key.
  * Validation is handled separately at init time via `validateToken()`.
  *
+ * ## Why `authorize()` is retained
+ *
+ * The `authorize()` function is part of the OpenCode auth hook contract
+ * (`type: "api"`). While OpenCode's SDK (as of v1.17.8) does not actively
+ * call this function during normal plugin operation (the auth hook is
+ * registered but not invoked at runtime), we retain it for:
+ *
+ * 1. **Future SDK compatibility**: If a future version of OpenCode activates
+ *    the auth hook callback mechanism, this implementation will work without
+ *    changes.
+ * 2. **Documented contract compliance**: The `{ type: "api", provider: "awx",
+ *    authorize }` shape is the declared interface for API-key-style auth
+ *    hooks — removing it would deviate from the SDK's documented pattern.
+ * 3. **Token validation traceability**: The function documents the expected
+ *    input shape (`token` field) and validation behavior, serving as a
+ *    specification for how the PAT should be processed if the auth pipeline
+ *    is ever connected.
+ *
+ * The actual credential retrieval for tool execution is handled by the
+ * 3-tier fallback chain in `getAwxClient()` (customConfig → getSecret →
+ * process.env.AWX_TOKEN), not by this auth hook.
+ *
  * @returns Auth hook configuration compatible with OpenCode's Hooks.auth
  */
 export function createAwxAuthHook() {
