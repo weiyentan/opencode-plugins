@@ -17,7 +17,7 @@ export function createGetResourceTool(getAwxClient: () => Promise<AwxClient>) {
     description: [
       "Get individual resource detail from AWX.",
       "Generalized resource detail getter with type→endpoint dispatch.",
-      "Supports 'template', 'project', 'inventory', 'credential', 'organization', 'host', 'group', 'label', 'instance-group', and 'execution-environment' resource types.",
+      "Supports 'template', 'project', 'inventory', 'credential', 'organization', 'host', 'group', 'label', 'instance-group', 'execution-environment', 'user', 'team', 'schedule', and 'notification_template' resource types.",
       "Returns structured output in a standard envelope:",
       "{ schema_version, resource_type, id, data }.",
       "For templates: name, description, job_type, resolved names,",
@@ -41,8 +41,8 @@ export function createGetResourceTool(getAwxClient: () => Promise<AwxClient>) {
     ].join(" "),
     args: {
       type: z
-        .enum(["template", "project", "inventory", "credential", "organization", "host", "group", "label", "instance-group", "execution-environment"])
-        .describe("Resource type to fetch. Supports: template, project, inventory, credential, organization, host, group, label, instance-group, execution-environment"),
+        .enum(["template", "project", "inventory", "credential", "organization", "host", "group", "label", "instance-group", "execution-environment", "user", "team", "schedule", "notification_template"])
+        .describe("Resource type to fetch. Supports: template, project, inventory, credential, organization, host, group, label, instance-group, execution-environment, user, team, schedule, notification_template"),
       id: z
         .number()
         .int()
