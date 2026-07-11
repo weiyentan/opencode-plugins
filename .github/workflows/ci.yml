@@ -11,12 +11,16 @@ on:
       - "packages/**"
       - ".github/workflows/**"
       - "package.json"
+      - "tsconfig*.json"
+      - ".npmrc"
   pull_request:
     branches: [master]
     paths:
       - "packages/**"
       - ".github/workflows/**"
       - "package.json"
+      - "tsconfig*.json"
+      - ".npmrc"
 
 jobs:
   ci:

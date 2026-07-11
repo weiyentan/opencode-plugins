@@ -80,7 +80,7 @@ These options were evaluated and resolved by the 3-tier auth fallback chain (cus
 
 | File | Role |
 |---|---|
-| `src/index.ts` | Plugin entry point. Defines `getAwxClient()` which calls `input.client.getSecret?.("awx")` (lines 121, 140). All 7 tools call `getAwxClient()`. |
+| `src/index.ts` | Plugin entry point. Defines `getAwxClient()` which calls `input.client.getSecret?.("awx")` (lines 113, 134). All tools call `getAwxClient()`. |
 | `src/opencode-augment.d.ts` | TypeScript phantom declaration that adds `getSecret` to the `OpencodeClient` interface — compile-time only, no runtime effect. |
 | `src/auth.ts` | Auth hook factory — `createAwxAuthHook()` registers `type: "api"` auth with `provider: "awx"` and `authorize()`. |
 | `src/client.ts` | HTTP middleware pipeline (circuit breaker, retry/backoff, timeout). Downstream consumer of the token. |

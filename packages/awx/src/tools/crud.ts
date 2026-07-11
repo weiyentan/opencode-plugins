@@ -2816,6 +2816,7 @@ export function createCrudTools(getAwxClient: () => Promise<AwxClient>) {
         "Optional fields: first_name, last_name, email, is_superuser,",
         "is_system_auditor, and organization_id.",
         "Returns the created user detail in the standard mutation envelope.",
+        "Note: The password is passed as a plain-text tool argument and may be visible in tool call metadata and logs.",
       ].join(" "),
       args: {
         username: z.string().min(1).describe("Username for the new user"),
