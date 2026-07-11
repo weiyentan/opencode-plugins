@@ -1,0 +1,14 @@
+{
+  "name": "opencode-plugins",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Monorepo for OpenCode plugins — tools for AWX, GitHub, GitLab, and more.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces"
+  }
+}
