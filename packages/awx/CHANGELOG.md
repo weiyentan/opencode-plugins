@@ -2,7 +2,7 @@
 
 All notable changes to the AWX plugin are documented in this file.
 
-## [Unreleased]
+## [0.7.0] - 2026-07-12
 
 ### Added
 
@@ -25,6 +25,8 @@ All notable changes to the AWX plugin are documented in this file.
 
 - **Tool count**: Expanded from 25 tools to 60 tools across all modules.
 - **Tool-action mapping**: Updated `docs/tool-action-mapping.md` — coverage from ~76% to ~97% (32 of 33 operations covered).
+
+[0.7.0]: https://github.com/weiyentan/opencode-plugins/compare/v0.6.1...v0.7.0
 
 ## [0.6.1] - 2026-07-08
 
