@@ -63,16 +63,18 @@
 - **wakatime**: Bypasses OpenCode auth entirely. Reads the API key from a filesystem config file (`~/.wakatime.cfg`) using `fs.readFileSync`. This avoids any dependency on `getSecret` or the auth hook system.
 - **firecrawl**: Not fully investigated, but the known pattern across working plugins is: **avoid depending on SDK auth injection for credential retrieval**. The SDK's auth system appears designed for SET operations only (storing tokens), with no corresponding GET/retrieve mechanism.
 
-## 7. Hypotheses for Fixing (Not Decided — Under Consideration)
+## 7. Hypotheses for Fixing (Resolved)
 
-| Hypothesis | Approach | Trade-off |
+*The following hypotheses were under consideration during diagnosis. The fix decision has been made and implemented (see § Fix Decision below).*
+
+| Hypothesis | Approach | Verdict |
 |---|---|---|
-| **H1: Setup tool pattern** | Add an `awx-setup` tool accepting `baseUrl` + `token` as args; store in a module-level variable | Simple, explicit, no SDK dependency. User must run setup once per session. |
-| **H2: Server version fallback** | Check `typeof input.client.getSecret` and fall back to alternative (env var, file read) if undefined | Graceful degradation; accounts for unknown future SDK versions. |
-| **H3: `client.auth.set()` + retrieval path** | Use `auth.set` to store the token, then find some way to read it back | Uncertain — SDK auth is SET-only; unclear if a GET path exists. |
-| **H4: Env var fallback** | Read `AWX_TOKEN` from `process.env` as a secondary credential source | Simple; works with CI/CD and headless sessions. Exposes token to process list. |
+| **H1: Setup tool pattern** | Add an `awx-setup` tool accepting `baseUrl` + `token` as args; store in a module-level variable | ✅ **Adopted** as Tier 1 (`customConfig` via `awx-configure` tool) |
+| **H2: Server version fallback** | Check `typeof input.client.getSecret` and fall back to alternative (env var, file read) if undefined | ✅ **Adopted** as Tier 2 (`getSecret` fallback in chain) |
+| **H3: `client.auth.set()` + retrieval path** | Use `auth.set` to store the token, then find some way to read it back | ❌ **Rejected** — SDK auth is SET-only; no GET/retrieve path exists |
+| **H4: Env var fallback** | Read `AWX_TOKEN` from `process.env` as a secondary credential source | ✅ **Adopted** as Tier 3 (env var fallback) |
 
-These are options under consideration, not decisions. A future agent should evaluate and decide.
+These options were evaluated and resolved by the 3-tier auth fallback chain (customConfig → getSecret → AWX_TOKEN) — see § Fix Decision below for the implemented solution.
 
 ## 8. Key Files
 
