@@ -1,6 +1,6 @@
 # OpenCode Plugins
 
-[![CI](https://img.shields.io/github/actions/workflow/status/weiyentan/opencode-plugins/ci.yml?branch=main&label=CI)](https://github.com/weiyentan/opencode-plugins/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/weiyentan/opencode-plugins/ci.yml?branch=master&label=CI)](https://github.com/weiyentan/opencode-plugins/actions)
 [![npm version](https://img.shields.io/npm/v/@weiyentan/opencode-plugin-awx)](https://www.npmjs.com/package/@weiyentan/opencode-plugin-awx)
 [![License](https://img.shields.io/github/license/weiyentan/opencode-plugins)](LICENSE)
 
