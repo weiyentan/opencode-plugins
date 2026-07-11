@@ -1,5 +1,9 @@
 # OpenCode Plugins
 
+[![CI](https://img.shields.io/github/actions/workflow/status/weiyentan/opencode-plugins/ci.yml?branch=master&label=CI)](https://github.com/weiyentan/opencode-plugins/actions)
+[![npm version](https://img.shields.io/npm/v/@weiyentan/opencode-plugin-awx)](https://www.npmjs.com/package/@weiyentan/opencode-plugin-awx)
+[![License](https://img.shields.io/github/license/weiyentan/opencode-plugins)](LICENSE)
+
 A monorepo of [OpenCode](https://opencode.ai) server plugins that extend the OpenCode agent with first-class tool integrations.
 
 ## Plugins
@@ -17,6 +21,9 @@ An OpenCode plugin for [AWX](https://github.com/ansible/awx) / Ansible Automatio
 - [AWX Tool Gap Audit](packages/awx/docs/tool-gap-audit.md) — full tool coverage and gap analysis
 - [Client Middleware Design](docs/client-middleware-design.md) — middleware pipeline spec
 - [Domain Glossary](CONTEXT.md) — core concepts and terminology
+- [Changelog](packages/awx/CHANGELOG.md) — release history and version notes
+
+**License:** MIT — see [LICENSE](LICENSE) for full terms.
 
 **Implementation issues:** https://github.com/weiyentan/opencode-plugins/issues
 
@@ -39,28 +46,59 @@ packages/
 
 ### Prerequisites
 
-- Node.js 18+ (Node 18 compatibility is handled transparently via `anyAbortSignal()` and `createTimeoutSignal()` in the client middleware)
+- Node >=20 (stable `fetch` API and `AbortSignal.timeout()` require Node 20+)
 - `@opencode-ai/plugin` (peer dependency)
 - Access to an AAP instance for integration testing
 
-### Getting Started
+### Quick Start
 
-The AWX plugin package (`packages/awx/`) is already scaffolded with these modules:
+Install the AWX plugin in your OpenCode project:
 
-| Module | File | Purpose |
-|--------|------|---------|
-| **Plugin entry** | `src/index.ts` | Registers all AWX tools (listing, launching, CRUD operations for templates, projects, inventories, users, teams, schedules, notification templates, hosts, groups, labels, instance groups, execution environments, credentials, organizations, and workflow templates); wires HTTP client, metrics lifecycle (load/persist/dispose), and dispose hook for plugin shutdown |
-| **CRUD dispatch** | `src/crud.ts` | Endpoint registry and dispatch for create/update/delete on all registered resource types |
-| **Auth hook** | `src/auth.ts` | Bearer token / PAT authentication via OpenCode's `type: "api"` auth hook |
-| **Output contract** | `src/contracts/job-detail.ts` | Zod schemas and TypeScript types matching `awx_job_detail.py` v1.0 |
-| **Mutation contract** | `src/contracts/resource-mutation.ts` | `ResourceMutationOutput` v1.0 contract for create/update/delete responses |
-| **Transforms** | `src/transforms.ts` | SSH→HTTPS URL conversion, git branch inference, required-var validation |
-| **Client middleware** | `src/client.ts` | HTTP middleware pipeline: circuit breaker, retry/backoff, timeout via native `fetch` |
-| **Metrics** | `src/metrics.ts` | Per-tool counters with file-backed durability for operational visibility |
-| **Node shim** | `src/node-shim.d.ts` | Minimal Node.js built-in declarations (avoids `@types/node` dependency) |
-| **Snapshot generator** | `scripts/generate-snapshots.py` | Regenerates contract snapshots from fixture data |
+```bash
+npm install @weiyentan/opencode-plugin-awx
+```
 
-See `packages/awx/README.md` for detailed documentation. To start implementing tools, pick an unblocked `afk` issue from the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues).
+Add it to your `opencode.jsonc` configuration:
+
+```jsonc
+{ "plugin": ["@weiyentan/opencode-plugin-awx"] }
+```
+
+Set the required environment variables:
+
+```bash
+export AWX_BASE_URL="https://your-aap-instance.example.com"
+export AWX_TOKEN="your_pat_token_here"
+```
+
+> **Security:** In production, avoid hardcoding `AWX_TOKEN` in shell history or config files. Use a secrets manager (e.g., HashiCorp Vault, Ansible Vault, your CI/CD platform's secrets store) or the OpenCode auth hook for credential injection.
+
+Launch OpenCode and the tools become available. Here are common usage examples:
+
+```
+/awx-list-templates                      # List all job templates
+/awx-list-templates --filter "name__icontains=deploy"  # Filter templates
+/awx-launch-job 8                        # Launch job template #8
+/awx-job-status 42                       # Check status of job #42
+/awx-sync-project 15                     # Sync project #15
+/awx-ping                                # Test connectivity to AAP
+```
+
+For a complete reference of all available tools and their arguments, see `packages/awx/README.md` or the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues).
+
+### Architecture Overview
+
+The AWX plugin follows a modular architecture with dedicated source modules for each tool category:
+
+- **`src/index.ts`** — Plugin entry point that wires all tools into the Hooks shape
+- **`src/client.ts`** — HTTP middleware pipeline with timeout, circuit breaker, and retry logic
+- **`src/auth.ts`** — Bearer token / PAT authentication via `authorize()` hook
+- **`src/transforms.ts`** — SSH→HTTPS URL conversion, git branch inference, extra-vars transformations
+- **`src/contracts/`** — Zod schemas and TypeScript types for output contracts
+- **`src/tools/`** — Tool factory modules (CRUD, job lifecycle, listing, etc.)
+- **`src/tools/crud-*.ts`** — CRUD operations for individual resource types
+
+See `packages/awx/README.md` for detailed documentation of all modules.
 
 ### Running Integration Tests
 
@@ -81,7 +119,12 @@ All issues use the AFK (Away From Keyboard) label for autonomous implementation:
 
 ## Contributing
 
-1. Pick an unblocked issue from the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) labeled `afk` and `status:todo`
-2. Follow the PRD and ADRs for architecture guidance
-3. Each tool must include unit tests and conform to the output contract
-4. Integration tests are gated behind `AWX_TOKEN` and are not required for every PR
+Contributions are welcome! This project uses autonomous (AFK) development workflows.
+
+1. **Find an issue** — Pick an unblocked issue from the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues) labeled `afk` and `status:todo`
+2. **Read the docs** — Review the [PRD](docs/prd/) and [Architecture Decision Records](docs/adr/) for design guidance and conventions
+3. **Implement with TDD** — Each tool must include unit tests and conform to the output contract. Use `/tdd "<issue title>"` for test-driven development
+4. **Run tests locally** — `npm test` (unit tests) before submitting. Integration tests (`npx vitest run tests/integration/`) are gated behind `AWX_TOKEN` and are not required for every PR
+5. **Submit** — Open a pull request with your changes. The CI pipeline will run path-filtered checks for the affected package(s)
+
+See `.opencode-workflow.yaml` for development workflow configuration and tier executor dispatch details.
