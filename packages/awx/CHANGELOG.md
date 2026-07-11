@@ -19,6 +19,7 @@ All notable changes to the AWX plugin are documented in this file.
 - **CRUD tools for instance groups and execution environments** (`src/tools/crud-instance-group.ts`, `src/tools/crud-execution-environment.ts`): Full create/update/delete operations for instance groups and execution environments (PR #164, #166).
 - **CRUD tools for credentials, organizations, and workflow templates** (`src/tools/crud-credential.ts`, `src/tools/crud-organization.ts`, `src/tools/crud-workflow-template.ts`): Full create/update/delete operations for credentials, organizations, and workflow templates (PR #165).
 - **CRUD tools for users, teams, schedules, and notification templates** (`src/tools/crud-user.ts`, `src/tools/crud-team.ts`, `src/tools/crud-schedule.ts`, `src/tools/crud-notification-template.ts`): Full create/update/delete operations for users, teams, schedules, and notification templates (PR #171).
+- **`awx-get-resource` enhanced**: Now supports `type="user"`, `type="team"`, `type="schedule"`, and `type="notification_template"` — allowing detail retrieval for user, team, schedule, and notification template resources (PR #178).
 
 ### Changed
 
