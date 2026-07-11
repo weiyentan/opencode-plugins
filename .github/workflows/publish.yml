@@ -18,21 +18,28 @@ jobs:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install dependencies
+      - name: Install dependencies (workspace root)
         run: npm ci
-        working-directory: packages/awx
 
-      - name: Build
+      - name: Build all packages
         run: npm run build
-        working-directory: packages/awx
 
-      - name: Test
-        run: npm test
-        working-directory: packages/awx
+      - name: Test all packages
+        run: npm run test
 
-      - name: Publish
-        run: npm publish
-        working-directory: packages/awx
+      - name: Publish workspace packages
+        run: |
+          for dir in packages/*/; do
+            pkg_json="${dir}package.json"
+            if [ -f "$pkg_json" ]; then
+              name=$(node -p "require('./${dir}package.json').name || ''")
+              private=$(node -p "require('./${dir}package.json').private || false")
+              if [ -n "$name" ] && [ "$private" = "false" ]; then
+                echo "Publishing $name..."
+                npm publish --workspace="$name"
+              fi
+            fi
+          done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
