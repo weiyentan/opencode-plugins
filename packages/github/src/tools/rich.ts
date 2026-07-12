@@ -144,7 +144,7 @@ const PR_FULL_QUERY = `
           pageInfo { hasNextPage endCursor }
         }
         # Latest commit CI status
-        commits(last: 1) {
+        ciStatus: commits(last: 1) {
           nodes {
             commit {
               oid
@@ -491,8 +491,8 @@ export function createRichTools(
           };
         }
 
-        // Extract CI status from latest commit
-        const latestCommit = firstNodeOf(pr.commits?.["commits"] ?? pr.commits);
+        // Extract CI status from latest commit (aliased as `ciStatus` in the query)
+        const latestCommit = firstNodeOf(pr.ciStatus);
         const rollup = latestCommit?.commit?.statusCheckRollup;
         const ciStatus = rollup
           ? {
