@@ -28,8 +28,10 @@ import { tool } from "@opencode-ai/plugin";
 import { createGitHubAuthHook, validateGitHubToken } from "./auth.js";
 import { createGitHubClient, createTimeoutSignal } from "./client.js";
 import type { GitHubClient } from "./client.js";
-// graphql.ts — thin wrapper around @octokit/graphql
-// (import deferred until tools that need it are implemented)
+import { createGraphQLClient } from "./graphql.js";
+import type { GitHubGraphQLClient } from "./graphql.js";
+import { createRichTools } from "./tools/rich.js";
+import { createQueryTool } from "./tools/query.js";
 
 const z = tool.schema;
 
@@ -58,7 +60,9 @@ function setCustomConfig(config: { baseUrl?: string; token?: string } | undefine
  *
  * Returns Hooks including:
  * - Auth hook (type: "api" for bearer token / PAT)
- * - Registered tools (github.hello, github-configure, github-debug-env)
+ * - Registered tools: github.hello, github-configure, github-debug-env,
+ *   github.issue.get-full, github.pr.get-full, github.issue.search,
+ *   github.repo.get-full, github.query
  */
 async function server(input: PluginInput): Promise<Hooks> {
   const { serverUrl } = input;
@@ -68,6 +72,7 @@ async function server(input: PluginInput): Promise<Hooks> {
 
   /* ── GitHub HTTP client — lazy resolver, created on first tool call ── */
   let cachedClient: GitHubClient | undefined;
+  let cachedGraphQL: GitHubGraphQLClient | undefined;
   let cachedToken: string | undefined;
   let cachedBaseUrl: string | undefined;
 
@@ -101,6 +106,39 @@ async function server(input: PluginInput): Promise<Hooks> {
     }
 
     return cachedClient;
+  }
+
+  /** Lazy resolver for the GraphQL client, created on first rich-tool call */
+  async function getGitHubGraphQL(): Promise<GitHubGraphQLClient> {
+    const resolvedBaseUrl =
+      getCustomConfig()?.baseUrl ??
+      process.env.GITHUB_BASE_URL ??
+      "https://api.github.com";
+
+    // 3-tier fallback: customConfig → getSecret → env var
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const token =
+      getCustomConfig()?.token ??
+      await (input.client as any).getSecret?.("github") ??
+      process.env.GITHUB_TOKEN;
+
+    if (!token) {
+      throw new Error(
+        "GitHub Personal Access Token (PAT) not configured. " +
+        "Store your PAT via the plugin auth prompt, the github-configure tool, " +
+        "or the GITHUB_TOKEN environment variable.",
+      );
+    }
+
+    const tokenString = String(token);
+
+    if (!cachedGraphQL || cachedToken !== tokenString || cachedBaseUrl !== resolvedBaseUrl) {
+      cachedToken = tokenString;
+      cachedBaseUrl = resolvedBaseUrl;
+      cachedGraphQL = createGraphQLClient(tokenString, { baseUrl: resolvedBaseUrl });
+    }
+
+    return cachedGraphQL;
   }
 
   /* ── Init-time validation ─────────────────────────────────── */
@@ -236,8 +274,9 @@ async function server(input: PluginInput): Promise<Hooks> {
       };
       setCustomConfig(Object.keys(merged).length > 0 ? merged : undefined);
 
-      // Invalidate cached client so it re-resolves with new config
+      // Invalidate cached clients so they re-resolve with new config
       cachedClient = undefined;
+      cachedGraphQL = undefined;
       cachedToken = undefined;
       cachedBaseUrl = undefined;
 
@@ -258,6 +297,10 @@ async function server(input: PluginInput): Promise<Hooks> {
     },
   });
 
+  /* ── GraphQL-powered rich tools ──────────────────────────── */
+  const richTools = createRichTools(getGitHubGraphQL);
+  const queryTool = createQueryTool(getGitHubGraphQL);
+
   /* ── Hooks ────────────────────────────────────────────────── */
   return {
     auth: authHook,
@@ -265,6 +308,8 @@ async function server(input: PluginInput): Promise<Hooks> {
       hello,
       "github-debug-env": debugEnv,
       "github-configure": configure,
+      ...richTools,
+      "github.query": queryTool,
     },
   };
 }
