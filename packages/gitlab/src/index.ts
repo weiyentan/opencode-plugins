@@ -32,6 +32,10 @@ import type { GitLabClient } from "./client.js";
 import { createGraphQLClient } from "./graphql.js";
 import type { GraphQLClient } from "./graphql.js";
 import { createIssueTools } from "./tools/issues.js";
+import { createMRTools } from "./tools/mrs.js";
+import { createProjectTools } from "./tools/projects.js";
+import { createCodeTools } from "./tools/code.js";
+import { createUserTools } from "./tools/user.js";
 
 const z = tool.schema;
 
@@ -346,6 +350,11 @@ async function server(input: PluginInput): Promise<Hooks> {
 
   /* ── Issue tools (REST) ──────────────────────────────────── */
   const issueTools = createIssueTools(getGitLabClient);
+  /* ── MR, project, code & user tools (REST) ──────────────── */
+  const mrTools = createMRTools(getGitLabClient);
+  const projectTools = createProjectTools(getGitLabClient);
+  const codeTools = createCodeTools(getGitLabClient);
+  const userTools = createUserTools(getGitLabClient);
 
   /* ── Hooks ────────────────────────────────────────────────── */
   return {
@@ -355,6 +364,10 @@ async function server(input: PluginInput): Promise<Hooks> {
       "gitlab-configure": configureTool,
       "gitlab-ping": pingTool,
       ...issueTools,
+      ...mrTools,
+      ...projectTools,
+      ...codeTools,
+      ...userTools,
     },
   };
 }
