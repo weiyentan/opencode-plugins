@@ -31,9 +31,9 @@ An OpenCode plugin for [AWX](https://github.com/ansible/awx) / Ansible Automatio
 
 ### GitHub Plugin (`packages/github/`)
 
-An OpenCode plugin that exposes GitHub API capabilities as developer-facing tools. Uses GraphQL for rich context queries — optimized for browsing issues, reviewing PRs, searching code, and getting repository context.
+An OpenCode plugin that exposes GitHub API capabilities as developer-facing tools. Uses GraphQL for rich context queries and REST for CRUD operations — optimized for browsing issues, reviewing PRs, searching code, and getting repository context.
 
-**Status:** ✅ Phase 0 (spike) and Phase 1 (core tools) complete — 8 tools covering sanity check, configuration, rich issue/PR/repo queries, and generic GraphQL passthrough.
+**Status:** ✅ Phase 0 (spike) and Phase 1 (core tools + REST tools) complete — 21 tools covering sanity check, configuration, rich GraphQL queries, REST issue CRUD + comment, PR list/get/create/merge, repo get/search, code search, and user profile.
 
 **Tools:**
 | Tool | Description |
@@ -46,6 +46,19 @@ An OpenCode plugin that exposes GitHub API capabilities as developer-facing tool
 | `github.issue.search` | Cross-repo issue search with rich results (GraphQL) |
 | `github.repo.get-full` | Repo with README, commits, languages, contributors (GraphQL) |
 | `github.query` | Arbitrary GraphQL query passthrough |
+| `github.issue.list` | List issues — filterable by state, labels, assignee |
+| `github.issue.get` | Get a single issue by number |
+| `github.issue.create` | Create a new issue |
+| `github.issue.update` | Update an existing issue |
+| `github.issue.comment` | Comment on an issue |
+| `github.pr.list` | List pull requests |
+| `github.pr.get` | Get a single PR with diffstat |
+| `github.pr.create` | Create a new pull request |
+| `github.pr.merge` | Merge a pull request |
+| `github.repo.get` | Get repository metadata |
+| `github.repo.search` | Search repositories |
+| `github.code.search` | Search code across repositories |
+| `github.user.get` | Get current user profile |
 
 **Key docs:**
 - [Package README](packages/github/README.md)
@@ -55,7 +68,7 @@ An OpenCode plugin that exposes GitHub API capabilities as developer-facing tool
 
 An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Uses GraphQL for rich queries and REST for CRUD operations with GitLab-native terminology (merge requests → `mr` prefix).
 
-**Status:** ✅ Phase 0 (spike) complete — 3 tools covering sanity check, runtime configuration, and connectivity verification. Foundation modules (auth, client, GraphQL, pagination) are implemented and tested.
+**Status:** ✅ Phase 0 (spike) and Phase 1 (core tools + REST tools + GraphQL rich tools) complete — 21 tools covering sanity check, runtime configuration, connectivity verification, GraphQL rich queries, REST issue CRUD + comment, MR list/get/create/merge, project get/search, code search, and user profile.
 
 **Tools:**
 | Tool | Description |
@@ -63,6 +76,24 @@ An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Uses Gr
 | `hello` | Sanity-check tool — verifies plugin load |
 | `gitlab-configure` | Configure the GitLab plugin at runtime (sets PAT) |
 | `gitlab-ping` | Verify REST and GraphQL connectivity to GitLab |
+| `gitlab.issue.get-full` | Issue with notes, linked MRs, system events (GraphQL) |
+| `gitlab.mr.get-full` | MR with commits, discussions, pipelines, approvals (GraphQL) |
+| `gitlab.issue.search` | Cross-project issue search with rich results (GraphQL) |
+| `gitlab.project.get-full` | Project with languages, README, file tree, activity (GraphQL) |
+| `gitlab.query` | Arbitrary GraphQL query passthrough |
+| `gitlab.issue.list` | List issues — filterable by state, labels, milestone |
+| `gitlab.issue.get` | Get a single issue by IID |
+| `gitlab.issue.create` | Create a new issue |
+| `gitlab.issue.update` | Update an existing issue |
+| `gitlab.issue.comment` | Comment on an issue |
+| `gitlab.mr.list` | List merge requests |
+| `gitlab.mr.get` | Get a single MR with diff stats |
+| `gitlab.mr.create` | Create a new merge request |
+| `gitlab.mr.merge` | Merge a merge request |
+| `gitlab.project.get` | Get project metadata |
+| `gitlab.project.search` | Search projects |
+| `gitlab.code.search` | Search code across projects |
+| `gitlab.user.get` | Get current user profile |
 
 **Key docs:**
 - [Package README](packages/gitlab/README.md)
