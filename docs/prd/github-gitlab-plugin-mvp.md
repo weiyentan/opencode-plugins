@@ -58,7 +58,7 @@ Every tool returns:
 This avoids both the lossiness of strict Zod contracts (AWX pain point) and the context bloat of returning every API field in the default view.
 
 ### Monorepo Structure
-All packages live in a single monorepo at `github.com/weiyentan/opencode-plugins`. Packages are fully independent — no shared runtime code, only shared architecture patterns. CI uses path-filtered workflows to test and publish only the changed package.
+All packages live in a single monorepo at `github.com/weiyentan/opencode-plugins`. Packages are fully independent — no shared runtime code, only shared architecture patterns. CI uses path-filtered workflows to test only the affected packages on push/PR. Publishing is manual via `workflow_dispatch` with a selected package, expected version, and dist tag.
 
 ### Plugin Architecture
 Each plugin follows the proven AWX pattern:

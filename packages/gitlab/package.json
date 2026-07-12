@@ -1,0 +1,55 @@
+{
+  "name": "@weiyentan/opencode-plugin-gitlab",
+  "version": "0.0.1",
+  "private": false,
+  "description": "OpenCode plugin for GitLab — native tool access to projects, merge requests, issues, and repository operations.",
+  "type": "module",
+  "files": [
+    "dist/**",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build && npm test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "typescript": "^5.8.2",
+    "vitest": "^3.1.1"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.17.8"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "gitlab",
+    "git",
+    "devops"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/weiyentan/opencode-plugins",
+    "directory": "packages/gitlab"
+  }
+}

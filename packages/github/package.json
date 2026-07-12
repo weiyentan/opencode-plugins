@@ -1,0 +1,58 @@
+{
+  "name": "@weiyentan/opencode-plugin-github",
+  "version": "0.1.0",
+  "private": false,
+  "description": "OpenCode plugin for GitHub API — native tool access to issues, PRs, search, and code browsing.",
+  "type": "module",
+  "files": [
+    "dist/**",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build && npm test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@octokit/graphql": "^8.2.2",
+    "@opencode-ai/plugin": "^1.17.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "typescript": "^5.8.2",
+    "vitest": "^3.1.1"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.17.8"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "github",
+    "api"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/weiyentan/opencode-plugins",
+    "directory": "packages/github"
+  }
+}

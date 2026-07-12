@@ -1,15 +1,32 @@
 name: Publish to npm
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to publish'
+        required: true
+        type: choice
+        options:
+          - awx
+          - github
+          - gitlab
+      expected_version:
+        description: 'Expected version (must match package.json)'
+        required: true
+        type: string
+      dist_tag:
+        description: 'npm distribution tag'
+        required: true
+        type: choice
+        default: 'latest'
+        options:
+          - latest
+          - experimental
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -18,32 +35,65 @@ jobs:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Enforce publish from master only
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/master" ]; then
+            echo "ERROR: Publishing is only allowed from the master branch." >&2
+            echo "Current ref: $GITHUB_REF" >&2
+            echo "Switch to master and re-trigger this workflow." >&2
+            exit 1
+          fi
+          echo "Branch check passed: publishing from master"
+
+      - name: Map package input to workspace
+        id: map
+        run: |
+          case "${{ github.event.inputs.package }}" in
+            awx)
+              echo "workspace_name=@weiyentan/opencode-plugin-awx" >> $GITHUB_OUTPUT
+              echo "package_dir=packages/awx" >> $GITHUB_OUTPUT
+              ;;
+            github)
+              echo "workspace_name=@weiyentan/opencode-plugin-github" >> $GITHUB_OUTPUT
+              echo "package_dir=packages/github" >> $GITHUB_OUTPUT
+              ;;
+            gitlab)
+              echo "workspace_name=@weiyentan/opencode-plugin-gitlab" >> $GITHUB_OUTPUT
+              echo "package_dir=packages/gitlab" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "Error: unknown package" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Validate package directory exists
+        run: |
+          if [ ! -d "${{ steps.map.outputs.package_dir }}" ]; then
+            echo "Error: Package directory ${{ steps.map.outputs.package_dir }} does not exist" >&2
+            exit 1
+          fi
+
+      - name: Validate version matches expected_version
+        run: |
+          ACTUAL_VERSION=$(node -p "require('./${{ steps.map.outputs.package_dir }}/package.json').version")
+          EXPECTED="${{ github.event.inputs.expected_version }}"
+          if [ "$ACTUAL_VERSION" != "$EXPECTED" ]; then
+            echo "Error: Version mismatch. Expected: $EXPECTED, Actual: $ACTUAL_VERSION" >&2
+            exit 1
+          fi
+          echo "Version check passed: $ACTUAL_VERSION"
+
       - name: Install dependencies (workspace root)
         run: npm ci
 
-      - name: Build all packages
-        run: npm run build
+      - name: Build selected workspace
+        run: npm run build --workspace="${{ steps.map.outputs.workspace_name }}"
 
-      - name: Test all packages
-        run: npm test
+      - name: Test selected workspace
+        run: npm test --workspace="${{ steps.map.outputs.workspace_name }}"
 
-      - name: Publish workspace packages
-        run: |
-          for dir in packages/*/; do
-            pkg_json="${dir}package.json"
-            if [ -f "$pkg_json" ]; then
-              name=$(node -p "require('./${dir}package.json').name || ''")
-              private=$(node -p "require('./${dir}package.json').private || false")
-              if [ -n "$name" ] && [ "$private" = "false" ]; then
-                echo "Publishing $name..."
-                npm publish --workspace="$name"
-              fi
-            fi
-          done
+      - name: Publish selected workspace
+        run: npm publish --workspace="${{ steps.map.outputs.workspace_name }}" --tag="${{ github.event.inputs.dist_tag }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
