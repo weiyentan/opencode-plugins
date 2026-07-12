@@ -36,6 +36,8 @@ import { createMRTools } from "./tools/mrs.js";
 import { createProjectTools } from "./tools/projects.js";
 import { createCodeTools } from "./tools/code.js";
 import { createUserTools } from "./tools/user.js";
+import { createRichTools } from "./tools/rich.js";
+import { createQueryTool } from "./tools/query.js";
 
 const z = tool.schema;
 
@@ -355,6 +357,9 @@ async function server(input: PluginInput): Promise<Hooks> {
   const projectTools = createProjectTools(getGitLabClient);
   const codeTools = createCodeTools(getGitLabClient);
   const userTools = createUserTools(getGitLabClient);
+  /* ── GraphQL-powered rich tools ──────────────────────────── */
+  const richTools = createRichTools(getGraphQLClient);
+  const queryTool = createQueryTool(getGraphQLClient);
 
   /* ── Hooks ────────────────────────────────────────────────── */
   return {
@@ -368,6 +373,8 @@ async function server(input: PluginInput): Promise<Hooks> {
       ...projectTools,
       ...codeTools,
       ...userTools,
+      ...richTools,
+      "gitlab.query": queryTool,
     },
   };
 }
