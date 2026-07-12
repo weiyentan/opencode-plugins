@@ -32,23 +32,25 @@ Tools are available automatically after register and server restart.
 ## Quick Start
 
 ```text
-awx-configure baseUrl=https://my-aap.example.com token=your-pat-token
+# Set your PAT as an environment variable (recommended)
+export AWX_TOKEN=your-pat-token
+awx-configure baseUrl=https://my-aap.example.com
 awx-ping
 awx-list-templates
 awx-launch-job templateId=10
 awx-job-status jobId=42
 ```
 
-The `awx-configure` tool stores credentials in memory for the session. Alternatively, set `AWX_TOKEN` as an environment variable before starting the OpenCode server.
+Set `AWX_TOKEN` at the shell layer (e.g., `.bashrc`, `.zshrc`, or Windows profile) so it is available before the OpenCode server starts. The `awx-configure` tool stores the base URL in memory for the session.
 
 ## Configuration
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `AWX_BASE_URL` | Yes | Base URL of the AAP/AWX instance |
-| `AWX_TOKEN` | No | Personal Access Token (fallback if not set via `awx-configure`) |
+| `AWX_TOKEN` | Yes | Personal Access Token (set at the shell layer before starting the OpenCode server) |
 
-Credentials are resolved through a 3-tier fallback: session config → server `getSecret` → environment variable.
+Credentials are resolved through a 2-tier fallback: `AWX_TOKEN` environment variable → server `getSecret`.
 
 ## Available Tools
 
