@@ -321,30 +321,6 @@ export function parseRateLimitHeaders(response: Response): RateLimitInfo | null 
   };
 }
 
-/**
- * Assemble rate-limit information into a human-readable summary string.
- *
- * Useful for including in tool output or metadata.
- *
- * @param info  Parsed RateLimitInfo from parseRateLimitHeaders()
- */
-export function formatRateLimitSummary(info: RateLimitInfo | null): string {
-  if (!info) return "Rate limit info not available.";
-
-  const parts: string[] = [];
-  if (info.remaining !== null && info.limit !== null) {
-    parts.push(`${info.remaining}/${info.limit} remaining`);
-  }
-  if (info.reset !== null) {
-    const resetDate = new Date(info.reset * 1000);
-    parts.push(`resets at ${resetDate.toISOString()}`);
-  }
-  if (info.resource) {
-    parts.push(`(resource: ${info.resource})`);
-  }
-  return parts.length > 0 ? `Rate limit: ${parts.join(", ")}` : "Rate limit: unknown";
-}
-
 /* ── Link Header Pagination Parsing ─────────────────────────────── */
 
 /**
