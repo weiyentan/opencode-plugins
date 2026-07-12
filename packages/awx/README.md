@@ -21,7 +21,7 @@ Register the plugin in your `opencode.jsonc`:
 
 ```jsonc
 {
-  "plugins": [
+  "plugin": [
     "@weiyentan/opencode-plugin-awx"
   ]
 }
