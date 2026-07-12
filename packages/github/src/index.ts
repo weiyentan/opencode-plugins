@@ -2,7 +2,7 @@
  * GitHub Plugin for OpenCode
  *
  * Provides native tool access to the GitHub API for issues, pull requests,
- * search, and code browsing.
+ * repositories, code search, user profiles, and browsing.
  *
  * ## Plugin Lifecycle
  *
@@ -32,6 +32,10 @@ import { createGraphQLClient } from "./graphql.js";
 import type { GitHubGraphQLClient } from "./graphql.js";
 import { createRichTools } from "./tools/rich.js";
 import { createQueryTool } from "./tools/query.js";
+import { createPrTools } from "./tools/prs.js";
+import { createRepoTools } from "./tools/repos.js";
+import { createCodeTools } from "./tools/code.js";
+import { createUserTools } from "./tools/user.js";
 
 const z = tool.schema;
 
@@ -62,7 +66,10 @@ function setCustomConfig(config: { baseUrl?: string; token?: string } | undefine
  * - Auth hook (type: "api" for bearer token / PAT)
  * - Registered tools: github.hello, github-configure, github-debug-env,
  *   github.issue.get-full, github.pr.get-full, github.issue.search,
- *   github.repo.get-full, github.query
+ *   github.repo.get-full, github.query,
+ *   github.pr.list, github.pr.get, github.pr.create, github.pr.merge,
+ *   github.repo.get, github.repo.search,
+ *   github.code.search, github.user.get
  */
 async function server(input: PluginInput): Promise<Hooks> {
   const { serverUrl } = input;
@@ -305,6 +312,12 @@ async function server(input: PluginInput): Promise<Hooks> {
   const richTools = createRichTools(getGitHubGraphQL);
   const queryTool = createQueryTool(getGitHubGraphQL);
 
+  /* ── REST-powered tools ──────────────────────────────────── */
+  const prTools = createPrTools(getGitHubClient);
+  const repoTools = createRepoTools(getGitHubClient);
+  const codeTools = createCodeTools(getGitHubClient);
+  const userTools = createUserTools(getGitHubClient);
+
   /* ── Hooks ────────────────────────────────────────────────── */
   return {
     auth: authHook,
@@ -314,6 +327,10 @@ async function server(input: PluginInput): Promise<Hooks> {
       "github-configure": configure,
       ...richTools,
       "github.query": queryTool,
+      ...prTools,
+      ...repoTools,
+      ...codeTools,
+      ...userTools,
     },
   };
 }
