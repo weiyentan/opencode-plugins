@@ -35,6 +35,16 @@ jobs:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Enforce publish from master only
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/master" ]; then
+            echo "ERROR: Publishing is only allowed from the master branch." >&2
+            echo "Current ref: $GITHUB_REF" >&2
+            echo "Switch to master and re-trigger this workflow." >&2
+            exit 1
+          fi
+          echo "Branch check passed: publishing from master"
+
       - name: Map package input to workspace
         id: map
         run: |
