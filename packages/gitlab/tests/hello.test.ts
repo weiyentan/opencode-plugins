@@ -4,9 +4,9 @@
  * Basic verification that the plugin entry point loads and the hello tool
  * registers and executes correctly.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
-import { GitLabPlugin } from "../src/index.js";
+import { GitLabPlugin, getCustomConfig, setCustomConfig } from "../src/index.js";
 
 /** Minimal mock of ToolContext */
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
@@ -51,6 +51,17 @@ describe("GitLab Plugin — entry point", () => {
     expect(typeof hooks.tool!.hello!.description).toBe("string");
   });
 
+  it("creates hooks with auth configuration", async () => {
+    const hooks = await GitLabPlugin(mockPluginInput());
+    expect(hooks.auth).toBeDefined();
+  });
+
+  it("creates hooks with gitlab-configure tool", async () => {
+    const hooks = await GitLabPlugin(mockPluginInput());
+    expect(hooks.tool).toBeDefined();
+    expect(hooks.tool!["gitlab-configure"]).toBeDefined();
+  });
+
   it("hello tool responds with greeting", async () => {
     const hooks: Hooks = await GitLabPlugin(mockPluginInput());
     const hello = hooks.tool!.hello!;
@@ -81,9 +92,70 @@ describe("GitLab Plugin — entry point", () => {
     expect(result).toEqual({ output: "Request was aborted." });
   });
 
-  it("export surface contains only GitLabPlugin and default", async () => {
+  it("export surface includes GitLabPlugin, default, getCustomConfig, and setCustomConfig", async () => {
     const importedModule = await import("../src/index.js");
     const keys = Object.keys(importedModule).sort();
-    expect(keys).toEqual(["GitLabPlugin", "default"].sort());
+    expect(keys).toEqual(
+      [
+        "GitLabPlugin",
+        "default",
+        "getCustomConfig",
+        "setCustomConfig",
+      ].sort(),
+    );
+  });
+});
+
+describe("GitLab Plugin — custom config (Tier 1 auth fallback)", () => {
+  beforeEach(() => {
+    setCustomConfig({});
+  });
+
+  it("getCustomConfig returns undefined by default", () => {
+    setCustomConfig({});
+    const config = getCustomConfig();
+    expect(config).toBeDefined();
+    expect(config!.token).toBeUndefined();
+  });
+
+  it("setCustomConfig stores and retrieves token", () => {
+    setCustomConfig({ token: "glpat-test" });
+    const config = getCustomConfig();
+    expect(config!.token).toBe("glpat-test");
+  });
+
+  it("setCustomConfig overwrites previous config", () => {
+    setCustomConfig({ token: "glpat-first" });
+    setCustomConfig({ token: "glpat-second" });
+    expect(getCustomConfig()!.token).toBe("glpat-second");
+  });
+});
+
+describe("GitLab Plugin — gitlab-configure tool", () => {
+  it("sets token via gitlab-configure tool", async () => {
+    const hooks = await GitLabPlugin(mockPluginInput());
+    const configureTool = hooks.tool!["gitlab-configure"]!;
+
+    const result = await configureTool.execute(
+      { token: "glpat-configured" },
+      mockToolContext(),
+    );
+
+    expect(result.output).toContain("GitLab plugin configured");
+    expect(getCustomConfig()!.token).toBe("glpat-configured");
+  });
+
+  it("gitlab-configure respects abort", async () => {
+    const hooks = await GitLabPlugin(mockPluginInput());
+    const configureTool = hooks.tool!["gitlab-configure"]!;
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await configureTool.execute(
+      { token: "glpat-aborted" },
+      mockToolContext({ abort: controller.signal }),
+    );
+
+    expect(result.output).toBe("Request was aborted.");
   });
 });
