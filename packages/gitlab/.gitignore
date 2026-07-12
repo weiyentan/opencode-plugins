@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+packages/gitlab/node_modules/
+
+# Build output
+dist/
+
+# Environment (credentials, tokens)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+coverage/
+.vitest/
+
+# Runtime metrics
+.metrics/
