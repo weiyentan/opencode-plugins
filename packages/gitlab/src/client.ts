@@ -126,8 +126,8 @@ export function createTimeoutSignal(ms: number): {
  * and falls back to manual event wiring on Node 18.
  */
 function anyAbortSignal(signals: AbortSignal[]): AbortSignal {
-  if (typeof (AbortSignal as any).any === "function") {
-    return (AbortSignal as any).any(signals);
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any(signals);
   }
   const controller = new AbortController();
   for (const signal of signals) {

@@ -110,8 +110,8 @@ export function createGraphQLClient(
       // Combine with caller's abort signal
       const signal = abortSignal
         ? ((): AbortSignal => {
-            if (typeof (AbortSignal as any).any === "function") {
-              return (AbortSignal as any).any([abortSignal, controller.signal]);
+            if (typeof AbortSignal.any === "function") {
+              return AbortSignal.any([abortSignal, controller.signal]);
             }
             // Fallback for Node 18: chain abort events
             const onAbort = () => controller.abort();
