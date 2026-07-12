@@ -31,6 +31,7 @@ import { createClient, createTimeoutSignal } from "./client.js";
 import type { GitLabClient } from "./client.js";
 import { createGraphQLClient } from "./graphql.js";
 import type { GraphQLClient } from "./graphql.js";
+import { createIssueTools } from "./tools/issues.js";
 
 const z = tool.schema;
 
@@ -343,6 +344,9 @@ async function server(input: PluginInput): Promise<Hooks> {
     },
   });
 
+  /* ── Issue tools (REST) ──────────────────────────────────── */
+  const issueTools = createIssueTools(getGitLabClient);
+
   /* ── Hooks ────────────────────────────────────────────────── */
   return {
     auth: authHook,
@@ -350,6 +354,7 @@ async function server(input: PluginInput): Promise<Hooks> {
       hello,
       "gitlab-configure": configureTool,
       "gitlab-ping": pingTool,
+      ...issueTools,
     },
   };
 }
