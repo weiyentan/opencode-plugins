@@ -27,6 +27,42 @@ An OpenCode plugin for [AWX](https://github.com/ansible/awx) / Ansible Automatio
 
 **Implementation issues:** https://github.com/weiyentan/opencode-plugins/issues
 
+### GitHub Plugin (`packages/github/`)
+
+An OpenCode plugin that exposes GitHub API capabilities as developer-facing tools. Uses REST for CRUD operations and GraphQL for rich context queries — optimized for browsing issues, reviewing PRs, searching code, and getting repository context.
+
+**Status:** ✅ Phase 0 (spike) and Phase 1 (core tools) complete — ~60 tools covering issues, pull requests, repositories, code search, user/org info, and rich GraphQL queries.
+
+**Tools include:**
+- `github.issue.list`, `github.issue.get`, `github.issue.search`
+- `github.pr.list`, `github.pr.get`, `github.pr.search`
+- `github.repo.list`, `github.repo.get`, `github.repo.search`
+- `github.code.search`
+- `github.user.get`, `github.org.get`
+- Rich tools (`github.rich.*`) using GraphQL for deep context (e.g., `getPullRequestContext`, `getIssueContext`, `getRepoContext`)
+
+**Key docs:**
+- [PRD — GitHub/GitLab Plugin MVP](docs/prd/github-gitlab-plugin-mvp.md)
+
+### GitLab Plugin (`packages/gitlab/`)
+
+An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Follows the same architecture as the GitHub plugin with GitLab-native terminology (merge requests → `mr` prefix) and API semantics.
+
+**Status:** ✅ Phase 0 (spike) complete — core tools and tests implemented covering issues, merge requests, projects, code search, and GraphQL queries.
+
+**Tools include:**
+- `gitlab.issue.list`, `gitlab.issue.get`, `gitlab.issue.search`
+- `gitlab.mr.list`, `gitlab.mr.get`, `gitlab.mr.search`
+- `gitlab.project.list`, `gitlab.project.get`, `gitlab.project.search`
+- `gitlab.code.search`
+- `gitlab.user.get`, `gitlab.group.get`
+
+**Key docs:**
+- [PRD — GitHub/GitLab Plugin MVP](docs/prd/github-gitlab-plugin-mvp.md)
+
+### Portability Principle
+Both the GitHub and GitLab plugins share an abstract tool shape (`list`, `get`, `create`, `search`) mapped to each platform's API. Only concepts that exist on both platforms are included in the initial feature set. See the [Domain Glossary](CONTEXT.md) for tool namespace conventions and design principles.
+
 ## Repository Structure
 
 ```
@@ -39,7 +75,9 @@ docs/
 │   └── plugin-awx-refined.md  # Refined PRD
 └── client-middleware-design.md  # Middleware pipeline design
 packages/
-└── awx/                    # AWX plugin package (auth, contracts, transforms, job lifecycle, CRUD mutation tools, resource detail tools)
+├── awx/                    # AWX plugin package (auth, contracts, transforms, job lifecycle, CRUD mutation tools, resource detail tools)
+├── github/                 # GitHub plugin package (issues, PRs, repos, code search, GraphQL rich tools)
+└── gitlab/                 # GitLab plugin package (issues, MRs, projects, code search, GraphQL queries)
 ```
 
 ## Development
