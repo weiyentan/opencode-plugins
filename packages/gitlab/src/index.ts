@@ -48,7 +48,7 @@ interface CustomConfig {
 let customConfig: CustomConfig | undefined;
 
 /** Set custom config programmatically (called by gitlab-configure tool) */
-export function setCustomConfig(config: CustomConfig): void {
+export function setCustomConfig(config: CustomConfig | undefined): void {
   customConfig = config;
 }
 
