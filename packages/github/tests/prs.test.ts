@@ -62,6 +62,11 @@ function mockClientForGet(
 /** Shared mock context */
 const mockContext = { abort: undefined as any };
 
+/** Create a mock client factory that rejects immediately (client init failure). */
+function mockClientReject(message: string): () => Promise<GitHubClient> {
+  return vi.fn().mockRejectedValue(new Error(message));
+}
+
 /* ── Tests ────────────────────────────────────────────────────── */
 
 describe("github.pr.list", () => {
@@ -415,5 +420,49 @@ describe("github.pr.merge", () => {
       expect(result.output).toContain("not mergeable");
       expect(result.metadata).toBeDefined();
     });
+  });
+});
+
+/* ── Client Init Failure Tests ────────────────────────────────── */
+
+describe("client init failure", () => {
+  beforeEach(async () => {
+    createPrTools = (await import("../src/tools/prs.js")).createPrTools;
+  });
+
+  it("github.pr.list handles client init failure", async () => {
+    const tools = createPrTools(mockClientReject("Token not configured"));
+    const result = await tools["github.pr.list"].execute(
+      { owner: "owner", repo: "repo", state: "open" },
+      mockContext,
+    );
+    expect(result.output).toBe("Token not configured");
+  });
+
+  it("github.pr.get handles client init failure", async () => {
+    const tools = createPrTools(mockClientReject("Token not configured"));
+    const result = await tools["github.pr.get"].execute(
+      { owner: "owner", repo: "repo", prNumber: 1 },
+      mockContext,
+    );
+    expect(result.output).toBe("Token not configured");
+  });
+
+  it("github.pr.create handles client init failure", async () => {
+    const tools = createPrTools(mockClientReject("Token not configured"));
+    const result = await tools["github.pr.create"].execute(
+      { owner: "owner", repo: "repo", title: "New PR", head: "feature", base: "main" },
+      mockContext,
+    );
+    expect(result.output).toBe("Token not configured");
+  });
+
+  it("github.pr.merge handles client init failure", async () => {
+    const tools = createPrTools(mockClientReject("Token not configured"));
+    const result = await tools["github.pr.merge"].execute(
+      { owner: "owner", repo: "repo", prNumber: 1 },
+      mockContext,
+    );
+    expect(result.output).toBe("Token not configured");
   });
 });

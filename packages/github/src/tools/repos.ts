@@ -119,7 +119,7 @@ export function createRepoTools(
 
         let response: Response;
         try {
-          response = await client.request("repo.get", path, undefined, context.abort);
+          response = await client.request("github.repo.get", path, undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),
@@ -279,7 +279,7 @@ export function createRepoTools(
 
         let response: Response;
         try {
-          response = await client.request("repo.search", path, undefined, context.abort);
+          response = await client.request("github.repo.search", path, undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),

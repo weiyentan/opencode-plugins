@@ -93,7 +93,7 @@ export function createUserTools(
 
         let response: Response;
         try {
-          response = await client.request("user.get", "/user", undefined, context.abort);
+          response = await client.request("github.user.get", "/user", undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),

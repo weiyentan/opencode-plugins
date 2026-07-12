@@ -196,7 +196,7 @@ export function createPrTools(
 
         let response: Response;
         try {
-          response = await client.request("pr.list", path, undefined, context.abort);
+          response = await client.request("github.pr.list", path, undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),
@@ -321,7 +321,7 @@ export function createPrTools(
 
         let prResponse: Response;
         try {
-          prResponse = await client.request("pr.get", prPath, undefined, context.abort);
+          prResponse = await client.request("github.pr.get", prPath, undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),
@@ -367,7 +367,7 @@ export function createPrTools(
         const commitsPath = `/repos/${encodedOwner}/${encodedRepo}/pulls/${args.prNumber}/commits?per_page=30`;
         try {
           const commitsResponse = await client.request(
-            "pr.get",
+            "github.pr.get",
             commitsPath,
             undefined,
             context.abort,
@@ -384,7 +384,7 @@ export function createPrTools(
         const filesPath = `/repos/${encodedOwner}/${encodedRepo}/pulls/${args.prNumber}/files?per_page=30`;
         try {
           const filesResponse = await client.request(
-            "pr.get",
+            "github.pr.get",
             filesPath,
             undefined,
             context.abort,
@@ -560,7 +560,7 @@ export function createPrTools(
         let response: Response;
         try {
           response = await client.request(
-            "pr.create",
+            "github.pr.create",
             path,
             {
               method: "POST",
@@ -705,7 +705,7 @@ export function createPrTools(
         let response: Response;
         try {
           response = await client.request(
-            "pr.merge",
+            "github.pr.merge",
             path,
             {
               method: "PUT",

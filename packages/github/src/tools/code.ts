@@ -133,7 +133,7 @@ export function createCodeTools(
 
         let response: Response;
         try {
-          response = await client.request("code.search", path, undefined, context.abort);
+          response = await client.request("github.code.search", path, undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),
