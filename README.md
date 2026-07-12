@@ -1,7 +1,9 @@
 # OpenCode Plugins
 
 [![CI](https://img.shields.io/github/actions/workflow/status/weiyentan/opencode-plugins/ci.yml?branch=master&label=CI)](https://github.com/weiyentan/opencode-plugins/actions)
-[![npm version](https://img.shields.io/npm/v/@weiyentan/opencode-plugin-awx)](https://www.npmjs.com/package/@weiyentan/opencode-plugin-awx)
+[![awx](https://img.shields.io/npm/v/@weiyentan/opencode-plugin-awx?label=awx)](https://www.npmjs.com/package/@weiyentan/opencode-plugin-awx)
+[![github](https://img.shields.io/npm/v/@weiyentan/opencode-plugin-github?label=github)](https://www.npmjs.com/package/@weiyentan/opencode-plugin-github)
+[![gitlab](https://img.shields.io/npm/v/@weiyentan/opencode-plugin-gitlab?label=gitlab)](https://www.npmjs.com/package/@weiyentan/opencode-plugin-gitlab)
 [![License](https://img.shields.io/github/license/weiyentan/opencode-plugins)](LICENSE)
 
 A monorepo of [OpenCode](https://opencode.ai) server plugins that extend the OpenCode agent with first-class tool integrations.
@@ -29,39 +31,46 @@ An OpenCode plugin for [AWX](https://github.com/ansible/awx) / Ansible Automatio
 
 ### GitHub Plugin (`packages/github/`)
 
-An OpenCode plugin that exposes GitHub API capabilities as developer-facing tools. Uses REST for CRUD operations and GraphQL for rich context queries — optimized for browsing issues, reviewing PRs, searching code, and getting repository context.
+An OpenCode plugin that exposes GitHub API capabilities as developer-facing tools. Uses GraphQL for rich context queries — optimized for browsing issues, reviewing PRs, searching code, and getting repository context.
 
-**Status:** ✅ Phase 0 (spike) and Phase 1 (core tools) complete — ~60 tools covering issues, pull requests, repositories, code search, user/org info, and rich GraphQL queries.
+**Status:** ✅ Phase 0 (spike) and Phase 1 (core tools) complete — 8 tools covering sanity check, configuration, rich issue/PR/repo queries, and generic GraphQL passthrough.
 
-**Tools include:**
-- `github.issue.list`, `github.issue.get`, `github.issue.search`
-- `github.pr.list`, `github.pr.get`, `github.pr.search`
-- `github.repo.list`, `github.repo.get`, `github.repo.search`
-- `github.code.search`
-- `github.user.get`, `github.org.get`
-- Rich tools (`github.rich.*`) using GraphQL for deep context (e.g., `getPullRequestContext`, `getIssueContext`, `getRepoContext`)
+**Tools:**
+| Tool | Description |
+|------|-------------|
+| `hello` | Sanity-check tool — verifies plugin load | 
+| `github-configure` | Configure connection settings (base URL, PAT) |
+| `github-debug-env` | Return current environment configuration |
+| `github.issue.get-full` | Issue with body, labels, comments, linked PRs, timeline (GraphQL) |
+| `github.pr.get-full` | PR with commits, reviews, review threads, CI status (GraphQL) |
+| `github.issue.search` | Cross-repo issue search with rich results (GraphQL) |
+| `github.repo.get-full` | Repo with README, commits, languages, contributors (GraphQL) |
+| `github.query` | Arbitrary GraphQL query passthrough |
 
 **Key docs:**
+- [Package README](packages/github/README.md)
 - [PRD — GitHub/GitLab Plugin MVP](docs/prd/github-gitlab-plugin-mvp.md)
 
 ### GitLab Plugin (`packages/gitlab/`)
 
-An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Follows the same architecture as the GitHub plugin with GitLab-native terminology (merge requests → `mr` prefix) and API semantics.
+An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Uses GraphQL for rich queries and REST for CRUD operations with GitLab-native terminology (merge requests → `mr` prefix).
 
-**Status:** ✅ Phase 0 (spike) complete — core tools and tests implemented covering issues, merge requests, projects, code search, and GraphQL queries.
+**Status:** ✅ Phase 0 (spike) complete — 3 tools covering sanity check, runtime configuration, and connectivity verification. Foundation modules (auth, client, GraphQL, pagination) are implemented and tested.
 
-**Tools include:**
-- `gitlab.issue.list`, `gitlab.issue.get`, `gitlab.issue.search`
-- `gitlab.mr.list`, `gitlab.mr.get`, `gitlab.mr.search`
-- `gitlab.project.list`, `gitlab.project.get`, `gitlab.project.search`
-- `gitlab.code.search`
-- `gitlab.user.get`, `gitlab.group.get`
+**Tools:**
+| Tool | Description |
+|------|-------------|
+| `hello` | Sanity-check tool — verifies plugin load |
+| `gitlab-configure` | Configure the GitLab plugin at runtime (sets PAT) |
+| `gitlab-ping` | Verify REST and GraphQL connectivity to GitLab |
 
 **Key docs:**
+- [Package README](packages/gitlab/README.md)
 - [PRD — GitHub/GitLab Plugin MVP](docs/prd/github-gitlab-plugin-mvp.md)
 
 ### Portability Principle
-Both the GitHub and GitLab plugins share an abstract tool shape (`list`, `get`, `create`, `search`) mapped to each platform's API. Only concepts that exist on both platforms are included in the initial feature set. See the [Domain Glossary](CONTEXT.md) for tool namespace conventions and design principles.
+
+Both the GitHub and GitLab plugins share a common architecture (GraphQL-powered rich tools, auth hooks, middleware pipelines) mapped to each platform's API. Tool names use platform-specific prefixes (`github.*`, `gitlab.*`) with dot-notation namespacing. See the [Domain Glossary](CONTEXT.md) for tool namespace conventions and design principles.
 
 ## Repository Structure
 
@@ -89,6 +98,8 @@ packages/
 - Access to an AAP instance for integration testing
 
 ### Quick Start
+
+#### AWX Plugin
 
 Install the AWX plugin in your OpenCode project:
 
@@ -122,21 +133,58 @@ Launch OpenCode and the tools become available. Here are common usage examples:
 /awx-ping                                # Test connectivity to AAP
 ```
 
-For a complete reference of all available tools and their arguments, see `packages/awx/README.md` or the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues).
+#### GitHub Plugin
+
+```bash
+npm install @weiyentan/opencode-plugin-github
+```
+
+Add to `opencode.jsonc`:
+
+```jsonc
+{ "plugin": ["@weiyentan/opencode-plugin-github"] }
+```
+
+Set your token:
+
+```bash
+export GITHUB_TOKEN="your_pat_here"
+```
+
+Or configure at runtime with the `github-configure` tool. See [packages/github/README.md](packages/github/README.md) for all available tools.
+
+#### GitLab Plugin
+
+```bash
+npm install @weiyentan/opencode-plugin-gitlab
+```
+
+Add to `opencode.jsonc`:
+
+```jsonc
+{ "plugin": ["@weiyentan/opencode-plugin-gitlab"] }
+```
+
+Set your token:
+
+```bash
+export GITLAB_TOKEN="your_pat_here"
+```
+
+Or configure at runtime with the `gitlab-configure` tool. See [packages/gitlab/README.md](packages/gitlab/README.md) for all available tools.
+
+For a complete reference of all AWX tools and their arguments, see `packages/awx/README.md` or the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues).
 
 ### Architecture Overview
 
-The AWX plugin follows a modular architecture with dedicated source modules for each tool category:
+All plugins follow the same modular architecture:
 
-- **`src/index.ts`** — Plugin entry point that wires all tools into the Hooks shape
-- **`src/client.ts`** — HTTP middleware pipeline with timeout, circuit breaker, and retry logic
+- **`src/index.ts`** — Plugin entry point that wires auth hooks and tools into the Hooks shape
+- **`src/client.ts`** — HTTP middleware pipeline with timeout, circuit breaker, rate-limit parsing, and retry/backoff
 - **`src/auth.ts`** — Bearer token / PAT authentication via `authorize()` hook
-- **`src/transforms.ts`** — SSH→HTTPS URL conversion, git branch inference, extra-vars transformations
-- **`src/contracts/`** — Zod schemas and TypeScript types for output contracts
-- **`src/tools/`** — Tool factory modules (CRUD, job lifecycle, listing, etc.)
-- **`src/tools/crud-*.ts`** — CRUD operations for individual resource types
+- **`src/graphql.ts`** — GraphQL API wrapper (GitHub, GitLab) using native `fetch`
 
-See `packages/awx/README.md` for detailed documentation of all modules.
+Package-specific documentation is in each `packages/<name>/README.md`.
 
 ### Running Integration Tests
 
