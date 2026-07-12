@@ -31,6 +31,10 @@ import { createClient, createTimeoutSignal } from "./client.js";
 import type { GitLabClient } from "./client.js";
 import { createGraphQLClient } from "./graphql.js";
 import type { GraphQLClient } from "./graphql.js";
+import { createMRTools } from "./tools/mrs.js";
+import { createProjectTools } from "./tools/projects.js";
+import { createCodeTools } from "./tools/code.js";
+import { createUserTools } from "./tools/user.js";
 
 const z = tool.schema;
 
@@ -343,6 +347,12 @@ async function server(input: PluginInput): Promise<Hooks> {
     },
   });
 
+  /* ── REST tools ──────────────────────────────────────────── */
+  const mrTools = createMRTools(getGitLabClient);
+  const projectTools = createProjectTools(getGitLabClient);
+  const codeTools = createCodeTools(getGitLabClient);
+  const userTools = createUserTools(getGitLabClient);
+
   /* ── Hooks ────────────────────────────────────────────────── */
   return {
     auth: authHook,
@@ -350,6 +360,10 @@ async function server(input: PluginInput): Promise<Hooks> {
       hello,
       "gitlab-configure": configureTool,
       "gitlab-ping": pingTool,
+      ...mrTools,
+      ...projectTools,
+      ...codeTools,
+      ...userTools,
     },
   };
 }
