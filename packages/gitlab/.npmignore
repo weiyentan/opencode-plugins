@@ -1,0 +1,6 @@
+src/
+tests/
+.metrics/
+coverage/
+tsconfig.json
+*.test.ts
