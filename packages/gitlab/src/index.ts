@@ -31,6 +31,8 @@ import { createClient, createTimeoutSignal } from "./client.js";
 import type { GitLabClient } from "./client.js";
 import { createGraphQLClient } from "./graphql.js";
 import type { GraphQLClient } from "./graphql.js";
+import { createRichTools } from "./tools/rich.js";
+import { createQueryTool } from "./tools/query.js";
 
 const z = tool.schema;
 
@@ -343,6 +345,10 @@ async function server(input: PluginInput): Promise<Hooks> {
     },
   });
 
+  /* ── GraphQL-powered rich tools ──────────────────────────── */
+  const richTools = createRichTools(getGraphQLClient);
+  const queryTool = createQueryTool(getGraphQLClient);
+
   /* ── Hooks ────────────────────────────────────────────────── */
   return {
     auth: authHook,
@@ -350,6 +356,8 @@ async function server(input: PluginInput): Promise<Hooks> {
       hello,
       "gitlab-configure": configureTool,
       "gitlab-ping": pingTool,
+      ...richTools,
+      "gitlab.query": queryTool,
     },
   };
 }
