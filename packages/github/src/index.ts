@@ -32,6 +32,7 @@ import { createGraphQLClient } from "./graphql.js";
 import type { GitHubGraphQLClient } from "./graphql.js";
 import { createRichTools } from "./tools/rich.js";
 import { createQueryTool } from "./tools/query.js";
+import { createIssueTools } from "./tools/issues.js";
 
 const z = tool.schema;
 
@@ -305,6 +306,9 @@ async function server(input: PluginInput): Promise<Hooks> {
   const richTools = createRichTools(getGitHubGraphQL);
   const queryTool = createQueryTool(getGitHubGraphQL);
 
+  /* ── REST-powered issue tools ────────────────────────────── */
+  const issueTools = createIssueTools(getGitHubClient);
+
   /* ── Hooks ────────────────────────────────────────────────── */
   return {
     auth: authHook,
@@ -314,6 +318,7 @@ async function server(input: PluginInput): Promise<Hooks> {
       "github-configure": configure,
       ...richTools,
       "github.query": queryTool,
+      ...issueTools,
     },
   };
 }
