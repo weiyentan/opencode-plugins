@@ -72,9 +72,11 @@ async function server(input: PluginInput): Promise<Hooks> {
 
   /* ── GitHub HTTP client — lazy resolver, created on first tool call ── */
   let cachedClient: GitHubClient | undefined;
+  let cachedClientToken: string | undefined;
+  let cachedClientBaseUrl: string | undefined;
   let cachedGraphQL: GitHubGraphQLClient | undefined;
-  let cachedToken: string | undefined;
-  let cachedBaseUrl: string | undefined;
+  let cachedGraphQLToken: string | undefined;
+  let cachedGraphQLBaseUrl: string | undefined;
 
   async function getGitHubClient(): Promise<GitHubClient> {
     const resolvedBaseUrl =
@@ -99,9 +101,9 @@ async function server(input: PluginInput): Promise<Hooks> {
 
     const tokenString = String(token);
 
-    if (!cachedClient || cachedToken !== tokenString || cachedBaseUrl !== resolvedBaseUrl) {
-      cachedToken = tokenString;
-      cachedBaseUrl = resolvedBaseUrl;
+    if (!cachedClient || cachedClientToken !== tokenString || cachedClientBaseUrl !== resolvedBaseUrl) {
+      cachedClientToken = tokenString;
+      cachedClientBaseUrl = resolvedBaseUrl;
       cachedClient = createGitHubClient(resolvedBaseUrl, tokenString);
     }
 
@@ -132,9 +134,9 @@ async function server(input: PluginInput): Promise<Hooks> {
 
     const tokenString = String(token);
 
-    if (!cachedGraphQL || cachedToken !== tokenString || cachedBaseUrl !== resolvedBaseUrl) {
-      cachedToken = tokenString;
-      cachedBaseUrl = resolvedBaseUrl;
+    if (!cachedGraphQL || cachedGraphQLToken !== tokenString || cachedGraphQLBaseUrl !== resolvedBaseUrl) {
+      cachedGraphQLToken = tokenString;
+      cachedGraphQLBaseUrl = resolvedBaseUrl;
       cachedGraphQL = createGraphQLClient(tokenString, { baseUrl: resolvedBaseUrl });
     }
 
@@ -276,9 +278,11 @@ async function server(input: PluginInput): Promise<Hooks> {
 
       // Invalidate cached clients so they re-resolve with new config
       cachedClient = undefined;
+      cachedClientToken = undefined;
+      cachedClientBaseUrl = undefined;
       cachedGraphQL = undefined;
-      cachedToken = undefined;
-      cachedBaseUrl = undefined;
+      cachedGraphQLToken = undefined;
+      cachedGraphQLBaseUrl = undefined;
 
       // Validate the client resolves with the new config
       let validationMessage = "";

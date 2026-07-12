@@ -42,6 +42,7 @@ const z = tool.schema;
  */
 interface CustomConfig {
   token?: string;
+  baseUrl?: string;
 }
 
 let customConfig: CustomConfig | undefined;
@@ -75,6 +76,9 @@ async function server(input: PluginInput): Promise<Hooks> {
   /* ── GitLab HTTP clients — lazy resolver, created on first tool call ── */
   let cachedClient: GitLabClient | undefined;
   let cachedToken: string | undefined;
+  let cachedBaseUrl: string | undefined;
+  let cachedGraphQLClient: GraphQLClient | undefined;
+  let cachedGraphQLToken: string | undefined;
 
   /**
    * Resolve the GitLab token through the 3-tier fallback chain:
@@ -128,12 +132,15 @@ async function server(input: PluginInput): Promise<Hooks> {
       );
     }
 
-    if (!cachedClient || cachedToken !== resolvedToken) {
+    const resolvedBaseUrl =
+      customConfig?.baseUrl ??
+      process.env.GITLAB_BASE_URL ??
+      "https://gitlab.com";
+
+    if (!cachedClient || cachedToken !== resolvedToken || cachedBaseUrl !== resolvedBaseUrl) {
       cachedToken = resolvedToken;
-      cachedClient = createClient(
-        customConfig?.token ? "https://gitlab.com" : "https://gitlab.com",
-        resolvedToken,
-      );
+      cachedBaseUrl = resolvedBaseUrl;
+      cachedClient = createClient(resolvedBaseUrl, resolvedToken);
     }
 
     return cachedClient;
@@ -154,7 +161,17 @@ async function server(input: PluginInput): Promise<Hooks> {
       );
     }
 
-    return createGraphQLClient("https://gitlab.com", resolvedToken);
+    const resolvedBaseUrl =
+      customConfig?.baseUrl ??
+      process.env.GITLAB_BASE_URL ??
+      "https://gitlab.com";
+
+    if (!cachedGraphQLClient || cachedGraphQLToken !== resolvedToken) {
+      cachedGraphQLToken = resolvedToken;
+      cachedGraphQLClient = createGraphQLClient(resolvedBaseUrl, resolvedToken);
+    }
+
+    return cachedGraphQLClient;
   }
 
   /* ── Init-time validation ─────────────────────────────────── */
@@ -167,8 +184,12 @@ async function server(input: PluginInput): Promise<Hooks> {
       const { signal, clear } = createTimeoutSignal(10_000);
 
       try {
+        const resolvedBaseUrl =
+          customConfig?.baseUrl ??
+          process.env.GITLAB_BASE_URL ??
+          "https://gitlab.com";
         const result = await validateToken(
-          "https://gitlab.com",
+          resolvedBaseUrl,
           storedToken,
           signal,
         );
@@ -242,17 +263,29 @@ async function server(input: PluginInput): Promise<Hooks> {
       token: z
         .string()
         .describe("GitLab Personal Access Token (PAT) with api and read_user scopes."),
+      baseUrl: z
+        .string()
+        .optional()
+        .describe("GitLab base URL (e.g., https://gitlab.com)"),
     },
     async execute(args, context) {
       if (context.abort?.aborted) {
         return { output: "Request was aborted." };
       }
 
-      setCustomConfig({ token: args.token });
+      const mergedConfig: CustomConfig = {
+        ...(customConfig ?? {}),
+        ...(args.token ? { token: args.token } : {}),
+        ...(args.baseUrl ? { baseUrl: args.baseUrl } : {}),
+      };
+      setCustomConfig(Object.keys(mergedConfig).length > 0 ? mergedConfig : undefined);
 
-      // Invalidate cached client so next request uses new token
+      // Invalidate cached clients so they re-resolve with new config
       cachedClient = undefined;
       cachedToken = undefined;
+      cachedBaseUrl = undefined;
+      cachedGraphQLClient = undefined;
+      cachedGraphQLToken = undefined;
 
       return {
         output:
