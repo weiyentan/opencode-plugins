@@ -26,6 +26,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@octokit/graphql": "^8.2.2",
     "@opencode-ai/plugin": "^1.17.8"
   },
   "devDependencies": {
