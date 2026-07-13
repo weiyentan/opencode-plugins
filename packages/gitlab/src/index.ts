@@ -31,6 +31,13 @@ import { createClient, createTimeoutSignal } from "./client.js";
 import type { GitLabClient } from "./client.js";
 import { createGraphQLClient } from "./graphql.js";
 import type { GraphQLClient } from "./graphql.js";
+import { createIssueTools } from "./tools/issues.js";
+import { createMRTools } from "./tools/mrs.js";
+import { createProjectTools } from "./tools/projects.js";
+import { createCodeTools } from "./tools/code.js";
+import { createUserTools } from "./tools/user.js";
+import { createRichTools } from "./tools/rich.js";
+import { createQueryTool } from "./tools/query.js";
 
 const z = tool.schema;
 
@@ -343,6 +350,17 @@ async function server(input: PluginInput): Promise<Hooks> {
     },
   });
 
+  /* ── Issue tools (REST) ──────────────────────────────────── */
+  const issueTools = createIssueTools(getGitLabClient);
+  /* ── MR, project, code & user tools (REST) ──────────────── */
+  const mrTools = createMRTools(getGitLabClient);
+  const projectTools = createProjectTools(getGitLabClient);
+  const codeTools = createCodeTools(getGitLabClient);
+  const userTools = createUserTools(getGitLabClient);
+  /* ── GraphQL-powered rich tools ──────────────────────────── */
+  const richTools = createRichTools(getGraphQLClient);
+  const queryTool = createQueryTool(getGraphQLClient);
+
   /* ── Hooks ────────────────────────────────────────────────── */
   return {
     auth: authHook,
@@ -350,6 +368,13 @@ async function server(input: PluginInput): Promise<Hooks> {
       hello,
       "gitlab-configure": configureTool,
       "gitlab-ping": pingTool,
+      ...issueTools,
+      ...mrTools,
+      ...projectTools,
+      ...codeTools,
+      ...userTools,
+      ...richTools,
+      "gitlab.query": queryTool,
     },
   };
 }
