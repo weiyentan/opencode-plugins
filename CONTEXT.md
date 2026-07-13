@@ -48,4 +48,4 @@ Tools are designed for platform portability. Each tool has an abstract shape (li
 - Merge requests use `mr` (not `pr`) in GitLab tool names to match GitLab's native terminology
 
 ### Monorepo Structure
-All plugin packages live in a single monorepo at `github.com/weiyentan/opencode-plugins`. Each package is fully independent — no shared runtime code between packages, only shared architecture patterns. CI uses path-filtered workflows to test only the affected packages on push/PR. Publishing is manual via `workflow_dispatch` with a selected package, expected version, and dist tag. This structure reduces overhead while keeping things discoverable.
+All plugin packages live in a single monorepo at `github.com/weiyentan/opencode-plugins`. Each package is fully independent — no shared runtime code between packages, only shared architecture patterns. CI uses path-filtered workflows to test only the affected packages on push/PR. Publishing is manual via `workflow_dispatch` with a selected package; version and dist-tag are auto-derived from `package.json`. This structure reduces overhead while keeping things discoverable.

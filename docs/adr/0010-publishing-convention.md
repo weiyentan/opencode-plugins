@@ -25,14 +25,12 @@ We need a consistent, safe, auditable publishing convention that works for all c
 ### Workflow inputs
 
 - `package` (choice: `awx`, `github`, `gitlab`) — the workspace to publish
-- `expected_version` (string) — must match the `version` field in the selected package's `package.json`
-- `dist_tag` (choice: `latest`, `experimental`) — the npm distribution tag
 
 ### Safety checks (in order)
 
 1. **Branch guard** — the workflow fails immediately unless `GITHUB_REF` is `refs/heads/master`. Publishing from any other branch is rejected with a clear error message.
 2. **Package directory exists** — the mapped workspace directory must be present.
-3. **Version match** — the `expected_version` input must exactly match `package.json`'s `version` field. This prevents accidental publishes of incorrect versions.
+3. **Version auto-read + dist-tag derivation** — the version is read automatically from the selected package's `package.json`. The dist-tag is derived from the version string: if the version contains `-experimental.`, the tag is set to `experimental`; otherwise it defaults to `latest`. No manual version or tag input is required.
 4. **Build + test** — `npm run build` and `npm test` must pass for the selected workspace before publish proceeds.
 
 ### Flow
@@ -43,16 +41,16 @@ workflow_dispatch (manual trigger on master)
   → branch guard (fail if not refs/heads/master)
   → map package input → workspace name + directory
   → validate directory exists
-  → validate version matches expected_version
+  → auto-read version from package.json + derive dist-tag
   → npm ci
   → npm run build --workspace=<name>
   → npm test --workspace=<name>
-  → npm publish --workspace=<name> --tag=<dist_tag>
+  → npm publish --workspace=<name> --tag=<derived_dist_tag>
 ```
 
 ### Why `workflow_dispatch` (manual trigger)
 
-- Publishing a plugin package is a deliberate act — a human must choose the package, confirm the version, and select the dist tag.
+- Publishing a plugin package is a deliberate act — a human must choose the package. The version and dist-tag are auto-derived from `package.json`.
 - Automated publish on merge would require complex change-detection (which package changed? is the version bump correct? what tag?) that adds fragility with little benefit for a repo of this cadence.
 - `workflow_dispatch` gives the operator full control while enforcing safety via automated checks.
 
@@ -67,7 +65,7 @@ workflow_dispatch (manual trigger on master)
 - **Positive**: Safety checks prevent common mistakes (wrong branch, version mismatch, broken build).
 - **Positive**: The `workflow_dispatch` UI on GitHub naturally surfaces the current branch, reminding the operator to be on `master`.
 - **Negative**: Publishing requires opening GitHub (or using `gh workflow run`). Local `npm publish` is possible but not the recommended path.
-- **Operational note**: To publish, the operator navigates to the Actions tab, selects "Publish to npm", chooses `master` as the branch, fills in the three inputs, and clicks "Run workflow". The `NPM_TOKEN` secret must be configured in the repository settings.
+- **Operational note**: To publish, the operator navigates to the Actions tab, selects "Publish to npm", chooses `master` as the branch, selects the package from the dropdown, and clicks "Run workflow". The version and dist-tag are auto-derived from `package.json`. The `NPM_TOKEN` secret must be configured in the repository settings.
 
 ## Alternatives Considered
 

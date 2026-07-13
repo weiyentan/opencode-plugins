@@ -11,18 +11,6 @@ on:
           - awx
           - github
           - gitlab
-      expected_version:
-        description: 'Expected version (must match package.json)'
-        required: true
-        type: string
-      dist_tag:
-        description: 'npm distribution tag'
-        required: true
-        type: choice
-        default: 'latest'
-        options:
-          - latest
-          - experimental
 
 jobs:
   publish:
@@ -74,15 +62,18 @@ jobs:
             exit 1
           fi
 
-      - name: Validate version matches expected_version
+      - name: Read version from package.json and derive dist-tag
+        id: version
         run: |
-          ACTUAL_VERSION=$(node -p "require('./${{ steps.map.outputs.package_dir }}/package.json').version")
-          EXPECTED="${{ github.event.inputs.expected_version }}"
-          if [ "$ACTUAL_VERSION" != "$EXPECTED" ]; then
-            echo "Error: Version mismatch. Expected: $EXPECTED, Actual: $ACTUAL_VERSION" >&2
-            exit 1
+          VERSION=$(node -p "require('./${{ steps.map.outputs.package_dir }}/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if [[ "$VERSION" == *-experimental.* ]]; then
+            DIST_TAG="experimental"
+          else
+            DIST_TAG="latest"
           fi
-          echo "Version check passed: $ACTUAL_VERSION"
+          echo "dist_tag=$DIST_TAG" >> $GITHUB_OUTPUT
+          echo "Read version: $VERSION, dist-tag: $DIST_TAG"
 
       - name: Install dependencies (workspace root)
         run: npm ci
@@ -94,6 +85,6 @@ jobs:
         run: npm test --workspace="${{ steps.map.outputs.workspace_name }}"
 
       - name: Publish selected workspace
-        run: npm publish --workspace="${{ steps.map.outputs.workspace_name }}" --tag="${{ github.event.inputs.dist_tag }}"
+        run: npm publish --workspace="${{ steps.map.outputs.workspace_name }}" --tag="${{ steps.version.outputs.dist_tag }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
