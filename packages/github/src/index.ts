@@ -65,12 +65,12 @@ function setCustomConfig(config: { baseUrl?: string; token?: string } | undefine
  *
  * Returns Hooks including:
  * - Auth hook (type: "api" for bearer token / PAT)
- * - Registered tools: github.hello, github-configure, github-debug-env,
- *   github.issue.get-full, github.pr.get-full, github.issue.search,
- *   github.repo.get-full, github.query,
- *   github.pr.list, github.pr.get, github.pr.create, github.pr.merge,
- *   github.repo.get, github.repo.search,
- *   github.code.search, github.user.get
+ * - Registered tools: hello, github-configure, github-debug-env,
+ *   github_issue_get_full, github_pr_get_full, github_issue_search,
+ *   github_repo_get_full, github_query,
+ *   github_pr_list, github_pr_get, github_pr_create, github_pr_merge,
+ *   github_repo_get, github_repo_search,
+ *   github_code_search, github_user_get
  */
 async function server(input: PluginInput): Promise<Hooks> {
   const { serverUrl } = input;
@@ -329,7 +329,7 @@ async function server(input: PluginInput): Promise<Hooks> {
       "github-debug-env": debugEnv,
       "github-configure": configure,
       ...richTools,
-      "github.query": queryTool,
+      "github_query": queryTool,
       ...issueTools,
       ...prTools,
       ...repoTools,

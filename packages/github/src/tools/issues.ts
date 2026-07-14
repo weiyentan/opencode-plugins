@@ -2,11 +2,11 @@
  * issues.ts — REST-based issue tools for the GitHub plugin.
  *
  * Provides 5 REST-powered issue tools:
- *   - github.issue.list   — list issues for a repo
- *   - github.issue.get    — get a single issue
- *   - github.issue.create — create an issue
- *   - github.issue.update — update an issue
- *   - github.issue.comment — comment on an issue
+ *   - github_issue_list   — list issues for a repo
+ *   - github_issue_get    — get a single issue
+ *   - github_issue_create — create an issue
+ *   - github_issue_update — update an issue
+ *   - github_issue_comment — comment on an issue
  *
  * ## Design
  *
@@ -186,9 +186,9 @@ export function createIssueTools(
   getClient: () => Promise<GitHubClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── github.issue.list ────────────────────────────────────── */
+    /* ── github_issue_list ────────────────────────────────────── */
 
-    "github.issue.list": tool({
+    "github_issue_list": tool({
       description: [
         "List issues for a GitHub repository.",
         "Supports filtering by state, labels, assignee, and sorting.",
@@ -287,7 +287,7 @@ export function createIssueTools(
         let response: Response;
         try {
           response = await client.request(
-            "github.issue.list",
+            "github_issue_list",
             path,
             undefined,
             context.abort,
@@ -335,9 +335,9 @@ export function createIssueTools(
       },
     }),
 
-    /* ── github.issue.get ──────────────────────────────────────── */
+    /* ── github_issue_get ──────────────────────────────────────── */
 
-    "github.issue.get": tool({
+    "github_issue_get": tool({
       description: [
         "Get a single GitHub issue by number.",
         "Returns curated issue fields with full _raw response in metadata.",
@@ -379,7 +379,7 @@ export function createIssueTools(
         let response: Response;
         try {
           response = await client.request(
-            "github.issue.get",
+            "github_issue_get",
             path,
             undefined,
             context.abort,
@@ -437,9 +437,9 @@ export function createIssueTools(
       },
     }),
 
-    /* ── github.issue.create ───────────────────────────────────── */
+    /* ── github_issue_create ───────────────────────────────────── */
 
-    "github.issue.create": tool({
+    "github_issue_create": tool({
       description: [
         "Create a new issue in a GitHub repository.",
         "Supports setting title, body, labels, and assignees.",
@@ -505,7 +505,7 @@ export function createIssueTools(
         let response: Response;
         try {
           response = await client.request(
-            "github.issue.create",
+            "github_issue_create",
             path,
             {
               method: "POST",
@@ -562,9 +562,9 @@ export function createIssueTools(
       },
     }),
 
-    /* ── github.issue.update ───────────────────────────────────── */
+    /* ── github_issue_update ───────────────────────────────────── */
 
-    "github.issue.update": tool({
+    "github_issue_update": tool({
       description: [
         "Update an existing GitHub issue.",
         "Supports changing state, title, body, labels, and assignees.",
@@ -646,7 +646,7 @@ export function createIssueTools(
         let response: Response;
         try {
           response = await client.request(
-            "github.issue.update",
+            "github_issue_update",
             path,
             {
               method: "PATCH",
@@ -698,9 +698,9 @@ export function createIssueTools(
       },
     }),
 
-    /* ── github.issue.comment ──────────────────────────────────── */
+    /* ── github_issue_comment ──────────────────────────────────── */
 
-    "github.issue.comment": tool({
+    "github_issue_comment": tool({
       description: [
         "Add a comment to an existing GitHub issue.",
         "Returns the created comment with curated fields.",
@@ -751,7 +751,7 @@ export function createIssueTools(
         let response: Response;
         try {
           response = await client.request(
-            "github.issue.comment",
+            "github_issue_comment",
             path,
             {
               method: "POST",

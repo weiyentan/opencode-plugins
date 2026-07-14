@@ -1,5 +1,5 @@
 /**
- * Unit tests for github.repo.* REST tools (get, search).
+ * Unit tests for github_repo_* REST tools (get, search).
  *
  * These tests use fixture data and a mock HTTP client to verify:
  *   1. Zod input validation rejects malformed arguments
@@ -38,7 +38,7 @@ const mockContext = { abort: undefined as any };
 
 /* ── Repo Get Tests ───────────────────────────────────────────── */
 
-describe("github.repo.get", () => {
+describe("github_repo_get", () => {
   beforeEach(async () => {
     createRepoTools = (await import("../src/tools/repos.js")).createRepoTools;
   });
@@ -46,7 +46,7 @@ describe("github.repo.get", () => {
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
       const tools = createRepoTools(() => Promise.resolve(mockClient({})));
-      const execute = (tools["github.repo.get"] as any).execute;
+      const execute = (tools["github_repo_get"] as any).execute;
 
       const result = await execute({ repo: "repo" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -57,7 +57,7 @@ describe("github.repo.get", () => {
     it("returns curated repo fields", async () => {
       const client = mockClient(REPO_GET_RESPONSE);
       const tools = createRepoTools(() => Promise.resolve(client));
-      const result = await tools["github.repo.get"].execute(
+      const result = await tools["github_repo_get"].execute(
         { owner: "owner", repo: "my-project" },
         mockContext,
       );
@@ -96,7 +96,7 @@ describe("github.repo.get", () => {
     it("handles repo not found", async () => {
       const client = mockClient(REPO_GET_NOT_FOUND_RESPONSE, 404);
       const tools = createRepoTools(() => Promise.resolve(client));
-      const result = await tools["github.repo.get"].execute(
+      const result = await tools["github_repo_get"].execute(
         { owner: "owner", repo: "nonexistent" },
         mockContext,
       );
@@ -110,7 +110,7 @@ describe("github.repo.get", () => {
     it("surfaces API errors", async () => {
       const client = mockClient({ message: "Forbidden" }, 403);
       const tools = createRepoTools(() => Promise.resolve(client));
-      const result = await tools["github.repo.get"].execute(
+      const result = await tools["github_repo_get"].execute(
         { owner: "owner", repo: "private-repo" },
         mockContext,
       );
@@ -124,7 +124,7 @@ describe("github.repo.get", () => {
   describe("abort handling", () => {
     it("respects abort signal", async () => {
       const tools = createRepoTools(() => Promise.resolve(mockClient({})));
-      const result = await tools["github.repo.get"].execute(
+      const result = await tools["github_repo_get"].execute(
         { owner: "owner", repo: "repo" },
         { abort: { aborted: true } as any },
       );
@@ -135,7 +135,7 @@ describe("github.repo.get", () => {
 
 /* ── Repo Search Tests ────────────────────────────────────────── */
 
-describe("github.repo.search", () => {
+describe("github_repo_search", () => {
   beforeEach(async () => {
     createRepoTools = (await import("../src/tools/repos.js")).createRepoTools;
   });
@@ -143,7 +143,7 @@ describe("github.repo.search", () => {
   describe("input validation", () => {
     it("handles missing query gracefully", async () => {
       const tools = createRepoTools(() => Promise.resolve(mockClient({})));
-      const execute = (tools["github.repo.search"] as any).execute;
+      const execute = (tools["github_repo_search"] as any).execute;
 
       const result = await execute({}, mockContext);
       expect(typeof result.output).toBe("string");
@@ -152,7 +152,7 @@ describe("github.repo.search", () => {
     it("accepts optional sort and order parameters", async () => {
       const client = mockClient(REPO_SEARCH_RESPONSE);
       const tools = createRepoTools(() => Promise.resolve(client));
-      const result = await tools["github.repo.search"].execute(
+      const result = await tools["github_repo_search"].execute(
         { query: "typescript", sort: "stars", order: "desc", perPage: 50 },
         mockContext,
       );
@@ -164,7 +164,7 @@ describe("github.repo.search", () => {
     it("returns curated search results", async () => {
       const client = mockClient(REPO_SEARCH_RESPONSE);
       const tools = createRepoTools(() => Promise.resolve(client));
-      const result = await tools["github.repo.search"].execute(
+      const result = await tools["github_repo_search"].execute(
         { query: "typescript" },
         mockContext,
       );
@@ -195,7 +195,7 @@ describe("github.repo.search", () => {
     it("surfaces API errors", async () => {
       const client = mockClient({ message: "Validation error" }, 422);
       const tools = createRepoTools(() => Promise.resolve(client));
-      const result = await tools["github.repo.search"].execute(
+      const result = await tools["github_repo_search"].execute(
         { query: "" },
         mockContext,
       );
@@ -208,7 +208,7 @@ describe("github.repo.search", () => {
   describe("abort handling", () => {
     it("respects abort signal", async () => {
       const tools = createRepoTools(() => Promise.resolve(mockClient({})));
-      const result = await tools["github.repo.search"].execute(
+      const result = await tools["github_repo_search"].execute(
         { query: "typescript" },
         { abort: { aborted: true } as any },
       );

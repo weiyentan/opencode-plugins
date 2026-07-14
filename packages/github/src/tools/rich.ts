@@ -7,13 +7,13 @@
  *
  * ## Tools
  *
- * - **github.issue.get-full** &mdash; Issue with body, labels, comments,
+ * - **github_issue_get_full** &mdash; Issue with body, labels, comments,
  *   linked PRs, and timeline events in one query.
- * - **github.pr.get-full** &mdash; PR with commits, reviews, review threads,
+ * - **github_pr_get_full** &mdash; PR with commits, reviews, review threads,
  *   merge status, and CI status in one query.
- * - **github.issue.search** &mdash; Cross-repo issue search with rich
+ * - **github_issue_search** &mdash; Cross-repo issue search with rich
  *   results including repo context.
- * - **github.repo.get-full** &mdash; Repo with README, recent commits,
+ * - **github_repo_get_full** &mdash; Repo with README, recent commits,
  *   and top contributors in one query.
  *
  * ## Design
@@ -270,9 +270,9 @@ export function createRichTools(
   getGQL: () => Promise<GitHubGraphQLClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── github.issue.get-full ────────────────────────────────── */
+    /* ── github_issue_get_full ────────────────────────────────── */
 
-    "github.issue.get-full": tool({
+    "github_issue_get_full": tool({
       description: [
         "Fetch a single GitHub issue with full details: body, labels,",
         "comments (first 10), linked pull requests, and timeline events.",
@@ -420,9 +420,9 @@ export function createRichTools(
       },
     }),
 
-    /* ── github.pr.get-full ───────────────────────────────────── */
+    /* ── github_pr_get_full ───────────────────────────────────── */
 
-    "github.pr.get-full": tool({
+    "github_pr_get_full": tool({
       description: [
         "Fetch a single GitHub pull request with full details: commits,",
         "reviews, review threads, merge status, and CI status.",
@@ -568,9 +568,9 @@ export function createRichTools(
       },
     }),
 
-    /* ── github.issue.search ──────────────────────────────────── */
+    /* ── github_issue_search ──────────────────────────────────── */
 
-    "github.issue.search": tool({
+    "github_issue_search": tool({
       description: [
         "Search for GitHub issues across repositories.",
         "Returns rich results with repo context, labels, and comment counts.",
@@ -663,9 +663,9 @@ export function createRichTools(
       },
     }),
 
-    /* ── github.repo.get-full ─────────────────────────────────── */
+    /* ── github_repo_get_full ─────────────────────────────────── */
 
-    "github.repo.get-full": tool({
+    "github_repo_get_full": tool({
       description: [
         "Fetch a GitHub repository with full details: description, languages,",
         "README summary, recent commits, top contributors, and stats.",

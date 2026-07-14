@@ -7,10 +7,10 @@
  *
  * ## Tools
  *
- * - **github.pr.list** — List pull requests (filterable by state, head, base, sort)
- * - **github.pr.get** — Get a single PR with diffstat and commits
- * - **github.pr.create** — Create a pull request (title, body, head, base, draft)
- * - **github.pr.merge** — Merge a pull request (merge method, commit title/message)
+ * - **github_pr_list** — List pull requests (filterable by state, head, base, sort)
+ * - **github_pr_get** — Get a single PR with diffstat and commits
+ * - **github_pr_create** — Create a pull request (title, body, head, base, draft)
+ * - **github_pr_merge** — Merge a pull request (merge method, commit title/message)
  *
  * ## Design
  *
@@ -98,9 +98,9 @@ export function createPrTools(
   getClient: () => Promise<GitHubClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── github.pr.list ─────────────────────────────────────────── */
+    /* ── github_pr_list ─────────────────────────────────────────── */
 
-    "github.pr.list": tool({
+    "github_pr_list": tool({
       description: [
         "List pull requests in a repository.",
         "Filterable by state (open, closed, all), head branch, base branch,",
@@ -196,7 +196,7 @@ export function createPrTools(
 
         let response: Response;
         try {
-          response = await client.request("github.pr.list", path, undefined, context.abort);
+          response = await client.request("github_pr_list", path, undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),
@@ -274,9 +274,9 @@ export function createPrTools(
       },
     }),
 
-    /* ── github.pr.get ──────────────────────────────────────────── */
+    /* ── github_pr_get ──────────────────────────────────────────── */
 
-    "github.pr.get": tool({
+    "github_pr_get": tool({
       description: [
         "Get a single pull request with full details including diffstat",
         "(additions, deletions, changed files) and commit list.",
@@ -321,7 +321,7 @@ export function createPrTools(
 
         let prResponse: Response;
         try {
-          prResponse = await client.request("github.pr.get", prPath, undefined, context.abort);
+          prResponse = await client.request("github_pr_get", prPath, undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),
@@ -367,7 +367,7 @@ export function createPrTools(
         const commitsPath = `/repos/${encodedOwner}/${encodedRepo}/pulls/${args.prNumber}/commits?per_page=30`;
         try {
           const commitsResponse = await client.request(
-            "github.pr.get",
+            "github_pr_get",
             commitsPath,
             undefined,
             context.abort,
@@ -384,7 +384,7 @@ export function createPrTools(
         const filesPath = `/repos/${encodedOwner}/${encodedRepo}/pulls/${args.prNumber}/files?per_page=30`;
         try {
           const filesResponse = await client.request(
-            "github.pr.get",
+            "github_pr_get",
             filesPath,
             undefined,
             context.abort,
@@ -484,9 +484,9 @@ export function createPrTools(
       },
     }),
 
-    /* ── github.pr.create ───────────────────────────────────────── */
+    /* ── github_pr_create ───────────────────────────────────────── */
 
-    "github.pr.create": tool({
+    "github_pr_create": tool({
       description: [
         "Create a new pull request in a repository.",
         "Supports draft PRs and full title/body content.",
@@ -560,7 +560,7 @@ export function createPrTools(
         let response: Response;
         try {
           response = await client.request(
-            "github.pr.create",
+            "github_pr_create",
             path,
             {
               method: "POST",
@@ -635,9 +635,9 @@ export function createPrTools(
       },
     }),
 
-    /* ── github.pr.merge ────────────────────────────────────────── */
+    /* ── github_pr_merge ────────────────────────────────────────── */
 
-    "github.pr.merge": tool({
+    "github_pr_merge": tool({
       description: [
         "Merge a pull request using the specified merge method.",
         "Supports merge, squash, and rebase merge strategies.",
@@ -705,7 +705,7 @@ export function createPrTools(
         let response: Response;
         try {
           response = await client.request(
-            "github.pr.merge",
+            "github_pr_merge",
             path,
             {
               method: "PUT",

@@ -1,6 +1,6 @@
 /**
- * Unit tests for rich GraphQL tools (github.issue.get-full, github.pr.get-full,
- * github.issue.search, github.repo.get-full).
+ * Unit tests for rich GraphQL tools (github_issue_get_full, github_pr_get_full,
+ * github_issue_search, github_repo_get_full).
  *
  * These tests use fixture data and a mock GraphQL client to verify:
  *   1. Zod input validation rejects malformed arguments
@@ -66,7 +66,7 @@ const mockContext = { abort: undefined as any };
 
 /* ── Tests ────────────────────────────────────────────────────── */
 
-describe("github.issue.get-full", () => {
+describe("github_issue_get_full", () => {
   beforeEach(async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
   });
@@ -74,7 +74,7 @@ describe("github.issue.get-full", () => {
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["github.issue.get-full"] as any).execute;
+      const execute = (tools["github_issue_get_full"] as any).execute;
 
       // Missing owner should produce a human-readable error
       const result = await execute({ repo: "repo", issueNumber: 42 }, mockContext);
@@ -84,7 +84,7 @@ describe("github.issue.get-full", () => {
 
     it("handles non-numeric issueNumber gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["github.issue.get-full"] as any).execute;
+      const execute = (tools["github_issue_get_full"] as any).execute;
 
       // Non-numeric issueNumber produces a human-readable error
       const result = await execute({ owner: "owner", repo: "repo", issueNumber: "abc" }, mockContext);
@@ -94,7 +94,7 @@ describe("github.issue.get-full", () => {
 
     it("handles empty strings gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["github.issue.get-full"] as any).execute;
+      const execute = (tools["github_issue_get_full"] as any).execute;
 
       const result = await execute({ owner: "", repo: "repo", issueNumber: 1 }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -106,7 +106,7 @@ describe("github.issue.get-full", () => {
     it("returns curated fields for a standard issue", async () => {
       const gql = mockGQL(ISSUE_FULL_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.issue.get-full"].execute(
+      const result = await tools["github_issue_get_full"].execute(
         { owner: "owner", repo: "repo", issueNumber: 42 },
         mockContext,
       );
@@ -151,7 +151,7 @@ describe("github.issue.get-full", () => {
     it("handles minimal issue (no comments, no events)", async () => {
       const gql = mockGQL(ISSUE_MINIMAL_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.issue.get-full"].execute(
+      const result = await tools["github_issue_get_full"].execute(
         { owner: "owner", repo: "repo", issueNumber: 99 },
         mockContext,
       );
@@ -170,7 +170,7 @@ describe("github.issue.get-full", () => {
     it("handles issue not found (null response)", async () => {
       const gql = mockGQL(ISSUE_NOT_FOUND_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.issue.get-full"].execute(
+      const result = await tools["github_issue_get_full"].execute(
         { owner: "owner", repo: "repo", issueNumber: 9999 },
         mockContext,
       );
@@ -188,7 +188,7 @@ describe("github.issue.get-full", () => {
         { type: "NOT_FOUND", message: "Could not resolve to a Repository with the name 'owner/repo'." },
       ]);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.issue.get-full"].execute(
+      const result = await tools["github_issue_get_full"].execute(
         { owner: "owner", repo: "repo", issueNumber: 42 },
         mockContext,
       );
@@ -203,7 +203,7 @@ describe("github.issue.get-full", () => {
 
 /* ── PR Tests ─────────────────────────────────────────────────── */
 
-describe("github.pr.get-full", () => {
+describe("github_pr_get_full", () => {
   beforeEach(async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
   });
@@ -211,7 +211,7 @@ describe("github.pr.get-full", () => {
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["github.pr.get-full"] as any).execute;
+      const execute = (tools["github_pr_get_full"] as any).execute;
 
       const result = await execute({ repo: "repo", prNumber: 43 }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -226,7 +226,7 @@ describe("github.pr.get-full", () => {
 
     it("handles non-numeric prNumber gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["github.pr.get-full"] as any).execute;
+      const execute = (tools["github_pr_get_full"] as any).execute;
 
       const result = await execute({ owner: "owner", repo: "repo", prNumber: "abc" }, mockContext);
       expect(result.output).toContain("not found");
@@ -237,7 +237,7 @@ describe("github.pr.get-full", () => {
     it("returns curated fields for a standard PR", async () => {
       const gql = mockGQL(PR_FULL_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.pr.get-full"].execute(
+      const result = await tools["github_pr_get_full"].execute(
         { owner: "owner", repo: "repo", prNumber: 43 },
         mockContext,
       );
@@ -274,7 +274,7 @@ describe("github.pr.get-full", () => {
     it("handles merged PR", async () => {
       const gql = mockGQL(PR_MERGED_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.pr.get-full"].execute(
+      const result = await tools["github_pr_get_full"].execute(
         { owner: "owner", repo: "repo", prNumber: 44 },
         mockContext,
       );
@@ -289,7 +289,7 @@ describe("github.pr.get-full", () => {
     it("handles PR not found", async () => {
       const gql = mockGQL(PR_NOT_FOUND_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.pr.get-full"].execute(
+      const result = await tools["github_pr_get_full"].execute(
         { owner: "owner", repo: "repo", prNumber: 9999 },
         mockContext,
       );
@@ -306,7 +306,7 @@ describe("github.pr.get-full", () => {
         { type: "FORBIDDEN", message: "Resource not accessible by integration" },
       ]);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.pr.get-full"].execute(
+      const result = await tools["github_pr_get_full"].execute(
         { owner: "owner", repo: "repo", prNumber: 42 },
         mockContext,
       );
@@ -319,7 +319,7 @@ describe("github.pr.get-full", () => {
 
 /* ── Issue Search Tests ────────────────────────────────────────── */
 
-describe("github.issue.search", () => {
+describe("github_issue_search", () => {
   beforeEach(async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
   });
@@ -327,7 +327,7 @@ describe("github.issue.search", () => {
   describe("input validation", () => {
     it("handles missing query gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["github.issue.search"] as any).execute;
+      const execute = (tools["github_issue_search"] as any).execute;
 
       const result = await execute({}, mockContext);
       expect(typeof result.output).toBe("string");
@@ -335,7 +335,7 @@ describe("github.issue.search", () => {
 
     it("handles empty query gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["github.issue.search"] as any).execute;
+      const execute = (tools["github_issue_search"] as any).execute;
 
       const result = await execute({ query: "" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -346,7 +346,7 @@ describe("github.issue.search", () => {
       const tools = createRichTools(() => Promise.resolve(gql));
 
       // Should not throw
-      const result = await tools["github.issue.search"].execute(
+      const result = await tools["github_issue_search"].execute(
         { query: "bug", first: 20 },
         mockContext,
       );
@@ -358,7 +358,7 @@ describe("github.issue.search", () => {
     it("returns curated search results with repo context", async () => {
       const gql = mockGQL(ISSUE_SEARCH_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.issue.search"].execute(
+      const result = await tools["github_issue_search"].execute(
         { query: "memory leak" },
         mockContext,
       );
@@ -386,7 +386,7 @@ describe("github.issue.search", () => {
     it("handles empty search results", async () => {
       const gql = mockGQL(ISSUE_SEARCH_EMPTY_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.issue.search"].execute(
+      const result = await tools["github_issue_search"].execute(
         { query: "nonexistent feature" },
         mockContext,
       );
@@ -404,7 +404,7 @@ describe("github.issue.search", () => {
         { type: "FORBIDDEN", message: "Resource not accessible by integration" },
       ]);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.issue.search"].execute(
+      const result = await tools["github_issue_search"].execute(
         { query: "bug" },
         mockContext,
       );
@@ -417,7 +417,7 @@ describe("github.issue.search", () => {
 
 /* ── Repo Full Tests ──────────────────────────────────────────── */
 
-describe("github.repo.get-full", () => {
+describe("github_repo_get_full", () => {
   beforeEach(async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
   });
@@ -425,7 +425,7 @@ describe("github.repo.get-full", () => {
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["github.repo.get-full"] as any).execute;
+      const execute = (tools["github_repo_get_full"] as any).execute;
 
       const result = await execute({ repo: "repo" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -443,7 +443,7 @@ describe("github.repo.get-full", () => {
     it("returns curated repo fields with README, commits, and contributors", async () => {
       const gql = mockGQL(REPO_FULL_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.repo.get-full"].execute(
+      const result = await tools["github_repo_get_full"].execute(
         { owner: "owner", repo: "my-project" },
         mockContext,
       );
@@ -486,7 +486,7 @@ describe("github.repo.get-full", () => {
     it("handles repo without README", async () => {
       const gql = mockGQL(REPO_NO_README_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.repo.get-full"].execute(
+      const result = await tools["github_repo_get_full"].execute(
         { owner: "owner", repo: "empty-repo" },
         mockContext,
       );
@@ -501,7 +501,7 @@ describe("github.repo.get-full", () => {
     it("handles repo not found", async () => {
       const gql = mockGQL(REPO_NOT_FOUND_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.repo.get-full"].execute(
+      const result = await tools["github_repo_get_full"].execute(
         { owner: "owner", repo: "nonexistent" },
         mockContext,
       );
@@ -518,7 +518,7 @@ describe("github.repo.get-full", () => {
         { type: "NOT_FOUND", message: "Could not resolve to a Repository" },
       ]);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["github.repo.get-full"].execute(
+      const result = await tools["github_repo_get_full"].execute(
         { owner: "owner", repo: "nonexistent" },
         mockContext,
       );
@@ -534,7 +534,7 @@ describe("abort handling", () => {
   it("respects abort signal for issue.get-full", async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
     const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-    const result = await tools["github.issue.get-full"].execute(
+    const result = await tools["github_issue_get_full"].execute(
       { owner: "owner", repo: "repo", issueNumber: 1 },
       { abort: { aborted: true } as any },
     );
@@ -544,7 +544,7 @@ describe("abort handling", () => {
   it("respects abort signal for pr.get-full", async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
     const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-    const result = await tools["github.pr.get-full"].execute(
+    const result = await tools["github_pr_get_full"].execute(
       { owner: "owner", repo: "repo", prNumber: 1 },
       { abort: { aborted: true } as any },
     );
@@ -554,7 +554,7 @@ describe("abort handling", () => {
   it("respects abort signal for issue.search", async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
     const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-    const result = await tools["github.issue.search"].execute(
+    const result = await tools["github_issue_search"].execute(
       { query: "bug" },
       { abort: { aborted: true } as any },
     );
@@ -564,7 +564,7 @@ describe("abort handling", () => {
   it("respects abort signal for repo.get-full", async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
     const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-    const result = await tools["github.repo.get-full"].execute(
+    const result = await tools["github_repo_get_full"].execute(
       { owner: "owner", repo: "repo" },
       { abort: { aborted: true } as any },
     );
@@ -577,7 +577,7 @@ describe("abort handling", () => {
 describe("integration", () => {
   const hasToken = Boolean(process.env.GITHUB_TOKEN);
 
-  it.runIf(hasToken)("github.issue.get-full returns real data", async () => {
+  it.runIf(hasToken)("github_issue_get_full returns real data", async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
     // Integration tests can be added here when running with a real token
     expect(true).toBe(true);

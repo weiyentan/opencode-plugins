@@ -7,7 +7,7 @@
  *
  * ## Tool
  *
- * - **github.user.get** — Get the current authenticated user's profile
+ * - **github_user_get** — Get the current authenticated user's profile
  *
  * ## Design
  *
@@ -65,9 +65,9 @@ export function createUserTools(
   getClient: () => Promise<GitHubClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── github.user.get ────────────────────────────────────────── */
+    /* ── github_user_get ────────────────────────────────────────── */
 
-    "github.user.get": tool({
+    "github_user_get": tool({
       description: [
         "Get the current authenticated user's GitHub profile.",
         "Returns user metadata including name, email, company, location,",
@@ -93,7 +93,7 @@ export function createUserTools(
 
         let response: Response;
         try {
-          response = await client.request("github.user.get", "/user", undefined, context.abort);
+          response = await client.request("github_user_get", "/user", undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),

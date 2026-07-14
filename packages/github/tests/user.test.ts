@@ -1,5 +1,5 @@
 /**
- * Unit tests for github.user.get REST tool.
+ * Unit tests for github_user_get REST tool.
  *
  * These tests use fixture data and a mock HTTP client to verify:
  *   1. Tool handles no-argument invocation correctly
@@ -33,7 +33,7 @@ const mockContext = { abort: undefined as any };
 
 /* ── Tests ────────────────────────────────────────────────────── */
 
-describe("github.user.get", () => {
+describe("github_user_get", () => {
   beforeEach(async () => {
     createUserTools = (await import("../src/tools/user.js")).createUserTools;
   });
@@ -42,7 +42,7 @@ describe("github.user.get", () => {
     it("works with no arguments", async () => {
       const client = mockClient(USER_GET_RESPONSE);
       const tools = createUserTools(() => Promise.resolve(client));
-      const result = await tools["github.user.get"].execute({}, mockContext);
+      const result = await tools["github_user_get"].execute({}, mockContext);
 
       expect(typeof result.output).toBe("string");
       expect(result.metadata).toBeDefined();
@@ -53,7 +53,7 @@ describe("github.user.get", () => {
     it("returns curated user profile fields", async () => {
       const client = mockClient(USER_GET_RESPONSE);
       const tools = createUserTools(() => Promise.resolve(client));
-      const result = await tools["github.user.get"].execute({}, mockContext);
+      const result = await tools["github_user_get"].execute({}, mockContext);
 
       expect(typeof result.output).toBe("string");
       const meta = result.metadata as Record<string, unknown>;
@@ -86,7 +86,7 @@ describe("github.user.get", () => {
     it("surfaces 401 authentication errors with guidance", async () => {
       const client = mockClient({ message: "Bad credentials" }, 401);
       const tools = createUserTools(() => Promise.resolve(client));
-      const result = await tools["github.user.get"].execute({}, mockContext);
+      const result = await tools["github_user_get"].execute({}, mockContext);
 
       expect(result.output).toContain("Authentication failed");
       expect(result.output).toContain("Personal Access Token");
@@ -97,7 +97,7 @@ describe("github.user.get", () => {
     it("surfaces generic API errors", async () => {
       const client = mockClient({ message: "Not Found" }, 404);
       const tools = createUserTools(() => Promise.resolve(client));
-      const result = await tools["github.user.get"].execute({}, mockContext);
+      const result = await tools["github_user_get"].execute({}, mockContext);
 
       expect(result.output).toContain("404");
       expect(result.output).toContain("Not Found");
@@ -108,7 +108,7 @@ describe("github.user.get", () => {
   describe("abort handling", () => {
     it("respects abort signal", async () => {
       const tools = createUserTools(() => Promise.resolve(mockClient({})));
-      const result = await tools["github.user.get"].execute(
+      const result = await tools["github_user_get"].execute(
         {},
         { abort: { aborted: true } as any },
       );

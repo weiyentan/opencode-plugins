@@ -1,5 +1,5 @@
 /**
- * Unit tests for REST-based issue tools (github.issue.list, .get, .create,
+ * Unit tests for REST-based issue tools (github_issue_list, .get, .create,
  * .update, .comment).
  *
  * These tests use fixture data and a mock GitHub HTTP client to verify:
@@ -106,7 +106,7 @@ function getExecute(toolName: string) {
 
 /* ── Tests ──────────────────────────────────────────────────────── */
 
-describe("github.issue.list", () => {
+describe("github_issue_list", () => {
   beforeEach(async () => {
     createIssueTools = (await import("../src/tools/issues.js"))
       .createIssueTools;
@@ -114,7 +114,7 @@ describe("github.issue.list", () => {
 
   describe("input validation", () => {
     it("handles missing owner gracefully", async () => {
-      const execute = getExecute("github.issue.list");
+      const execute = getExecute("github_issue_list");
       const result = await execute(
         { repo: "repo" },
         mockContext,
@@ -123,7 +123,7 @@ describe("github.issue.list", () => {
     });
 
     it("handles missing repo gracefully", async () => {
-      const execute = getExecute("github.issue.list");
+      const execute = getExecute("github_issue_list");
       const result = await execute(
         { owner: "owner" },
         mockContext,
@@ -136,7 +136,7 @@ describe("github.issue.list", () => {
         Promise.resolve(mockClient(ISSUE_LIST_RESPONSE)),
       );
       // Should not throw with all optional params
-      const result = await tools["github.issue.list"].execute(
+      const result = await tools["github_issue_list"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -158,7 +158,7 @@ describe("github.issue.list", () => {
     it("returns Markdown table in output", async () => {
       const client = mockClient(ISSUE_LIST_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.list"].execute(
+      const result = await tools["github_issue_list"].execute(
         { owner: "owner", repo: "repo" },
         mockContext,
       );
@@ -176,7 +176,7 @@ describe("github.issue.list", () => {
     it("returns curated fields and _raw in metadata", async () => {
       const client = mockClient(ISSUE_LIST_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.list"].execute(
+      const result = await tools["github_issue_list"].execute(
         { owner: "owner", repo: "repo" },
         mockContext,
       );
@@ -214,7 +214,7 @@ describe("github.issue.list", () => {
     it("handles empty list", async () => {
       const client = mockListEmpty();
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.list"].execute(
+      const result = await tools["github_issue_list"].execute(
         { owner: "owner", repo: "repo" },
         mockContext,
       );
@@ -230,7 +230,7 @@ describe("github.issue.list", () => {
     it("returns 'not found' message on 404", async () => {
       const client = mockErrorResponse(404, ISSUE_NOT_FOUND_BODY);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.list"].execute(
+      const result = await tools["github_issue_list"].execute(
         { owner: "owner", repo: "nonexistent" },
         mockContext,
       );
@@ -240,9 +240,9 @@ describe("github.issue.list", () => {
   });
 });
 
-/* ── github.issue.get ─────────────────────────────────────────────── */
+/* ── github_issue_get ─────────────────────────────────────────────── */
 
-describe("github.issue.get", () => {
+describe("github_issue_get", () => {
   beforeEach(async () => {
     createIssueTools = (await import("../src/tools/issues.js"))
       .createIssueTools;
@@ -250,7 +250,7 @@ describe("github.issue.get", () => {
 
   describe("input validation", () => {
     it("handles missing owner gracefully", async () => {
-      const execute = getExecute("github.issue.get");
+      const execute = getExecute("github_issue_get");
       const result = await execute(
         { repo: "repo", issueNumber: 42 },
         mockContext,
@@ -259,7 +259,7 @@ describe("github.issue.get", () => {
     });
 
     it("handles non-numeric issueNumber gracefully", async () => {
-      const execute = getExecute("github.issue.get");
+      const execute = getExecute("github_issue_get");
       const result = await execute(
         { owner: "owner", repo: "repo", issueNumber: "abc" },
         mockContext,
@@ -272,7 +272,7 @@ describe("github.issue.get", () => {
     it("returns curated fields for a standard issue", async () => {
       const client = mockClient(ISSUE_GET_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.get"].execute(
+      const result = await tools["github_issue_get"].execute(
         { owner: "owner", repo: "repo", issueNumber: 42 },
         mockContext,
       );
@@ -298,7 +298,7 @@ describe("github.issue.get", () => {
     it("handles closed issue", async () => {
       const client = mockClient(ISSUE_CLOSED_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.get"].execute(
+      const result = await tools["github_issue_get"].execute(
         { owner: "owner", repo: "repo", issueNumber: 99 },
         mockContext,
       );
@@ -314,7 +314,7 @@ describe("github.issue.get", () => {
     it("returns 'not found' message on 404", async () => {
       const client = mockErrorResponse(404, ISSUE_NOT_FOUND_BODY);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.get"].execute(
+      const result = await tools["github_issue_get"].execute(
         { owner: "owner", repo: "repo", issueNumber: 9999 },
         mockContext,
       );
@@ -325,9 +325,9 @@ describe("github.issue.get", () => {
   });
 });
 
-/* ── github.issue.create ──────────────────────────────────────────── */
+/* ── github_issue_create ──────────────────────────────────────────── */
 
-describe("github.issue.create", () => {
+describe("github_issue_create", () => {
   beforeEach(async () => {
     createIssueTools = (await import("../src/tools/issues.js"))
       .createIssueTools;
@@ -335,7 +335,7 @@ describe("github.issue.create", () => {
 
   describe("input validation", () => {
     it("handles missing title gracefully", async () => {
-      const execute = getExecute("github.issue.create");
+      const execute = getExecute("github_issue_create");
       const result = await execute(
         { owner: "owner", repo: "repo" },
         mockContext,
@@ -344,7 +344,7 @@ describe("github.issue.create", () => {
     });
 
     it("handles empty title gracefully", async () => {
-      const execute = getExecute("github.issue.create");
+      const execute = getExecute("github_issue_create");
       const result = await execute(
         { owner: "owner", repo: "repo", title: "" },
         mockContext,
@@ -357,7 +357,7 @@ describe("github.issue.create", () => {
     it("returns curated fields on successful creation", async () => {
       const client = mockClient(ISSUE_CREATE_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.create"].execute(
+      const result = await tools["github_issue_create"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -384,7 +384,7 @@ describe("github.issue.create", () => {
     it("accepts optional assignees", async () => {
       const client = mockClient(ISSUE_CREATE_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.create"].execute(
+      const result = await tools["github_issue_create"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -402,7 +402,7 @@ describe("github.issue.create", () => {
     it("returns validation error message on 422", async () => {
       const client = mockErrorResponse(422, ISSUE_VALIDATION_ERROR_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.create"].execute(
+      const result = await tools["github_issue_create"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -417,7 +417,7 @@ describe("github.issue.create", () => {
     it("returns 'not found' message on 404", async () => {
       const client = mockErrorResponse(404, ISSUE_NOT_FOUND_BODY);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.create"].execute(
+      const result = await tools["github_issue_create"].execute(
         {
           owner: "owner",
           repo: "nonexistent",
@@ -431,9 +431,9 @@ describe("github.issue.create", () => {
   });
 });
 
-/* ── github.issue.update ──────────────────────────────────────────── */
+/* ── github_issue_update ──────────────────────────────────────────── */
 
-describe("github.issue.update", () => {
+describe("github_issue_update", () => {
   beforeEach(async () => {
     createIssueTools = (await import("../src/tools/issues.js"))
       .createIssueTools;
@@ -441,7 +441,7 @@ describe("github.issue.update", () => {
 
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
-      const execute = getExecute("github.issue.update");
+      const execute = getExecute("github_issue_update");
       const result = await execute(
         { repo: "repo", issueNumber: 42 },
         mockContext,
@@ -465,7 +465,7 @@ describe("github.issue.update", () => {
       const client = mockClient(ISSUE_UPDATE_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
       // Should not throw with just state
-      const result = await tools["github.issue.update"].execute(
+      const result = await tools["github_issue_update"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -482,7 +482,7 @@ describe("github.issue.update", () => {
     it("returns updated issue fields", async () => {
       const client = mockClient(ISSUE_UPDATE_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.update"].execute(
+      const result = await tools["github_issue_update"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -508,7 +508,7 @@ describe("github.issue.update", () => {
     it("returns 'not found' message on 404", async () => {
       const client = mockErrorResponse(404, ISSUE_NOT_FOUND_BODY);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.update"].execute(
+      const result = await tools["github_issue_update"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -524,7 +524,7 @@ describe("github.issue.update", () => {
     it("returns validation error message on 422", async () => {
       const client = mockErrorResponse(422, ISSUE_VALIDATION_ERROR_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.update"].execute(
+      const result = await tools["github_issue_update"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -539,9 +539,9 @@ describe("github.issue.update", () => {
   });
 });
 
-/* ── github.issue.comment ─────────────────────────────────────────── */
+/* ── github_issue_comment ─────────────────────────────────────────── */
 
-describe("github.issue.comment", () => {
+describe("github_issue_comment", () => {
   beforeEach(async () => {
     createIssueTools = (await import("../src/tools/issues.js"))
       .createIssueTools;
@@ -549,7 +549,7 @@ describe("github.issue.comment", () => {
 
   describe("input validation", () => {
     it("handles missing body gracefully", async () => {
-      const execute = getExecute("github.issue.comment");
+      const execute = getExecute("github_issue_comment");
       const result = await execute(
         { owner: "owner", repo: "repo", issueNumber: 42 },
         mockContext,
@@ -558,7 +558,7 @@ describe("github.issue.comment", () => {
     });
 
     it("handles empty body gracefully", async () => {
-      const execute = getExecute("github.issue.comment");
+      const execute = getExecute("github_issue_comment");
       const result = await execute(
         { owner: "owner", repo: "repo", issueNumber: 42, body: "" },
         mockContext,
@@ -571,7 +571,7 @@ describe("github.issue.comment", () => {
     it("returns comment fields on success", async () => {
       const client = mockClient(ISSUE_COMMENT_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.comment"].execute(
+      const result = await tools["github_issue_comment"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -599,7 +599,7 @@ describe("github.issue.comment", () => {
     it("returns 'not found' on 404", async () => {
       const client = mockErrorResponse(404, ISSUE_NOT_FOUND_BODY);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.comment"].execute(
+      const result = await tools["github_issue_comment"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -615,7 +615,7 @@ describe("github.issue.comment", () => {
     it("returns validation error on 422", async () => {
       const client = mockErrorResponse(422, ISSUE_VALIDATION_ERROR_RESPONSE);
       const tools = createIssueTools(() => Promise.resolve(client));
-      const result = await tools["github.issue.comment"].execute(
+      const result = await tools["github_issue_comment"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -638,55 +638,55 @@ describe("client init failure", () => {
       .createIssueTools;
   });
 
-  it("github.issue.list handles client init failure", async () => {
+  it("github_issue_list handles client init failure", async () => {
     const tools = createIssueTools(
       mockClientReject("Token not configured"),
     );
-    const result = await tools["github.issue.list"].execute(
+    const result = await tools["github_issue_list"].execute(
       { owner: "owner", repo: "repo" },
       mockContext,
     );
     expect(result.output).toContain("Token not configured");
   });
 
-  it("github.issue.get handles client init failure", async () => {
+  it("github_issue_get handles client init failure", async () => {
     const tools = createIssueTools(
       mockClientReject("Token not configured"),
     );
-    const result = await tools["github.issue.get"].execute(
+    const result = await tools["github_issue_get"].execute(
       { owner: "owner", repo: "repo", issueNumber: 1 },
       mockContext,
     );
     expect(result.output).toContain("Token not configured");
   });
 
-  it("github.issue.create handles client init failure", async () => {
+  it("github_issue_create handles client init failure", async () => {
     const tools = createIssueTools(
       mockClientReject("Token not configured"),
     );
-    const result = await tools["github.issue.create"].execute(
+    const result = await tools["github_issue_create"].execute(
       { owner: "owner", repo: "repo", title: "Bug" },
       mockContext,
     );
     expect(result.output).toContain("Token not configured");
   });
 
-  it("github.issue.update handles client init failure", async () => {
+  it("github_issue_update handles client init failure", async () => {
     const tools = createIssueTools(
       mockClientReject("Token not configured"),
     );
-    const result = await tools["github.issue.update"].execute(
+    const result = await tools["github_issue_update"].execute(
       { owner: "owner", repo: "repo", issueNumber: 1 },
       mockContext,
     );
     expect(result.output).toContain("Token not configured");
   });
 
-  it("github.issue.comment handles client init failure", async () => {
+  it("github_issue_comment handles client init failure", async () => {
     const tools = createIssueTools(
       mockClientReject("Token not configured"),
     );
-    const result = await tools["github.issue.comment"].execute(
+    const result = await tools["github_issue_comment"].execute(
       { owner: "owner", repo: "repo", issueNumber: 1, body: "Nice fix!" },
       mockContext,
     );
@@ -706,7 +706,7 @@ describe("abort handling", () => {
 
   it("respects abort signal for issue.list", async () => {
     const tools = createIssueTools(() => Promise.resolve(mockClient([])));
-    const result = await tools["github.issue.list"].execute(
+    const result = await tools["github_issue_list"].execute(
       { owner: "owner", repo: "repo" },
       abortedContext,
     );
@@ -715,7 +715,7 @@ describe("abort handling", () => {
 
   it("respects abort signal for issue.get", async () => {
     const tools = createIssueTools(() => Promise.resolve(mockClient({})));
-    const result = await tools["github.issue.get"].execute(
+    const result = await tools["github_issue_get"].execute(
       { owner: "owner", repo: "repo", issueNumber: 1 },
       abortedContext,
     );
@@ -724,7 +724,7 @@ describe("abort handling", () => {
 
   it("respects abort signal for issue.create", async () => {
     const tools = createIssueTools(() => Promise.resolve(mockClient({})));
-    const result = await tools["github.issue.create"].execute(
+    const result = await tools["github_issue_create"].execute(
       { owner: "owner", repo: "repo", title: "Test" },
       abortedContext,
     );
@@ -733,7 +733,7 @@ describe("abort handling", () => {
 
   it("respects abort signal for issue.update", async () => {
     const tools = createIssueTools(() => Promise.resolve(mockClient({})));
-    const result = await tools["github.issue.update"].execute(
+    const result = await tools["github_issue_update"].execute(
       { owner: "owner", repo: "repo", issueNumber: 1 },
       abortedContext,
     );
@@ -742,7 +742,7 @@ describe("abort handling", () => {
 
   it("respects abort signal for issue.comment", async () => {
     const tools = createIssueTools(() => Promise.resolve(mockClient({})));
-    const result = await tools["github.issue.comment"].execute(
+    const result = await tools["github_issue_comment"].execute(
       { owner: "owner", repo: "repo", issueNumber: 1, body: "Test" },
       abortedContext,
     );
@@ -755,7 +755,7 @@ describe("abort handling", () => {
 describe("integration", () => {
   const hasToken = Boolean(process.env.GITHUB_TOKEN);
 
-  it.runIf(hasToken)("github.issue.list returns real data", async () => {
+  it.runIf(hasToken)("github_issue_list returns real data", async () => {
     createIssueTools = (await import("../src/tools/issues.js"))
       .createIssueTools;
     expect(true).toBe(true);
