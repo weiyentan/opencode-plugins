@@ -7,8 +7,8 @@
  *
  * ## Tools
  *
- * - **github.repo.get** — Get repository metadata (description, topics, language, stars, fork count)
- * - **github.repo.search** — Search repositories by query (sort by stars, forks, updated)
+ * - **github_repo_get** — Get repository metadata (description, topics, language, stars, fork count)
+ * - **github_repo_search** — Search repositories by query (sort by stars, forks, updated)
  *
  * ## Design
  *
@@ -81,9 +81,9 @@ export function createRepoTools(
   getClient: () => Promise<GitHubClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── github.repo.get ────────────────────────────────────────── */
+    /* ── github_repo_get ────────────────────────────────────────── */
 
-    "github.repo.get": tool({
+    "github_repo_get": tool({
       description: [
         "Get a GitHub repository's metadata including description, topics,",
         "primary language, stars, forks, license, and visibility.",
@@ -119,7 +119,7 @@ export function createRepoTools(
 
         let response: Response;
         try {
-          response = await client.request("github.repo.get", path, undefined, context.abort);
+          response = await client.request("github_repo_get", path, undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),
@@ -207,9 +207,9 @@ export function createRepoTools(
       },
     }),
 
-    /* ── github.repo.search ─────────────────────────────────────── */
+    /* ── github_repo_search ─────────────────────────────────────── */
 
-    "github.repo.search": tool({
+    "github_repo_search": tool({
       description: [
         "Search for GitHub repositories by query.",
         "Results can be sorted by stars, forks, or last updated.",
@@ -279,7 +279,7 @@ export function createRepoTools(
 
         let response: Response;
         try {
-          response = await client.request("github.repo.search", path, undefined, context.abort);
+          response = await client.request("github_repo_search", path, undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),

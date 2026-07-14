@@ -1,5 +1,5 @@
 /**
- * Test fixtures for github.query (generic GraphQL passthrough).
+ * Test fixtures for github_query (generic GraphQL passthrough).
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

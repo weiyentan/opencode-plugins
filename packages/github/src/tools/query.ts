@@ -1,12 +1,12 @@
 /**
  * query.ts — Generic GraphQL query passthrough tool.
  *
- * github.query: Executes an arbitrary GraphQL query against the GitHub API
+ * github_query: Executes an arbitrary GraphQL query against the GitHub API
  * with auth injection and returns the full raw response.
  *
  * ## Tool
  *
- * - **github.query** &mdash; Takes `query` (string) and optional `variables`
+ * - **github_query** &mdash; Takes `query` (string) and optional `variables`
  *   (record), returns `_raw` with the full GraphQL response data. When the
  *   query returns schema errors, they are formatted as structured messages
  *   (with type annotations) in the output string and `_raw` in metadata.
@@ -25,7 +25,7 @@ import type { GitHubGraphQLClient } from "../graphql.js";
 const z = tool.schema;
 
 /**
- * Create the github.query tool.
+ * Create the github_query tool.
  *
  * @param getGQL  Async factory that returns the GitHub GraphQL client
  * @returns A registered tool object

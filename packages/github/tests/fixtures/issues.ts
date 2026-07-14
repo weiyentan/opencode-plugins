@@ -1,5 +1,5 @@
 /**
- * Test fixtures for REST-based issue tools (github.issue.*).
+ * Test fixtures for REST-based issue tools (github_issue_*).
  *
  * These fixtures simulate the shape of the GitHub REST API response
  * for issues endpoints (list, get, create, update, comment).

@@ -1,5 +1,5 @@
 /**
- * Unit tests for github.query (generic GraphQL passthrough).
+ * Unit tests for github_query (generic GraphQL passthrough).
  *
  * Tests Zod validation, output shape including _raw,
  * and GraphQL error surfacing.
@@ -37,7 +37,7 @@ const mockContext = { abort: undefined as any };
 
 /* ── Tests ────────────────────────────────────────────────────── */
 
-describe("github.query", () => {
+describe("github_query", () => {
   beforeEach(async () => {
     createQueryTool = (await import("../src/tools/query.js")).createQueryTool;
   });
@@ -150,7 +150,7 @@ describe("github.query", () => {
 describe("integration", () => {
   const hasToken = Boolean(process.env.GITHUB_TOKEN);
 
-  it.runIf(hasToken)("github.query returns real data", async () => {
+  it.runIf(hasToken)("github_query returns real data", async () => {
     createQueryTool = (await import("../src/tools/query.js")).createQueryTool;
     expect(true).toBe(true);
   });

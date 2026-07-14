@@ -7,7 +7,7 @@
  *
  * ## Tool
  *
- * - **github.code.search** — Search code across repositories (query, language, repo, path qualifiers)
+ * - **github_code_search** — Search code across repositories (query, language, repo, path qualifiers)
  *
  * ## Design
  *
@@ -53,9 +53,9 @@ export function createCodeTools(
   getClient: () => Promise<GitHubClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── github.code.search ─────────────────────────────────────── */
+    /* ── github_code_search ─────────────────────────────────────── */
 
-    "github.code.search": tool({
+    "github_code_search": tool({
       description: [
         "Search for code across GitHub repositories.",
         "Supports qualifiers for language, repository, and file path.",
@@ -133,7 +133,7 @@ export function createCodeTools(
 
         let response: Response;
         try {
-          response = await client.request("github.code.search", path, undefined, context.abort);
+          response = await client.request("github_code_search", path, undefined, context.abort);
         } catch (err) {
           return {
             output: err instanceof Error ? err.message : String(err),

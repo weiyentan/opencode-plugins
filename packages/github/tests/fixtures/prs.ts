@@ -1,5 +1,5 @@
 /**
- * Test fixtures for github.pr.* REST API responses.
+ * Test fixtures for github_pr_* REST API responses.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

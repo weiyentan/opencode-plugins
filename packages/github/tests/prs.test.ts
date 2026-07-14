@@ -1,5 +1,5 @@
 /**
- * Unit tests for github.pr.* REST tools (list, get, create, merge).
+ * Unit tests for github_pr_* REST tools (list, get, create, merge).
  *
  * These tests use fixture data and a mock HTTP client to verify:
  *   1. Zod input validation rejects malformed arguments
@@ -69,7 +69,7 @@ function mockClientReject(message: string): () => Promise<GitHubClient> {
 
 /* ── Tests ────────────────────────────────────────────────────── */
 
-describe("github.pr.list", () => {
+describe("github_pr_list", () => {
   beforeEach(async () => {
     createPrTools = (await import("../src/tools/prs.js")).createPrTools;
   });
@@ -77,7 +77,7 @@ describe("github.pr.list", () => {
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
       const tools = createPrTools(() => Promise.resolve(mockClient([])));
-      const execute = (tools["github.pr.list"] as any).execute;
+      const execute = (tools["github_pr_list"] as any).execute;
 
       const result = await execute({ repo: "repo", state: "open" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -88,7 +88,7 @@ describe("github.pr.list", () => {
 
     it("handles invalid state values gracefully", async () => {
       const tools = createPrTools(() => Promise.resolve(mockClient([])));
-      const execute = (tools["github.pr.list"] as any).execute;
+      const execute = (tools["github_pr_list"] as any).execute;
 
       // Using a type assertion to simulate invalid input at runtime
       const result = await execute(
@@ -101,7 +101,7 @@ describe("github.pr.list", () => {
     it("accepts optional filtering parameters", async () => {
       const client = mockClient(PR_LIST_RESPONSE);
       const tools = createPrTools(() => Promise.resolve(client));
-      const result = await tools["github.pr.list"].execute(
+      const result = await tools["github_pr_list"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -122,7 +122,7 @@ describe("github.pr.list", () => {
     it("returns curated fields for a list of PRs", async () => {
       const client = mockClient(PR_LIST_RESPONSE);
       const tools = createPrTools(() => Promise.resolve(client));
-      const result = await tools["github.pr.list"].execute(
+      const result = await tools["github_pr_list"].execute(
         { owner: "owner", repo: "repo", state: "open" },
         mockContext,
       );
@@ -151,7 +151,7 @@ describe("github.pr.list", () => {
     it("handles empty PR list", async () => {
       const client = mockClient([]);
       const tools = createPrTools(() => Promise.resolve(client));
-      const result = await tools["github.pr.list"].execute(
+      const result = await tools["github_pr_list"].execute(
         { owner: "owner", repo: "repo", state: "closed" },
         mockContext,
       );
@@ -166,7 +166,7 @@ describe("github.pr.list", () => {
     it("surfaces API errors", async () => {
       const client = mockClient({ message: "Repository not found" }, 404);
       const tools = createPrTools(() => Promise.resolve(client));
-      const result = await tools["github.pr.list"].execute(
+      const result = await tools["github_pr_list"].execute(
         { owner: "owner", repo: "nonexistent" },
         mockContext,
       );
@@ -180,7 +180,7 @@ describe("github.pr.list", () => {
   describe("abort handling", () => {
     it("respects abort signal", async () => {
       const tools = createPrTools(() => Promise.resolve(mockClient([])));
-      const result = await tools["github.pr.list"].execute(
+      const result = await tools["github_pr_list"].execute(
         { owner: "owner", repo: "repo" },
         { abort: { aborted: true } as any },
       );
@@ -191,7 +191,7 @@ describe("github.pr.list", () => {
 
 /* ── PR Get Tests ─────────────────────────────────────────────── */
 
-describe("github.pr.get", () => {
+describe("github_pr_get", () => {
   beforeEach(async () => {
     createPrTools = (await import("../src/tools/prs.js")).createPrTools;
   });
@@ -199,7 +199,7 @@ describe("github.pr.get", () => {
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
       const tools = createPrTools(() => Promise.resolve(mockClient({})));
-      const execute = (tools["github.pr.get"] as any).execute;
+      const execute = (tools["github_pr_get"] as any).execute;
 
       const result = await execute({ repo: "repo", prNumber: 43 }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -207,7 +207,7 @@ describe("github.pr.get", () => {
 
     it("handles non-numeric prNumber gracefully", async () => {
       const tools = createPrTools(() => Promise.resolve(mockClient({})));
-      const execute = (tools["github.pr.get"] as any).execute;
+      const execute = (tools["github_pr_get"] as any).execute;
 
       const result = await execute({ owner: "owner", repo: "repo", prNumber: "abc" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -218,7 +218,7 @@ describe("github.pr.get", () => {
     it("returns curated fields for a single PR", async () => {
       const client = mockClientForGet(PR_GET_RESPONSE, PR_COMMITS_RESPONSE, PR_FILES_RESPONSE);
       const tools = createPrTools(() => Promise.resolve(client));
-      const result = await tools["github.pr.get"].execute(
+      const result = await tools["github_pr_get"].execute(
         { owner: "owner", repo: "repo", prNumber: 43 },
         mockContext,
       );
@@ -259,7 +259,7 @@ describe("github.pr.get", () => {
     it("handles PR not found", async () => {
       const client = mockClient(PRS_NOT_FOUND_RESPONSE, 404);
       const tools = createPrTools(() => Promise.resolve(client));
-      const result = await tools["github.pr.get"].execute(
+      const result = await tools["github_pr_get"].execute(
         { owner: "owner", repo: "repo", prNumber: 9999 },
         mockContext,
       );
@@ -273,7 +273,7 @@ describe("github.pr.get", () => {
     it("surfaces API errors", async () => {
       const client = mockClient({ message: "Forbidden" }, 403);
       const tools = createPrTools(() => Promise.resolve(client));
-      const result = await tools["github.pr.get"].execute(
+      const result = await tools["github_pr_get"].execute(
         { owner: "owner", repo: "repo", prNumber: 1 },
         mockContext,
       );
@@ -287,7 +287,7 @@ describe("github.pr.get", () => {
 
 /* ── PR Create Tests ──────────────────────────────────────────── */
 
-describe("github.pr.create", () => {
+describe("github_pr_create", () => {
   beforeEach(async () => {
     createPrTools = (await import("../src/tools/prs.js")).createPrTools;
   });
@@ -295,7 +295,7 @@ describe("github.pr.create", () => {
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
       const tools = createPrTools(() => Promise.resolve(mockClient({})));
-      const execute = (tools["github.pr.create"] as any).execute;
+      const execute = (tools["github_pr_create"] as any).execute;
 
       const result = await execute({ owner: "owner", repo: "repo", title: "PR" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -306,7 +306,7 @@ describe("github.pr.create", () => {
     it("returns created PR details", async () => {
       const client = mockClient(PR_CREATE_RESPONSE, 201);
       const tools = createPrTools(() => Promise.resolve(client));
-      const result = await tools["github.pr.create"].execute(
+      const result = await tools["github_pr_create"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -339,7 +339,7 @@ describe("github.pr.create", () => {
       };
       const client = mockClient(errorResponse, 422);
       const tools = createPrTools(() => Promise.resolve(client));
-      const result = await tools["github.pr.create"].execute(
+      const result = await tools["github_pr_create"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -359,7 +359,7 @@ describe("github.pr.create", () => {
 
 /* ── PR Merge Tests ───────────────────────────────────────────── */
 
-describe("github.pr.merge", () => {
+describe("github_pr_merge", () => {
   beforeEach(async () => {
     createPrTools = (await import("../src/tools/prs.js")).createPrTools;
   });
@@ -367,7 +367,7 @@ describe("github.pr.merge", () => {
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
       const tools = createPrTools(() => Promise.resolve(mockClient({})));
-      const execute = (tools["github.pr.merge"] as any).execute;
+      const execute = (tools["github_pr_merge"] as any).execute;
 
       const result = await execute({ owner: "owner", repo: "repo" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -378,7 +378,7 @@ describe("github.pr.merge", () => {
     it("returns merge result details", async () => {
       const client = mockClient(PR_MERGE_RESPONSE);
       const tools = createPrTools(() => Promise.resolve(client));
-      const result = await tools["github.pr.merge"].execute(
+      const result = await tools["github_pr_merge"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -407,7 +407,7 @@ describe("github.pr.merge", () => {
       };
       const client = mockClient(failureResponse, 405);
       const tools = createPrTools(() => Promise.resolve(client));
-      const result = await tools["github.pr.merge"].execute(
+      const result = await tools["github_pr_merge"].execute(
         {
           owner: "owner",
           repo: "repo",
@@ -430,36 +430,36 @@ describe("client init failure", () => {
     createPrTools = (await import("../src/tools/prs.js")).createPrTools;
   });
 
-  it("github.pr.list handles client init failure", async () => {
+  it("github_pr_list handles client init failure", async () => {
     const tools = createPrTools(mockClientReject("Token not configured"));
-    const result = await tools["github.pr.list"].execute(
+    const result = await tools["github_pr_list"].execute(
       { owner: "owner", repo: "repo", state: "open" },
       mockContext,
     );
     expect(result.output).toBe("Token not configured");
   });
 
-  it("github.pr.get handles client init failure", async () => {
+  it("github_pr_get handles client init failure", async () => {
     const tools = createPrTools(mockClientReject("Token not configured"));
-    const result = await tools["github.pr.get"].execute(
+    const result = await tools["github_pr_get"].execute(
       { owner: "owner", repo: "repo", prNumber: 1 },
       mockContext,
     );
     expect(result.output).toBe("Token not configured");
   });
 
-  it("github.pr.create handles client init failure", async () => {
+  it("github_pr_create handles client init failure", async () => {
     const tools = createPrTools(mockClientReject("Token not configured"));
-    const result = await tools["github.pr.create"].execute(
+    const result = await tools["github_pr_create"].execute(
       { owner: "owner", repo: "repo", title: "New PR", head: "feature", base: "main" },
       mockContext,
     );
     expect(result.output).toBe("Token not configured");
   });
 
-  it("github.pr.merge handles client init failure", async () => {
+  it("github_pr_merge handles client init failure", async () => {
     const tools = createPrTools(mockClientReject("Token not configured"));
-    const result = await tools["github.pr.merge"].execute(
+    const result = await tools["github_pr_merge"].execute(
       { owner: "owner", repo: "repo", prNumber: 1 },
       mockContext,
     );

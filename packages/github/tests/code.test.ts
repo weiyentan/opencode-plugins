@@ -1,5 +1,5 @@
 /**
- * Unit tests for github.code.search REST tool.
+ * Unit tests for github_code_search REST tool.
  *
  * These tests use fixture data and a mock HTTP client to verify:
  *   1. Zod input validation rejects malformed arguments
@@ -36,7 +36,7 @@ const mockContext = { abort: undefined as any };
 
 /* ── Tests ────────────────────────────────────────────────────── */
 
-describe("github.code.search", () => {
+describe("github_code_search", () => {
   beforeEach(async () => {
     createCodeTools = (await import("../src/tools/code.js")).createCodeTools;
   });
@@ -44,7 +44,7 @@ describe("github.code.search", () => {
   describe("input validation", () => {
     it("handles missing query gracefully", async () => {
       const tools = createCodeTools(() => Promise.resolve(mockClient({})));
-      const execute = (tools["github.code.search"] as any).execute;
+      const execute = (tools["github_code_search"] as any).execute;
 
       const result = await execute({}, mockContext);
       expect(typeof result.output).toBe("string");
@@ -52,7 +52,7 @@ describe("github.code.search", () => {
 
     it("handles empty query gracefully", async () => {
       const tools = createCodeTools(() => Promise.resolve(mockClient({})));
-      const execute = (tools["github.code.search"] as any).execute;
+      const execute = (tools["github_code_search"] as any).execute;
 
       const result = await execute({ query: "" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -61,7 +61,7 @@ describe("github.code.search", () => {
     it("accepts optional qualifiers", async () => {
       const client = mockClient(CODE_SEARCH_RESPONSE);
       const tools = createCodeTools(() => Promise.resolve(client));
-      const result = await tools["github.code.search"].execute(
+      const result = await tools["github_code_search"].execute(
         {
           query: "hello",
           language: "typescript",
@@ -78,7 +78,7 @@ describe("github.code.search", () => {
     it("returns curated code search results", async () => {
       const client = mockClient(CODE_SEARCH_RESPONSE);
       const tools = createCodeTools(() => Promise.resolve(client));
-      const result = await tools["github.code.search"].execute(
+      const result = await tools["github_code_search"].execute(
         { query: "hello world" },
         mockContext,
       );
@@ -107,7 +107,7 @@ describe("github.code.search", () => {
     it("handles empty search results", async () => {
       const client = mockClient(CODE_SEARCH_EMPTY_RESPONSE);
       const tools = createCodeTools(() => Promise.resolve(client));
-      const result = await tools["github.code.search"].execute(
+      const result = await tools["github_code_search"].execute(
         { query: "nonexistent_token_xyz" },
         mockContext,
       );
@@ -127,7 +127,7 @@ describe("github.code.search", () => {
       };
       const client = mockClient(errorResponse, 422);
       const tools = createCodeTools(() => Promise.resolve(client));
-      const result = await tools["github.code.search"].execute(
+      const result = await tools["github_code_search"].execute(
         { query: "!!!invalid" },
         mockContext,
       );
@@ -140,7 +140,7 @@ describe("github.code.search", () => {
     it("surfaces generic API errors", async () => {
       const client = mockClient({ message: "Not Found" }, 404);
       const tools = createCodeTools(() => Promise.resolve(client));
-      const result = await tools["github.code.search"].execute(
+      const result = await tools["github_code_search"].execute(
         { query: "something" },
         mockContext,
       );
@@ -154,7 +154,7 @@ describe("github.code.search", () => {
   describe("abort handling", () => {
     it("respects abort signal", async () => {
       const tools = createCodeTools(() => Promise.resolve(mockClient({})));
-      const result = await tools["github.code.search"].execute(
+      const result = await tools["github_code_search"].execute(
         { query: "hello" },
         { abort: { aborted: true } as any },
       );
