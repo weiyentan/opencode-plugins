@@ -1,5 +1,5 @@
 /**
- * Test fixtures for github.issue.search GraphQL responses.
+ * Test fixtures for github_issue_search GraphQL responses.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

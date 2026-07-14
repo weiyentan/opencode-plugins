@@ -1,5 +1,5 @@
 /**
- * Test fixtures for github.code.search REST API response.
+ * Test fixtures for github_code_search REST API response.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

@@ -1,5 +1,5 @@
 /**
- * Test fixtures for github.user.get REST API response.
+ * Test fixtures for github_user_get REST API response.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

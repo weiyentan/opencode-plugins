@@ -1,5 +1,5 @@
 /**
- * Test fixtures for github.repo.get-full GraphQL responses.
+ * Test fixtures for github_repo_get_full GraphQL responses.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

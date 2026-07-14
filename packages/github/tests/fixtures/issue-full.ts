@@ -1,5 +1,5 @@
 /**
- * Test fixtures for github.issue.get-full GraphQL responses.
+ * Test fixtures for github_issue_get_full GraphQL responses.
  *
  * These fixtures simulate the shape of the GitHub GraphQL API response
  * for a repository issue query with labels, comments, and timeline events.
