@@ -182,57 +182,61 @@ async function server(input: PluginInput): Promise<Hooks> {
   }
 
   /* ── Init-time validation ─────────────────────────────────── */
-  // Attempt to validate the connection if a token is available.
-  // Token validation depends on whether the user has already stored a PAT.
+  // If a token is configured, attempt to validate the connection.
   // If no token is configured, skip — the user will configure it later.
-  try {
-    const storedToken = await resolveToken();
-    if (storedToken) {
-      const { signal, clear } = createTimeoutSignal(10_000);
+  (async () => {
+    try {
+      const storedToken = await resolveToken();
+      if (storedToken) {
+        const { signal, clear } = createTimeoutSignal(10_000);
 
-      try {
-        const resolvedBaseUrl =
-          customConfig?.baseUrl ??
-          process.env.GITLAB_BASE_URL ??
-          "https://gitlab.com";
-        const result = await validateToken(
-          resolvedBaseUrl,
-          storedToken,
-          signal,
-        );
+        try {
+          const resolvedBaseUrl =
+            customConfig?.baseUrl ??
+            process.env.GITLAB_BASE_URL ??
+            "https://gitlab.com";
+          const result = await validateToken(
+            resolvedBaseUrl,
+            storedToken,
+            signal,
+          );
 
-        if (!result.valid) {
-          void input.client.app.log({
-            body: {
-              service: "plugin-gitlab",
-              level: "error",
-              message: `Init-time token validation failed: ${result.error}`,
-            },
-          });
-        } else {
-          void input.client.app.log({
-            body: {
-              service: "plugin-gitlab",
-              level: "info",
-              message: `Token validated successfully against GitLab`,
-            },
-          });
+          if (!result.valid) {
+            void input.client.app.log({
+              body: {
+                service: "plugin-gitlab",
+                level: "error",
+                message: `Init-time token validation failed: ${result.error}`,
+              },
+            });
+          } else {
+            void input.client.app.log({
+              body: {
+                service: "plugin-gitlab",
+                level: "info",
+                message: `Token validated successfully against GitLab`,
+              },
+            });
+          }
+        } finally {
+          clear();
         }
-      } finally {
-        clear();
+      }
+    } catch {
+      try {
+        void input.client.app.log({
+          body: {
+            service: "plugin-gitlab",
+            level: "info",
+            message:
+              "No stored token found. Auth will be configured on first use.",
+          },
+        });
+      } catch {
+        // Swallow — logging failure should not crash startup
       }
     }
-  } catch {
-    // No token — skip validation, user will configure later
-    void input.client.app.log({
-      body: {
-        service: "plugin-gitlab",
-        level: "info",
-        message:
-          "No stored token found. Auth will be configured on first use.",
-      },
-    });
-  }
+  })();
 
   /* ── Tools ────────────────────────────────────────────────── */
 
