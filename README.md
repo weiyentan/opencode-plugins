@@ -41,24 +41,24 @@ An OpenCode plugin that exposes GitHub API capabilities as developer-facing tool
 | `hello` | Sanity-check tool — verifies plugin load | 
 | `github-configure` | Configure connection settings (base URL, PAT) |
 | `github-debug-env` | Return current environment configuration |
-| `github.issue.get-full` | Issue with body, labels, comments, linked PRs, timeline (GraphQL) |
-| `github.pr.get-full` | PR with commits, reviews, review threads, CI status (GraphQL) |
-| `github.issue.search` | Cross-repo issue search with rich results (GraphQL) |
-| `github.repo.get-full` | Repo with README, commits, languages, contributors (GraphQL) |
-| `github.query` | Arbitrary GraphQL query passthrough |
-| `github.issue.list` | List issues — filterable by state, labels, assignee |
-| `github.issue.get` | Get a single issue by number |
-| `github.issue.create` | Create a new issue |
-| `github.issue.update` | Update an existing issue |
-| `github.issue.comment` | Comment on an issue |
-| `github.pr.list` | List pull requests |
-| `github.pr.get` | Get a single PR with diffstat |
-| `github.pr.create` | Create a new pull request |
-| `github.pr.merge` | Merge a pull request |
-| `github.repo.get` | Get repository metadata |
-| `github.repo.search` | Search repositories |
-| `github.code.search` | Search code across repositories |
-| `github.user.get` | Get current user profile |
+| `github_issue_get_full` | Issue with body, labels, comments, linked PRs, timeline (GraphQL) |
+| `github_pr_get_full` | PR with commits, reviews, review threads, CI status (GraphQL) |
+| `github_issue_search` | Cross-repo issue search with rich results (GraphQL) |
+| `github_repo_get_full` | Repo with README, commits, languages, contributors (GraphQL) |
+| `github_query` | Arbitrary GraphQL query passthrough |
+| `github_issue_list` | List issues — filterable by state, labels, assignee |
+| `github_issue_get` | Get a single issue by number |
+| `github_issue_create` | Create a new issue |
+| `github_issue_update` | Update an existing issue |
+| `github_issue_comment` | Comment on an issue |
+| `github_pr_list` | List pull requests |
+| `github_pr_get` | Get a single PR with diffstat |
+| `github_pr_create` | Create a new pull request |
+| `github_pr_merge` | Merge a pull request |
+| `github_repo_get` | Get repository metadata |
+| `github_repo_search` | Search repositories |
+| `github_code_search` | Search code across repositories |
+| `github_user_get` | Get current user profile |
 
 **Key docs:**
 - [Package README](packages/github/README.md)
@@ -101,7 +101,7 @@ An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Uses Gr
 
 ### Portability Principle
 
-Both the GitHub and GitLab plugins share a common architecture (GraphQL-powered rich tools, auth hooks, middleware pipelines) mapped to each platform's API. GitHub tool names use dot-notation (`github.*`) while GitLab tool names use underscore-notation (`gitlab_*`). See the [Domain Glossary](CONTEXT.md) for tool namespace conventions and design principles.
+Both the GitHub and GitLab plugins share a common architecture (GraphQL-powered rich tools, auth hooks, middleware pipelines) mapped to each platform's API. GitHub tool names use underscore-notation (`github_*`) while GitLab tool names use underscore-notation (`gitlab_*`). See the [Domain Glossary](CONTEXT.md) for tool namespace conventions and design principles.
 
 ## Repository Structure
 
