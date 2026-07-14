@@ -19,7 +19,7 @@
  * ## Auth Fallback Chain (3-tier)
  *
  * Credentials are resolved through a 3-tier fallback chain:
- *   1. `customConfig` — configured via `gitlab-configure` tool at runtime
+ *   1. `customConfig` — configured via `gitlab_configure` tool at runtime
  *   2. `getSecret("gitlab")` — server-injected secret (if available)
  *   3. `process.env.GITLAB_TOKEN` — environment variable fallback
  */
@@ -45,7 +45,7 @@ const z = tool.schema;
 
 /**
  * Module-level storage for runtime-configured credentials.
- * Populated by the `gitlab-configure` tool.
+ * Populated by the `gitlab_configure` tool.
  */
 interface CustomConfig {
   token?: string;
@@ -54,7 +54,7 @@ interface CustomConfig {
 
 let customConfig: CustomConfig | undefined;
 
-/** Set custom config programmatically (called by gitlab-configure tool) */
+/** Set custom config programmatically (called by gitlab_configure tool) */
 export function setCustomConfig(config: CustomConfig | undefined): void {
   customConfig = config;
 }
@@ -90,12 +90,12 @@ async function server(input: PluginInput): Promise<Hooks> {
   /**
    * Resolve the GitLab token through the 3-tier fallback chain:
    *
-   *  1. customConfig.token — runtime-configured via gitlab-configure tool
+   *  1. customConfig.token — runtime-configured via gitlab_configure tool
    *  2. getSecret("gitlab") — server-injected secret (if available)
    *  3. process.env.GITLAB_TOKEN — environment variable fallback
    */
   async function resolveToken(): Promise<string | undefined> {
-    // Tier 1: custom config (from gitlab-configure tool)
+    // Tier 1: custom config (from gitlab_configure tool)
     if (customConfig?.token) {
       return customConfig.token;
     }
@@ -134,7 +134,7 @@ async function server(input: PluginInput): Promise<Hooks> {
     if (!resolvedToken) {
       throw new Error(
         "GitLab Personal Access Token (PAT) not configured. " +
-          "Set GITLAB_TOKEN environment variable, use the gitlab-configure tool, " +
+          "Set GITLAB_TOKEN environment variable, use the gitlab_configure tool, " +
           "or store your PAT via the plugin auth prompt.",
       );
     }
@@ -163,7 +163,7 @@ async function server(input: PluginInput): Promise<Hooks> {
     if (!resolvedToken) {
       throw new Error(
         "GitLab Personal Access Token (PAT) not configured. " +
-          "Set GITLAB_TOKEN environment variable, use the gitlab-configure tool, " +
+          "Set GITLAB_TOKEN environment variable, use the gitlab_configure tool, " +
           "or store your PAT via the plugin auth prompt.",
       );
     }
@@ -317,8 +317,8 @@ async function server(input: PluginInput): Promise<Hooks> {
 
       try {
         const client = await getGitLabClient();
-        const response = await client.request(
-          "gitlab-ping",
+          const response = await client.request(
+          "gitlab_ping",
           "/api/v4/user",
           undefined,
           context.abort,
@@ -366,15 +366,15 @@ async function server(input: PluginInput): Promise<Hooks> {
     auth: authHook,
     tool: {
       hello,
-      "gitlab-configure": configureTool,
-      "gitlab-ping": pingTool,
+      "gitlab_configure": configureTool,
+      "gitlab_ping": pingTool,
       ...issueTools,
       ...mrTools,
       ...projectTools,
       ...codeTools,
       ...userTools,
       ...richTools,
-      "gitlab.query": queryTool,
+      "gitlab_query": queryTool,
     },
   };
 }
@@ -388,7 +388,7 @@ async function server(input: PluginInput): Promise<Hooks> {
  * ```
  *
  * Configuration is read via the 3-tier fallback chain:
- * - `gitlab-configure` tool (runtime, top priority)
+ * - `gitlab_configure` tool (runtime, top priority)
  * - `getSecret("gitlab")` (server-injected, if available)
  * - `GITLAB_TOKEN` environment variable (fallback)
  */

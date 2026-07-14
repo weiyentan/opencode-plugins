@@ -1,12 +1,12 @@
 /**
  * query.ts — Generic GraphQL query passthrough tool for GitLab.
  *
- * gitlab.query: Executes an arbitrary GraphQL query against the GitLab API
+ * gitlab_query: Executes an arbitrary GraphQL query against the GitLab API
  * with auth injection and returns the full raw response.
  *
  * ## Tool
  *
- * - **gitlab.query** &mdash; Takes `query` (string) and optional `variables`
+ * - **gitlab_query** &mdash; Takes `query` (string) and optional `variables`
  *   (record), returns `_raw` with the full GraphQL response data. When the
  *   query returns schema errors, they are formatted as structured messages
  *   in the output string and `_raw` in metadata.
@@ -25,7 +25,7 @@ import type { GraphQLClient } from "../graphql.js";
 const z = tool.schema;
 
 /**
- * Create the gitlab.query tool.
+ * Create the gitlab_query tool.
  *
  * @param getGQL  Async factory that returns the GitLab GraphQL client
  * @returns A registered tool object

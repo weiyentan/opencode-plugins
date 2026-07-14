@@ -1,5 +1,5 @@
 /**
- * Test fixtures for gitlab.issue.get-full GraphQL responses.
+ * Test fixtures for gitlab_issue_get_full GraphQL responses.
  *
  * These fixtures simulate the shape of the GitLab GraphQL API response
  * for a project issue query with labels, notes, and linked merge requests.

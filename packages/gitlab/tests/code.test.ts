@@ -1,7 +1,7 @@
 /**
  * Code Search Tool Tests — GitLab Plugin
  *
- * Tests for gitlab.code.search.
+ * Tests for gitlab_code_search.
  */
 import { describe, it, expect, vi } from "vitest";
 import type { GitLabClient } from "../src/client.js";
@@ -67,10 +67,10 @@ function mockJsonResponse(data: unknown, status = 200): Response {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   gitlab.code.search
+   gitlab_code_search
    ══════════════════════════════════════════════════════════════════ */
 
-describe("gitlab.code.search", () => {
+describe("gitlab_code_search", () => {
   it("returns code search results in markdown format", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -78,7 +78,7 @@ describe("gitlab.code.search", () => {
     );
 
     const tools = createCodeTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.code.search"]!;
+    const toolDef = tools["gitlab_code_search"]!;
     const result = await toolDef.execute(
       { query: "hello", project_id: 42 },
       { abort: mockAbort() },
@@ -99,7 +99,7 @@ describe("gitlab.code.search", () => {
     );
 
     const tools = createCodeTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.code.search"]!;
+    const toolDef = tools["gitlab_code_search"]!;
     const result = await toolDef.execute(
       { query: "hello", project_id: 42, language: "python" },
       { abort: mockAbort() },
@@ -117,7 +117,7 @@ describe("gitlab.code.search", () => {
     );
 
     const tools = createCodeTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.code.search"]!;
+    const toolDef = tools["gitlab_code_search"]!;
     const result = await toolDef.execute(
       { query: "nonexistent", project_id: 42 },
       { abort: mockAbort() },
@@ -128,7 +128,7 @@ describe("gitlab.code.search", () => {
 
   it("respects abort signal", async () => {
     const tools = createCodeTools(() => Promise.resolve(createMockClient()));
-    const toolDef = tools["gitlab.code.search"]!;
+    const toolDef = tools["gitlab_code_search"]!;
     const controller = new AbortController();
     controller.abort();
 
@@ -147,7 +147,7 @@ describe("gitlab.code.search", () => {
     );
 
     const tools = createCodeTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.code.search"]!;
+    const toolDef = tools["gitlab_code_search"]!;
     const result = await toolDef.execute(
       { query: "test", project_id: 42 },
       { abort: mockAbort() },
@@ -161,7 +161,7 @@ describe("gitlab.code.search", () => {
     const tools = createCodeTools(() =>
       Promise.reject(new Error("No token configured")),
     );
-    const toolDef = tools["gitlab.code.search"]!;
+    const toolDef = tools["gitlab_code_search"]!;
     const result = await toolDef.execute(
       { query: "test", project_id: 42 },
       { abort: mockAbort() },

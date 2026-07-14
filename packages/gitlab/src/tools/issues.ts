@@ -7,11 +7,11 @@
  *
  * ## Tools
  *
- * - **gitlab.issue.list** &mdash; List issues for a project (filterable)
- * - **gitlab.issue.get** &mdash; Get a single issue by IID
- * - **gitlab.issue.create** &mdash; Create a new issue
- * - **gitlab.issue.update** &mdash; Update an existing issue (state, title, etc.)
- * - **gitlab.issue.comment** &mdash; Add a note/comment to an issue
+ * - **gitlab_issue_list** &mdash; List issues for a project (filterable)
+ * - **gitlab_issue_get** &mdash; Get a single issue by IID
+ * - **gitlab_issue_create** &mdash; Create a new issue
+ * - **gitlab_issue_update** &mdash; Update an existing issue (state, title, etc.)
+ * - **gitlab_issue_comment** &mdash; Add a note/comment to an issue
  *
  * ## GitLab API Differences from GitHub
  *
@@ -136,9 +136,9 @@ export function createIssueTools(
   getClient: () => Promise<GitLabClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── gitlab.issue.list ────────────────────────────────────── */
+    /* ── gitlab_issue_list ────────────────────────────────────── */
 
-    "gitlab.issue.list": tool({
+    "gitlab_issue_list": tool({
       description: [
         "List issues for a GitLab project. Supports filtering by state,",
         "labels, milestone, and search text. Returns paginated results",
@@ -239,7 +239,7 @@ export function createIssueTools(
         let response;
         try {
           response = await client.request(
-            "gitlab.issue.list",
+            "gitlab_issue_list",
             path,
             undefined,
             context.abort,
@@ -296,9 +296,9 @@ export function createIssueTools(
       },
     }),
 
-    /* ── gitlab.issue.get ─────────────────────────────────────── */
+    /* ── gitlab_issue_get ─────────────────────────────────────── */
 
-    "gitlab.issue.get": tool({
+    "gitlab_issue_get": tool({
       description: [
         "Get a single GitLab issue by its project-level IID (the number",
         "displayed in the UI, e.g., #42). Returns full issue details",
@@ -343,7 +343,7 @@ export function createIssueTools(
         let response;
         try {
           response = await client.request(
-            "gitlab.issue.get",
+            "gitlab_issue_get",
             path,
             undefined,
             context.abort,
@@ -419,9 +419,9 @@ export function createIssueTools(
       },
     }),
 
-    /* ── gitlab.issue.create ──────────────────────────────────── */
+    /* ── gitlab_issue_create ──────────────────────────────────── */
 
-    "gitlab.issue.create": tool({
+    "gitlab_issue_create": tool({
       description: [
         "Create a new issue in a GitLab project. At minimum, a title is",
         "required. Optionally set description, labels, milestone, and",
@@ -525,7 +525,7 @@ export function createIssueTools(
         let response;
         try {
           response = await client.request(
-            "gitlab.issue.create",
+            "gitlab_issue_create",
             path,
             {
               method: "POST",
@@ -571,9 +571,9 @@ export function createIssueTools(
       },
     }),
 
-    /* ── gitlab.issue.update ──────────────────────────────────── */
+    /* ── gitlab_issue_update ──────────────────────────────────── */
 
-    "gitlab.issue.update": tool({
+    "gitlab_issue_update": tool({
       description: [
         "Update an existing GitLab issue. Supports partial updates — only",
         "provided fields are modified. Can change state (close/reopen),",
@@ -697,7 +697,7 @@ export function createIssueTools(
         let response;
         try {
           response = await client.request(
-            "gitlab.issue.update",
+            "gitlab_issue_update",
             path,
             {
               method: "PUT",
@@ -744,9 +744,9 @@ export function createIssueTools(
       },
     }),
 
-    /* ── gitlab.issue.comment ─────────────────────────────────── */
+    /* ── gitlab_issue_comment ─────────────────────────────────── */
 
-    "gitlab.issue.comment": tool({
+    "gitlab_issue_comment": tool({
       description: [
         "Add a note (comment) to an existing GitLab issue. Uses GitLab's",
         "Notes API (POST /projects/:id/issues/:issue_iid/notes).",
@@ -799,7 +799,7 @@ export function createIssueTools(
         let response;
         try {
           response = await client.request(
-            "gitlab.issue.comment",
+            "gitlab_issue_comment",
             path,
             {
               method: "POST",

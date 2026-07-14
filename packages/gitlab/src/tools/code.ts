@@ -5,7 +5,7 @@
  *
  * ## Tool
  *
- * - **gitlab.code.search** — Search code across projects by query
+ * - **gitlab_code_search** — Search code across projects by query
  *
  * ## API Reference
  *
@@ -76,9 +76,9 @@ export function createCodeTools(
   getGitLabClient: () => Promise<GitLabClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── gitlab.code.search ──────────────────────────────────── */
+    /* ── gitlab_code_search ──────────────────────────────────── */
 
-    "gitlab.code.search": tool({
+    "gitlab_code_search": tool({
       description: [
         "Search code content across GitLab projects.",
         "Uses the GitLab project-scoped search API with scope=blobs.",
@@ -142,7 +142,7 @@ export function createCodeTools(
 
         try {
           const response = await client.request(
-            "gitlab.code.search",
+            "gitlab_code_search",
             path,
             undefined,
             context.abort,

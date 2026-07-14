@@ -1,7 +1,7 @@
 /**
  * Merge Request Tools Tests — GitLab Plugin
  *
- * Tests for gitlab.mr.list, gitlab.mr.get, gitlab.mr.create, gitlab.mr.merge.
+ * Tests for gitlab_mr_list, gitlab_mr_get, gitlab_mr_create, gitlab_mr_merge.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { GitLabClient } from "../src/client.js";
@@ -100,10 +100,10 @@ function mockJsonResponse(data: unknown, status = 200): Response {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   gitlab.mr.list
+   gitlab_mr_list
    ══════════════════════════════════════════════════════════════════ */
 
-describe("gitlab.mr.list", () => {
+describe("gitlab_mr_list", () => {
   it("returns a markdown list of merge requests", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -111,7 +111,7 @@ describe("gitlab.mr.list", () => {
     );
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.list"]!;
+    const toolDef = tools["gitlab_mr_list"]!;
     const result = await toolDef.execute(
       { project_id: 1 },
       { abort: mockAbort() },
@@ -133,7 +133,7 @@ describe("gitlab.mr.list", () => {
     );
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.list"]!;
+    const toolDef = tools["gitlab_mr_list"]!;
     await toolDef.execute(
       { project_id: 1, state: "merged" },
       { abort: mockAbort() },
@@ -151,7 +151,7 @@ describe("gitlab.mr.list", () => {
     );
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.list"]!;
+    const toolDef = tools["gitlab_mr_list"]!;
     await toolDef.execute(
       { project_id: 1, labels: "bug,frontend" },
       { abort: mockAbort() },
@@ -169,7 +169,7 @@ describe("gitlab.mr.list", () => {
     );
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.list"]!;
+    const toolDef = tools["gitlab_mr_list"]!;
     const result = await toolDef.execute(
       { project_id: 1 },
       { abort: mockAbort() },
@@ -181,7 +181,7 @@ describe("gitlab.mr.list", () => {
   it("respects abort signal", async () => {
     const client = createMockClient();
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.list"]!;
+    const toolDef = tools["gitlab_mr_list"]!;
     const controller = new AbortController();
     controller.abort();
 
@@ -200,7 +200,7 @@ describe("gitlab.mr.list", () => {
     );
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.list"]!;
+    const toolDef = tools["gitlab_mr_list"]!;
     const result = await toolDef.execute(
       { project_id: 999 },
       { abort: mockAbort() },
@@ -212,10 +212,10 @@ describe("gitlab.mr.list", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════
-   gitlab.mr.get
+   gitlab_mr_get
    ══════════════════════════════════════════════════════════════════ */
 
-describe("gitlab.mr.get", () => {
+describe("gitlab_mr_get", () => {
   it("returns full merge request details", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>)
@@ -223,7 +223,7 @@ describe("gitlab.mr.get", () => {
       .mockResolvedValueOnce(mockJsonResponse(SAMPLE_COMMITS));
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.get"]!;
+    const toolDef = tools["gitlab_mr_get"]!;
     const result = await toolDef.execute(
       { project_id: 1, iid: 1 },
       { abort: mockAbort() },
@@ -245,7 +245,7 @@ describe("gitlab.mr.get", () => {
       .mockRejectedValueOnce(new Error("Commits API error"));
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.get"]!;
+    const toolDef = tools["gitlab_mr_get"]!;
     const result = await toolDef.execute(
       { project_id: 1, iid: 1 },
       { abort: mockAbort() },
@@ -258,7 +258,7 @@ describe("gitlab.mr.get", () => {
 
   it("respects abort signal", async () => {
     const tools = createMRTools(() => Promise.resolve(createMockClient()));
-    const toolDef = tools["gitlab.mr.get"]!;
+    const toolDef = tools["gitlab_mr_get"]!;
     const controller = new AbortController();
     controller.abort();
 
@@ -277,7 +277,7 @@ describe("gitlab.mr.get", () => {
     );
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.get"]!;
+    const toolDef = tools["gitlab_mr_get"]!;
     const result = await toolDef.execute(
       { project_id: 1, iid: 999 },
       { abort: mockAbort() },
@@ -289,10 +289,10 @@ describe("gitlab.mr.get", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════
-   gitlab.mr.create
+   gitlab_mr_create
    ══════════════════════════════════════════════════════════════════ */
 
-describe("gitlab.mr.create", () => {
+describe("gitlab_mr_create", () => {
   it("creates a merge request successfully", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -300,7 +300,7 @@ describe("gitlab.mr.create", () => {
     );
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.create"]!;
+    const toolDef = tools["gitlab_mr_create"]!;
     const result = await toolDef.execute(
       {
         project_id: 1,
@@ -331,7 +331,7 @@ describe("gitlab.mr.create", () => {
     );
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.create"]!;
+    const toolDef = tools["gitlab_mr_create"]!;
     await toolDef.execute(
       {
         project_id: 1,
@@ -353,7 +353,7 @@ describe("gitlab.mr.create", () => {
 
   it("respects abort signal", async () => {
     const tools = createMRTools(() => Promise.resolve(createMockClient()));
-    const toolDef = tools["gitlab.mr.create"]!;
+    const toolDef = tools["gitlab_mr_create"]!;
     const controller = new AbortController();
     controller.abort();
 
@@ -372,10 +372,10 @@ describe("gitlab.mr.create", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════
-   gitlab.mr.merge
+   gitlab_mr_merge
    ══════════════════════════════════════════════════════════════════ */
 
-describe("gitlab.mr.merge", () => {
+describe("gitlab_mr_merge", () => {
   it("merges a merge request successfully", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -383,7 +383,7 @@ describe("gitlab.mr.merge", () => {
     );
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.merge"]!;
+    const toolDef = tools["gitlab_mr_merge"]!;
     const result = await toolDef.execute(
       { project_id: 1, iid: 1 },
       { abort: mockAbort() },
@@ -405,7 +405,7 @@ describe("gitlab.mr.merge", () => {
     );
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.merge"]!;
+    const toolDef = tools["gitlab_mr_merge"]!;
     await toolDef.execute(
       {
         project_id: 1,
@@ -425,7 +425,7 @@ describe("gitlab.mr.merge", () => {
 
   it("respects abort signal", async () => {
     const tools = createMRTools(() => Promise.resolve(createMockClient()));
-    const toolDef = tools["gitlab.mr.merge"]!;
+    const toolDef = tools["gitlab_mr_merge"]!;
     const controller = new AbortController();
     controller.abort();
 
@@ -444,7 +444,7 @@ describe("gitlab.mr.merge", () => {
     );
 
     const tools = createMRTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.mr.merge"]!;
+    const toolDef = tools["gitlab_mr_merge"]!;
     const result = await toolDef.execute(
       { project_id: 1, iid: 1 },
       { abort: mockAbort() },

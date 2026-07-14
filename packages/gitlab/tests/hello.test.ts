@@ -56,10 +56,10 @@ describe("GitLab Plugin — entry point", () => {
     expect(hooks.auth).toBeDefined();
   });
 
-  it("creates hooks with gitlab-configure tool", async () => {
+  it("creates hooks with gitlab_configure tool", async () => {
     const hooks = await GitLabPlugin(mockPluginInput());
     expect(hooks.tool).toBeDefined();
-    expect(hooks.tool!["gitlab-configure"]).toBeDefined();
+    expect(hooks.tool!["gitlab_configure"]).toBeDefined();
   });
 
   it("hello tool responds with greeting", async () => {
@@ -131,10 +131,10 @@ describe("GitLab Plugin — custom config (Tier 1 auth fallback)", () => {
   });
 });
 
-describe("GitLab Plugin — gitlab-configure tool", () => {
-  it("sets token via gitlab-configure tool", async () => {
+describe("GitLab Plugin — gitlab_configure tool", () => {
+  it("sets token via gitlab_configure tool", async () => {
     const hooks = await GitLabPlugin(mockPluginInput());
-    const configureTool = hooks.tool!["gitlab-configure"]!;
+    const configureTool = hooks.tool!["gitlab_configure"]!;
 
     const result = await configureTool.execute(
       { token: "glpat-configured" },
@@ -145,9 +145,9 @@ describe("GitLab Plugin — gitlab-configure tool", () => {
     expect(getCustomConfig()!.token).toBe("glpat-configured");
   });
 
-  it("gitlab-configure respects abort", async () => {
+  it("gitlab_configure respects abort", async () => {
     const hooks = await GitLabPlugin(mockPluginInput());
-    const configureTool = hooks.tool!["gitlab-configure"]!;
+    const configureTool = hooks.tool!["gitlab_configure"]!;
     const controller = new AbortController();
     controller.abort();
 

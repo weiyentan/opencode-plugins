@@ -1,5 +1,5 @@
 /**
- * Unit tests for gitlab.query (generic GraphQL passthrough).
+ * Unit tests for gitlab_query (generic GraphQL passthrough).
  *
  * Tests Zod validation, output shape including _raw,
  * and GraphQL error surfacing.
@@ -39,7 +39,7 @@ const mockContext = { abort: undefined as any };
 
 /* ── Tests ────────────────────────────────────────────────────── */
 
-describe("gitlab.query", () => {
+describe("gitlab_query", () => {
   beforeEach(async () => {
     createQueryTool = (await import("../src/tools/query.js")).createQueryTool;
   });
