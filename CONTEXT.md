@@ -43,7 +43,7 @@ An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Follows
 Tools are designed for platform portability. Each tool has an abstract shape (list, get, create, search) mapped to each platform's API. The tool surface is intentionally generic — only concepts that exist on both platforms are included in the initial feature set. Platform-specific tools (e.g., PR reviews, GitLab-specific features) are deferred to later iterations.
 
 ### Tool Namespace Convention
-- GitHub tools use dot-notation with platform prefix: `github.issue.list`, `github.pr.create`, `github.code.search`
+- GitHub tools use underscore-notation with platform prefix: `github_issue_list`, `github_pr_create`, `github_code_search`
 - GitLab tools use underscore-notation with platform prefix: `gitlab_issue_list`, `gitlab_mr_create`, `gitlab_code_search`
 - Merge requests use `mr` (not `pr`) in GitLab tool names to match GitLab's native terminology
 

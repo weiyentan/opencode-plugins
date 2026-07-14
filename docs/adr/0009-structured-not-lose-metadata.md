@@ -14,7 +14,7 @@ For the GitHub and GitLab plugins, we want tool output that is:
 
 We also considered two alternatives:
 
-1. **Raw passthrough** — return `metadata: { raw: fullApiResponse }` with no curation. Simple but noisy. A `github.issue.list` with 30 issues could dump 25-40 KB of JSON into context.
+1. **Raw passthrough** — return `metadata: { raw: fullApiResponse }` with no curation. Simple but noisy. A `github_issue_list` with 30 issues could dump 25-40 KB of JSON into context.
 
 2. **Strict contracts** — like AWX. Clean but lossy. Fields not in the contract are invisible to the agent.
 

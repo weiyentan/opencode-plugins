@@ -36,7 +36,7 @@ The tool surface is designed for **platform portability** — only concepts that
 ## Implementation Decisions
 
 ### Tool Namespace Convention
-- GitHub tools use dot-notation with `github.` prefix: `github.issue.list`, `github.pr.create`, `github.code.search`
+- GitHub tools use underscore-notation with `github_` prefix: `github_issue_list`, `github_pr_create`, `github_code_search`
 - GitLab tools use underscore-notation with `gitlab_` prefix: `gitlab_issue_list`, `gitlab_mr_create`, `gitlab_code_search`
 - Merge requests use `mr` (not `pr`) in GitLab tool names to match GitLab's native terminology
 
