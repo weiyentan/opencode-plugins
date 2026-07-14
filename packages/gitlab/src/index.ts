@@ -38,31 +38,10 @@ import { createCodeTools } from "./tools/code.js";
 import { createUserTools } from "./tools/user.js";
 import { createRichTools } from "./tools/rich.js";
 import { createQueryTool } from "./tools/query.js";
+import { getCustomConfig, setCustomConfig } from "./runtime-config.js";
+import type { CustomConfig } from "./runtime-config.js";
 
 const z = tool.schema;
-
-/* ── Custom Configuration (Tier 1 of auth fallback) ───────────── */
-
-/**
- * Module-level storage for runtime-configured credentials.
- * Populated by the `gitlab_configure` tool.
- */
-interface CustomConfig {
-  token?: string;
-  baseUrl?: string;
-}
-
-let customConfig: CustomConfig | undefined;
-
-/** Set custom config programmatically (called by gitlab_configure tool) */
-export function setCustomConfig(config: CustomConfig | undefined): void {
-  customConfig = config;
-}
-
-/** Get the current custom config (for use in getGitLabClient fallback chain) */
-export function getCustomConfig(): CustomConfig | undefined {
-  return customConfig;
-}
 
 /* ── Plugin Server Function ───────────────────────────────────── */
 
@@ -96,8 +75,9 @@ async function server(input: PluginInput): Promise<Hooks> {
    */
   async function resolveToken(): Promise<string | undefined> {
     // Tier 1: custom config (from gitlab_configure tool)
-    if (customConfig?.token) {
-      return customConfig.token;
+    const cfg = getCustomConfig();
+    if (cfg?.token) {
+      return cfg.token;
     }
 
     // Tier 2: server-injected secret (if the OpenCode server provides it)
@@ -140,7 +120,7 @@ async function server(input: PluginInput): Promise<Hooks> {
     }
 
     const resolvedBaseUrl =
-      customConfig?.baseUrl ??
+      getCustomConfig()?.baseUrl ??
       process.env.GITLAB_BASE_URL ??
       "https://gitlab.com";
 
@@ -169,7 +149,7 @@ async function server(input: PluginInput): Promise<Hooks> {
     }
 
     const resolvedBaseUrl =
-      customConfig?.baseUrl ??
+      getCustomConfig()?.baseUrl ??
       process.env.GITLAB_BASE_URL ??
       "https://gitlab.com";
 
@@ -192,9 +172,10 @@ async function server(input: PluginInput): Promise<Hooks> {
 
         try {
           const resolvedBaseUrl =
-            customConfig?.baseUrl ??
+            getCustomConfig()?.baseUrl ??
             process.env.GITLAB_BASE_URL ??
             "https://gitlab.com";
+
           const result = await validateToken(
             resolvedBaseUrl,
             storedToken,
@@ -285,7 +266,7 @@ async function server(input: PluginInput): Promise<Hooks> {
       }
 
       const mergedConfig: CustomConfig = {
-        ...(customConfig ?? {}),
+        ...(getCustomConfig() ?? {}),
         ...(args.token ? { token: args.token } : {}),
         ...(args.baseUrl ? { baseUrl: args.baseUrl } : {}),
       };
