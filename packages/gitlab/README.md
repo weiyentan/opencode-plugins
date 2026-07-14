@@ -43,7 +43,7 @@ All tools are registered with `gitlab_*` namespace.
 | `gitlab_mr_get_full` | Fetch a single MR with commits (first 30), discussions, pipelines, merge status, approvals, and diff stats (GraphQL) |
 | `gitlab_issue_search` | Cross-project issue search with rich results including project context and labels (GraphQL) |
 | `gitlab_project_get_full` | Fetch a project with description, languages, README summary, top-level file tree, recent activity, and stats (GraphQL) |
-| `gitlab_query` | Execute an arbitrary GraphQL query against the GitLab API |
+| `gitlab_query` | Execute an arbitrary GraphQL query against the GitLab API — response data surfaced as formatted JSON in output |
 
 ### REST Issue Tools
 
@@ -68,8 +68,9 @@ All tools are registered with `gitlab_*` namespace.
 
 | Tool | Description |
 |------|-------------|
-| `gitlab_project_get` | Get project metadata — description, topics, language, star/fork counts, visibility, repo URLs |
-| `gitlab_project_search` | Search projects by query string |
+| `gitlab_project_get` | Get project metadata by project ID or full path — description, topics, language, star/fork counts, visibility, repo URLs |
+| `gitlab_project_search` | Search ALL GitLab projects globally by query string — optional `membership` and `owned` params to narrow results |
+| `gitlab_project_list` | List projects accessible to the authenticated user — defaults to membership scope, supports search, owned, visibility, sort filters |
 | `gitlab_code_search` | Search code content across projects — filter by project ID and language |
 
 ### REST User Tool
@@ -100,7 +101,7 @@ The PAT requires at least `read_user` and `api` scopes.
 | `src/pagination.ts` | GitLab pagination utilities — Link header parsing and numeric page helpers |
 | `src/tools/issues.ts` | REST-powered issue tools — list, get, create, update, comment |
 | `src/tools/mrs.ts` | REST-powered merge request tools — list, get, create, merge |
-| `src/tools/projects.ts` | REST-powered project tools — get, search |
+| `src/tools/projects.ts` | REST-powered project tools — get, search, list |
 | `src/tools/code.ts` | REST-powered code search tool |
 | `src/tools/user.ts` | REST-powered user profile tool |
 | `src/tools/rich.ts` | GraphQL-powered rich tools — gitlab_issue_get_full, gitlab_mr_get_full, gitlab_issue_search, gitlab_project_get_full |
