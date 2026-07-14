@@ -1,7 +1,7 @@
 /**
  * Unit tests for gitlab_query (generic GraphQL passthrough).
  *
- * Tests Zod validation, output shape including _raw,
+ * Tests Zod validation, output shape including surfaced data,
  * and GraphQL error surfacing.
  */
 
@@ -71,7 +71,7 @@ describe("gitlab_query", () => {
   });
 
   describe("output shape", () => {
-    it("returns _raw in metadata on success", async () => {
+    it("includes data in human-readable output on success", async () => {
       const gql = mockGQL(VIEWER_QUERY_RESPONSE);
       const tool = createQueryTool(() => Promise.resolve(gql));
       const result = await (tool as any).execute(
@@ -79,9 +79,22 @@ describe("gitlab_query", () => {
         mockContext,
       );
 
-      expect(result.output).toBe("Query executed successfully.");
+      // Output should contain the data, not just a static message
+      expect(result.output).toContain("testuser");
+      expect(result.output).toContain("currentUser");
       expect(result.metadata).toBeDefined();
       expect((result.metadata as Record<string, unknown>)._raw).toEqual(VIEWER_QUERY_RESPONSE);
+    });
+
+    it("surfaces null data gracefully", async () => {
+      const gql = mockGQL(null);
+      const tool = createQueryTool(() => Promise.resolve(gql));
+      const result = await (tool as any).execute(
+        { query: "query { nonexistent }" },
+        mockContext,
+      );
+
+      expect(result.output).toContain("no data");
     });
   });
 
