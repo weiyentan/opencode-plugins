@@ -76,24 +76,24 @@ An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Uses Gr
 | `hello` | Sanity-check tool — verifies plugin load |
 | `gitlab-configure` | Configure the GitLab plugin at runtime (sets PAT) |
 | `gitlab-ping` | Verify REST and GraphQL connectivity to GitLab |
-| `gitlab.issue.get-full` | Issue with notes, linked MRs, system events (GraphQL) |
-| `gitlab.mr.get-full` | MR with commits, discussions, pipelines, approvals (GraphQL) |
-| `gitlab.issue.search` | Cross-project issue search with rich results (GraphQL) |
-| `gitlab.project.get-full` | Project with languages, README, file tree, activity (GraphQL) |
-| `gitlab.query` | Arbitrary GraphQL query passthrough |
-| `gitlab.issue.list` | List issues — filterable by state, labels, milestone |
-| `gitlab.issue.get` | Get a single issue by IID |
-| `gitlab.issue.create` | Create a new issue |
-| `gitlab.issue.update` | Update an existing issue |
-| `gitlab.issue.comment` | Comment on an issue |
-| `gitlab.mr.list` | List merge requests |
-| `gitlab.mr.get` | Get a single MR with diff stats |
-| `gitlab.mr.create` | Create a new merge request |
-| `gitlab.mr.merge` | Merge a merge request |
-| `gitlab.project.get` | Get project metadata |
-| `gitlab.project.search` | Search projects |
-| `gitlab.code.search` | Search code across projects |
-| `gitlab.user.get` | Get current user profile |
+| `gitlab_issue_get_full` | Issue with notes, linked MRs, system events (GraphQL) |
+| `gitlab_mr_get_full` | MR with commits, discussions, pipelines, approvals (GraphQL) |
+| `gitlab_issue_search` | Cross-project issue search with rich results (GraphQL) |
+| `gitlab_project_get_full` | Project with languages, README, file tree, activity (GraphQL) |
+| `gitlab_query` | Arbitrary GraphQL query passthrough |
+| `gitlab_issue_list` | List issues — filterable by state, labels, milestone |
+| `gitlab_issue_get` | Get a single issue by IID |
+| `gitlab_issue_create` | Create a new issue |
+| `gitlab_issue_update` | Update an existing issue |
+| `gitlab_issue_comment` | Comment on an issue |
+| `gitlab_mr_list` | List merge requests |
+| `gitlab_mr_get` | Get a single MR with diff stats |
+| `gitlab_mr_create` | Create a new merge request |
+| `gitlab_mr_merge` | Merge a merge request |
+| `gitlab_project_get` | Get project metadata |
+| `gitlab_project_search` | Search projects |
+| `gitlab_code_search` | Search code across projects |
+| `gitlab_user_get` | Get current user profile |
 
 **Key docs:**
 - [Package README](packages/gitlab/README.md)
@@ -101,7 +101,7 @@ An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Uses Gr
 
 ### Portability Principle
 
-Both the GitHub and GitLab plugins share a common architecture (GraphQL-powered rich tools, auth hooks, middleware pipelines) mapped to each platform's API. Tool names use platform-specific prefixes (`github.*`, `gitlab.*`) with dot-notation namespacing. See the [Domain Glossary](CONTEXT.md) for tool namespace conventions and design principles.
+Both the GitHub and GitLab plugins share a common architecture (GraphQL-powered rich tools, auth hooks, middleware pipelines) mapped to each platform's API. GitHub tool names use dot-notation (`github.*`) while GitLab tool names use underscore-notation (`gitlab_*`). See the [Domain Glossary](CONTEXT.md) for tool namespace conventions and design principles.
 
 ## Repository Structure
 
