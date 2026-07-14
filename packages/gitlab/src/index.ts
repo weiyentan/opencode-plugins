@@ -317,7 +317,7 @@ async function server(input: PluginInput): Promise<Hooks> {
 
       try {
         const client = await getGitLabClient();
-          const response = await client.request(
+        const response = await client.request(
           "gitlab_ping",
           "/api/v4/user",
           undefined,
