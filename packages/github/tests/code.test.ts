@@ -71,6 +71,11 @@ describe("github_code_search", () => {
         mockContext,
       );
       expect(result.metadata).toBeDefined();
+
+      // Regression: verify qualifier values are not double-encoded
+      const pathArg = (client.request as ReturnType<typeof vi.fn>).mock.calls[0][1] as string;
+      const qValue = new URLSearchParams(pathArg.split("?")[1] ?? "").get("q");
+      expect(qValue).toBe("hello language:typescript repo:owner/repo path:src/");
     });
   });
 
