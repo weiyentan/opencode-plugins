@@ -6,8 +6,12 @@ const READ_ONLY_PREFIXES = ["SELECT", "PRAGMA", "EXPLAIN", "WITH"];
 function validateReadOnly(sql: string): void {
   const trimmed = sql.trim();
 
+  // Strip content inside single-quoted strings so we don't false-positive on
+  // semicolons that appear inside string literals (e.g. WHERE name = 'O;Brien')
+  const stripped = trimmed.replace(/'[^']*'/g, "");
+
   // Reject multi-statement input (semicolons appearing before the end)
-  if (trimmed.includes(";") && !trimmed.endsWith(";")) {
+  if (stripped.includes(";") && !stripped.endsWith(";")) {
     throw new Error(
       `Multi-statement input is not allowed. Please provide a single SQL statement.\n` +
       `Only read-only queries are supported: SELECT, PRAGMA, EXPLAIN, WITH`
@@ -15,7 +19,8 @@ function validateReadOnly(sql: string): void {
   }
   // Handle trailing semicolon
   const normalized = trimmed.replace(/;\s*$/, "").trim();
-  if (normalized.includes(";")) {
+  const strippedNormalized = normalized.replace(/'[^']*'/g, "");
+  if (strippedNormalized.includes(";")) {
     throw new Error(
       `Multi-statement input is not allowed. Please provide a single SQL statement.\n` +
       `Only read-only queries are supported: SELECT, PRAGMA, EXPLAIN, WITH`

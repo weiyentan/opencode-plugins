@@ -32,9 +32,10 @@ export function createSchemaTool(getDb: () => Database) {
           };
         }
 
-        // Get column info via PRAGMA table_info
+        // Escape double quotes in table name to prevent PRAGMA injection
+        const safeTable = args.table.replace(/"/g, '""');
         const columns = database.pragma(
-          `table_info("${args.table}")`,
+          `table_info("${safeTable}")`,
         ) as Array<{
           cid: number;
           name: string;
