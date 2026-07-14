@@ -1,6 +1,6 @@
 {
   "name": "@weiyentan/opencode-plugin-gitlab",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": false,
   "description": "OpenCode plugin for GitLab — native tool access to projects, merge requests, issues, and repository operations.",
   "type": "module",
@@ -24,6 +24,9 @@
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.17.8"
   },
   "devDependencies": {
     "@types/node": "^24.12.2",
