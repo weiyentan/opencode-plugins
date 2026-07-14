@@ -92,7 +92,8 @@ The PAT requires at least `read_user` and `api` scopes.
 
 | Module | Purpose |
 |--------|---------|
-| `src/index.ts` | Plugin entry point — wires auth hook and tools into the Hooks shape |
+| `src/index.ts` | Plugin entry point — wires auth hook and tools into the Hooks shape; exports only `GitLabPlugin` and `default` (see ADR-0007) |
+| `src/runtime-config.ts` | Runtime configuration store — `CustomConfig` interface, `setCustomConfig()`, `getCustomConfig()`; kept separate from entry point per ADR-0007 |
 | `src/auth.ts` | PAT authentication via `authorize()` hook, init-time token validation |
 | `src/client.ts` | HTTP middleware pipeline with circuit breaker, rate-limit parsing, and retry/backoff |
 | `src/graphql.ts` | GraphQL API wrapper using native `fetch` (no SDK dependency) |

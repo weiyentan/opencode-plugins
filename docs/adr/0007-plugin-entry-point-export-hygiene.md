@@ -25,6 +25,7 @@ If tests or external consumers need access to internal utilities, they must impo
 ## Consequences
 
 - `setCustomConfig` and `getCustomConfig` were extracted into `src/runtime-config.ts`, which `index.ts` imports internally without re-exporting.
+- The GitLab plugin now follows the same pattern: `setCustomConfig`, `getCustomConfig`, and `CustomConfig` were extracted from `src/index.ts` into `src/runtime-config.ts`. Its entry point exports only `GitLabPlugin` and `default`.
 - Test files that need `setCustomConfig` import it from `../src/runtime-config.js` directly.
 - The npm package's `exports` field maps only `"."` to `"./dist/index.js"`, so the sub-module is unreachable via bare package imports — reinforcing the barrier.
 - Future tool implementations, helper functions, and config stores must follow this pattern from the start.
