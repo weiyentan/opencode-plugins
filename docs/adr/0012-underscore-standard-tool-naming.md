@@ -60,8 +60,7 @@ New tools added to grandfathered plugins SHOULD follow underscore notation where
 **Negative:**
 
 - **AWX remains divergent** — AWX hyphen-notation is shipped and cannot be changed without breaking existing integrations. The monorepo will never be fully uniform.
-- **CONTEXT.md needs updating** — The documentation in `CONTEXT.md` currently describes GitHub tool naming as dot-notation; it must be corrected to reflect actual underscore usage.
-- **Dot-notation still mentioned in CONTEXT.md** — Outdated documentation may confuse readers until it is corrected.
+- **Documentation aligned** — CONTEXT.md, README.md, ADR 0009, and the GitHub/GitLab plugin PRD already reflect underscore notation for tool names. No documentation updates are needed alongside this ADR.
 - **Minor migration friction for SQLite** — If any SQLite design documents were drafted with dot-notation placeholders, they need to be updated before implementation.
 
 ## Alternatives Considered
