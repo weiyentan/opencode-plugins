@@ -1,6 +1,6 @@
 {
   "name": "@weiyentan/opencode-plugin-gitlab",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": false,
   "description": "OpenCode plugin for GitLab — native tool access to projects, merge requests, issues, and repository operations.",
   "type": "module",
