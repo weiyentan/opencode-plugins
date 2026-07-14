@@ -4,6 +4,7 @@
 [![awx](https://img.shields.io/npm/v/@weiyentan/opencode-plugin-awx?label=awx)](https://www.npmjs.com/package/@weiyentan/opencode-plugin-awx)
 [![github](https://img.shields.io/npm/v/@weiyentan/opencode-plugin-github?label=github)](https://www.npmjs.com/package/@weiyentan/opencode-plugin-github)
 [![gitlab](https://img.shields.io/npm/v/@weiyentan/opencode-plugin-gitlab?label=gitlab)](https://www.npmjs.com/package/@weiyentan/opencode-plugin-gitlab)
+[![sqlite](https://img.shields.io/npm/v/@weiyentan/opencode-plugin-sqlite?label=sqlite)](https://www.npmjs.com/package/@weiyentan/opencode-plugin-sqlite)
 [![License](https://img.shields.io/github/license/weiyentan/opencode-plugins)](LICENSE)
 
 A monorepo of [OpenCode](https://opencode.ai) server plugins that extend the OpenCode agent with first-class tool integrations.
@@ -99,6 +100,22 @@ An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Uses Gr
 - [Package README](packages/gitlab/README.md)
 - [PRD — GitHub/GitLab Plugin MVP](docs/prd/github-gitlab-plugin-mvp.md)
 
+### SQLite Plugin (`packages/sqlite/`)
+
+An OpenCode plugin for read-only SQLite database queries. Provides tools to inspect tables, view schemas, and execute read-only SQL — ideal for agentic access to local SQLite databases (e.g., OpenCode's own state database).
+
+**Status:** ✅ Initial release — 3 tools covering table listing, schema inspection, and read-only query execution.
+
+**Tools:**
+| Tool | Description |
+|------|-------------|
+| `sqlite_tables` | List all tables in the connected SQLite database |
+| `sqlite_schema` | Get schema (columns, types, nullability, defaults, PK) for a specific table |
+| `sqlite_query` | Execute a read-only SQL query (SELECT, PRAGMA, EXPLAIN, WITH) with markdown table output |
+
+**Key docs:**
+- [Package README](packages/sqlite/README.md)
+
 ### Portability Principle
 
 Both the GitHub and GitLab plugins share a common architecture (GraphQL-powered rich tools, auth hooks, middleware pipelines) mapped to each platform's API. GitHub tool names use underscore-notation (`github_*`) while GitLab tool names use underscore-notation (`gitlab_*`). See the [Domain Glossary](CONTEXT.md) for tool namespace conventions and design principles.
@@ -117,7 +134,8 @@ docs/
 packages/
 ├── awx/                    # AWX plugin package (auth, contracts, transforms, job lifecycle, CRUD mutation tools, resource detail tools)
 ├── github/                 # GitHub plugin package (issues, PRs, repos, code search, GraphQL rich tools)
-└── gitlab/                 # GitLab plugin package (issues, MRs, projects, code search, GraphQL queries)
+├── gitlab/                 # GitLab plugin package (issues, MRs, projects, code search, GraphQL queries)
+└── sqlite/                 # SQLite plugin package (read-only database queries, table listing, schema inspection)
 ```
 
 ## Development
@@ -203,6 +221,32 @@ export GITLAB_TOKEN="your_pat_here"
 ```
 
 Or configure at runtime with the `gitlab-configure` tool. See [packages/gitlab/README.md](packages/gitlab/README.md) for all available tools.
+
+#### SQLite Plugin
+
+```bash
+npm install @weiyentan/opencode-plugin-sqlite
+```
+
+Add to `opencode.jsonc`:
+
+```jsonc
+{ "plugin": ["@weiyentan/opencode-plugin-sqlite"] }
+```
+
+Set the database path (defaults to `~/.local/share/opencode/opencode.db`):
+
+```bash
+export OPENCODE_DB_PATH="/path/to/your/database.sqlite"
+```
+
+Available tools:
+
+```
+/sqlite_tables                      # List all tables
+/sqlite_schema --table my_table     # Inspect a table schema
+/sqlite_query --sql "SELECT * FROM my_table LIMIT 10"  # Run a read-only query
+```
 
 For a complete reference of all AWX tools and their arguments, see `packages/awx/README.md` or the [issue tracker](https://github.com/weiyentan/opencode-plugins/issues).
 
