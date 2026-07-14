@@ -6,7 +6,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PluginInput, Hooks, ToolContext } from "@opencode-ai/plugin";
-import { GitLabPlugin, getCustomConfig, setCustomConfig } from "../src/index.js";
+import { GitLabPlugin } from "../src/index.js";
+import { getCustomConfig, setCustomConfig } from "../src/runtime-config.js";
 
 /** Minimal mock of ToolContext */
 function mockToolContext(overrides?: Partial<ToolContext>): ToolContext {
@@ -92,17 +93,10 @@ describe("GitLab Plugin — entry point", () => {
     expect(result).toEqual({ output: "Request was aborted." });
   });
 
-  it("export surface includes GitLabPlugin, default, getCustomConfig, and setCustomConfig", async () => {
+  it("export surface includes GitLabPlugin and default only", async () => {
     const importedModule = await import("../src/index.js");
     const keys = Object.keys(importedModule).sort();
-    expect(keys).toEqual(
-      [
-        "GitLabPlugin",
-        "default",
-        "getCustomConfig",
-        "setCustomConfig",
-      ].sort(),
-    );
+    expect(keys).toEqual(["GitLabPlugin", "default"].sort());
   });
 });
 
