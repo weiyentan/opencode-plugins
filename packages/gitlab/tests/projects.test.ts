@@ -104,7 +104,7 @@ describe("gitlab_project_get", () => {
     expect((result.metadata! as any)._raw).toEqual(SAMPLE_PROJECT);
   });
 
-  it("handles string project path", async () => {
+  it("encodes namespaced path for REST API", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
       mockJsonResponse(SAMPLE_PROJECT),
@@ -119,7 +119,45 @@ describe("gitlab_project_get", () => {
 
     const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
       .calls[0][1] as string;
-    expect(requestUrl).toContain("group/my-project");
+    expect(requestUrl).toContain("group%2Fmy-project");
+    expect(requestUrl).not.toContain("group/my-project");
+  });
+
+  it("does not double-encode already-encoded path", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECT),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_get"]!;
+    await toolDef.execute(
+      { project_id: "group%2Fmy-project" },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("group%2Fmy-project");
+    expect(requestUrl).not.toContain("%252F");
+  });
+
+  it("passes numeric ID through unchanged", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECT),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_get"]!;
+    await toolDef.execute(
+      { project_id: 42 },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("/api/v4/projects/42");
   });
 
   it("respects abort signal", async () => {

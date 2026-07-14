@@ -92,6 +92,43 @@ describe("gitlab_code_search", () => {
     expect((result.metadata! as any).query).toBe("hello");
   });
 
+  it("encodes namespaced project path in request URL", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_CODE_RESULTS),
+    );
+
+    const tools = createCodeTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_code_search"]!;
+    await toolDef.execute(
+      { query: "hello", project_id: "group/my-project" },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("/api/v4/projects/group%2Fmy-project/search");
+  });
+
+  it("does not double-encode already-encoded path", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_CODE_RESULTS),
+    );
+
+    const tools = createCodeTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_code_search"]!;
+    await toolDef.execute(
+      { query: "hello", project_id: "group%2Fmy-project" },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("/api/v4/projects/group%2Fmy-project/search");
+    expect(requestUrl).not.toContain("%252F");
+  });
+
   it("filters by language when specified", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(

@@ -25,6 +25,26 @@ import type { GitLabClient } from "../client.js";
 
 const z = tool.schema;
 
+/* ── Project ID encoding ───────────────────────────────────────── */
+
+/**
+ * URL-encode a project ID for use in GitLab REST API paths.
+ *
+ * Numeric IDs are used as-is. String paths (e.g., "namespace/project")
+ * are URL-encoded to turn "/" into "%2F". Already-encoded paths
+ * containing "%2F" are passed through without double-encoding.
+ */
+function encodeProjectId(projectId: string | number): string {
+  if (typeof projectId === "number") {
+    return String(projectId);
+  }
+  // Avoid double-encoding: if the path already contains %2F, pass through
+  if (projectId.includes("%2F")) {
+    return projectId;
+  }
+  return encodeURIComponent(projectId);
+}
+
 /* ── Response type helpers ─────────────────────────────────────── */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -93,7 +113,7 @@ export function createCodeTools(
         project_id: z
           .union([z.string(), z.number()])
           .describe(
-            "Project ID (number) or URL-encoded path (e.g., 'group/subgroup/project') to search within.",
+            "Project ID (number) or full path (e.g., 'group/subgroup/project') to search within.",
           ),
         language: z
           .string()
@@ -132,13 +152,14 @@ export function createCodeTools(
           };
         }
 
+        const encodedId = encodeProjectId(args.project_id);
         const params = new URLSearchParams();
         params.set("scope", "blobs");
         params.set("search", args.query);
         params.set("per_page", String(args.per_page ?? 20));
 
         const path =
-          `/api/v4/projects/${args.project_id}/search?${params.toString()}`;
+          `/api/v4/projects/${encodedId}/search?${params.toString()}`;
 
         try {
           const response = await client.request(
