@@ -120,9 +120,9 @@ export function createCodeTools(
 
         // Build search query with qualifiers
         let searchQuery = args.query;
-        if (args.language) searchQuery += ` language:${encodeURIComponent(args.language)}`;
-        if (args.repo) searchQuery += ` repo:${encodeURIComponent(args.repo)}`;
-        if (args.path) searchQuery += ` path:${encodeURIComponent(args.path)}`;
+        if (args.language) searchQuery += ` language:${args.language}`;
+        if (args.repo) searchQuery += ` repo:${args.repo}`;
+        if (args.path) searchQuery += ` path:${args.path}`;
 
         const params = new URLSearchParams();
         params.set("q", searchQuery);
