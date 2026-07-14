@@ -6,10 +6,10 @@
  *
  * ## Tools
  *
- * - **gitlab.mr.list** — List merge requests with filters (state, labels, branches)
- * - **gitlab.mr.get** — Get a single merge request with diff stats
- * - **gitlab.mr.create** — Create a new merge request
- * - **gitlab.mr.merge** — Merge an existing merge request
+ * - **gitlab_mr_list** — List merge requests with filters (state, labels, branches)
+ * - **gitlab_mr_get** — Get a single merge request with diff stats
+ * - **gitlab_mr_create** — Create a new merge request
+ * - **gitlab_mr_merge** — Merge an existing merge request
  *
  * ## API Reference
  *
@@ -213,9 +213,9 @@ export function createMRTools(
   getGitLabClient: () => Promise<GitLabClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── gitlab.mr.list ───────────────────────────────────────── */
+    /* ── gitlab_mr_list ───────────────────────────────────────── */
 
-    "gitlab.mr.list": tool({
+    "gitlab_mr_list": tool({
       description: [
         "List merge requests for a GitLab project.",
         "Filterable by state (opened/closed/merged/all), labels,",
@@ -292,7 +292,7 @@ export function createMRTools(
 
         try {
           const response = await client.request(
-            "gitlab.mr.list",
+            "gitlab_mr_list",
             path,
             undefined,
             context.abort,
@@ -343,9 +343,9 @@ export function createMRTools(
       },
     }),
 
-    /* ── gitlab.mr.get ────────────────────────────────────────── */
+    /* ── gitlab_mr_get ────────────────────────────────────────── */
 
-    "gitlab.mr.get": tool({
+    "gitlab_mr_get": tool({
       description: [
         "Get a single merge request with full details including",
         "diff stats and commit history.",
@@ -384,7 +384,7 @@ export function createMRTools(
         try {
           // Fetch the MR with diff stats (include_diff=true) and commits
           const response = await client.request(
-            "gitlab.mr.get",
+            "gitlab_mr_get",
             `${basePath}?include_diff=true`,
             undefined,
             context.abort,
@@ -408,7 +408,7 @@ export function createMRTools(
           // Fetch commits separately
           try {
             const commitsResponse = await client.request(
-              "gitlab.mr.get",
+              "gitlab_mr_get",
               `${basePath}/commits`,
               undefined,
               context.abort,
@@ -449,9 +449,9 @@ export function createMRTools(
       },
     }),
 
-    /* ── gitlab.mr.create ─────────────────────────────────────── */
+    /* ── gitlab_mr_create ─────────────────────────────────────── */
 
-    "gitlab.mr.create": tool({
+    "gitlab_mr_create": tool({
       description: [
         "Create a new merge request in a GitLab project.",
         "Requires source branch, target branch, and title.",
@@ -527,7 +527,7 @@ export function createMRTools(
 
         try {
           const response = await client.request(
-            "gitlab.mr.create",
+            "gitlab_mr_create",
             path,
             {
               method: "POST",
@@ -572,9 +572,9 @@ export function createMRTools(
       },
     }),
 
-    /* ── gitlab.mr.merge ──────────────────────────────────────── */
+    /* ── gitlab_mr_merge ──────────────────────────────────────── */
 
-    "gitlab.mr.merge": tool({
+    "gitlab_mr_merge": tool({
       description: [
         "Merge a merge request. Supports merge strategy,",
         "squash commits, and removing the source branch.",
@@ -652,7 +652,7 @@ export function createMRTools(
 
         try {
           const response = await client.request(
-            "gitlab.mr.merge",
+            "gitlab_mr_merge",
             path,
             {
               method: "PUT",

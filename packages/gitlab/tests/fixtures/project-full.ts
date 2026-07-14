@@ -1,5 +1,5 @@
 /**
- * Test fixtures for gitlab.project.get-full GraphQL responses.
+ * Test fixtures for gitlab_project_get_full GraphQL responses.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

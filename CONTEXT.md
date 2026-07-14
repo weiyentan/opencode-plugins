@@ -44,7 +44,7 @@ Tools are designed for platform portability. Each tool has an abstract shape (li
 
 ### Tool Namespace Convention
 - GitHub tools use dot-notation with platform prefix: `github.issue.list`, `github.pr.create`, `github.code.search`
-- GitLab tools use dot-notation with platform prefix: `gitlab.issue.list`, `gitlab.mr.create`, `gitlab.code.search`
+- GitLab tools use underscore-notation with platform prefix: `gitlab_issue_list`, `gitlab_mr_create`, `gitlab_code_search`
 - Merge requests use `mr` (not `pr`) in GitLab tool names to match GitLab's native terminology
 
 ### Monorepo Structure

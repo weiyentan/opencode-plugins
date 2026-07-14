@@ -31,13 +31,13 @@ The tool surface is designed for **platform portability** — only concepts that
 15. As an AI agent, I want to search issues across repositories using GraphQL, so that I can find cross-cutting concerns.
 16. As a developer, I want tools to use the same output shape across all plugins, so that agent interactions are predictable.
 17. As a developer, I want CI to run only when a package changes, so that pull requests are fast and focused.
-18. As an AI agent, I want to use merge-request–specific tools for GitLab (e.g., `gitlab.mr.list`), so that terminology matches the platform.
+18. As an AI agent, I want to use merge-request–specific tools for GitLab (e.g., `gitlab_mr_list`), so that terminology matches the platform.
 
 ## Implementation Decisions
 
 ### Tool Namespace Convention
 - GitHub tools use dot-notation with `github.` prefix: `github.issue.list`, `github.pr.create`, `github.code.search`
-- GitLab tools use dot-notation with `gitlab.` prefix: `gitlab.issue.list`, `gitlab.mr.create`, `gitlab.code.search`
+- GitLab tools use underscore-notation with `gitlab_` prefix: `gitlab_issue_list`, `gitlab_mr_create`, `gitlab_code_search`
 - Merge requests use `mr` (not `pr`) in GitLab tool names to match GitLab's native terminology
 
 ### API Approach — Dual Track
@@ -82,7 +82,7 @@ Each plugin follows the proven AWX pattern:
 - `tests/` — Unit + integration tests
 
 ### GitLab plugin
-Same module structure. Namespaced as `gitlab.*`. Uses `mr` prefix for merge request tools. GitLab's API is REST-based with a GraphQL endpoint at `https://gitlab.com/api/graphql`.
+Same module structure. Namespaced as `gitlab_*`. Uses `mr` prefix for merge request tools. GitLab's API is REST-based with a GraphQL endpoint at `https://gitlab.com/api/graphql`.
 
 ### Dependency: @octokit/graphql
 The GitHub plugin adds `@octokit/graphql` (3 dependencies, ~15KB) for GraphQL support. The REST client remains plain `fetch`. The GitLab plugin uses the same pattern but with GitLab's own GraphQL endpoint — no separate SDK package needed.

@@ -1,6 +1,6 @@
 /**
- * Unit tests for rich GraphQL tools (gitlab.issue.get-full, gitlab.mr.get-full,
- * gitlab.issue.search, gitlab.project.get-full).
+ * Unit tests for rich GraphQL tools (gitlab_issue_get_full, gitlab_mr_get_full,
+ * gitlab_issue_search, gitlab_project_get_full).
  *
  * These tests use fixture data and a mock GraphQL client to verify:
  *   1. Zod input validation rejects malformed arguments
@@ -61,7 +61,7 @@ const mockContext = { abort: undefined as any };
 
 /* ── Tests ────────────────────────────────────────────────────── */
 
-describe("gitlab.issue.get-full", () => {
+describe("gitlab_issue_get_full", () => {
   beforeEach(async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
   });
@@ -69,7 +69,7 @@ describe("gitlab.issue.get-full", () => {
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["gitlab.issue.get-full"] as any).execute;
+      const execute = (tools["gitlab_issue_get_full"] as any).execute;
 
       // Missing projectPath should produce a human-readable error
       const result = await execute({ iid: "42" }, mockContext);
@@ -79,7 +79,7 @@ describe("gitlab.issue.get-full", () => {
 
     it("handles missing iid gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["gitlab.issue.get-full"] as any).execute;
+      const execute = (tools["gitlab_issue_get_full"] as any).execute;
 
       const result = await execute({ projectPath: "group/project" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -88,7 +88,7 @@ describe("gitlab.issue.get-full", () => {
 
     it("handles empty strings gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["gitlab.issue.get-full"] as any).execute;
+      const execute = (tools["gitlab_issue_get_full"] as any).execute;
 
       const result = await execute({ projectPath: "", iid: "1" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -100,7 +100,7 @@ describe("gitlab.issue.get-full", () => {
     it("returns curated fields for a standard issue", async () => {
       const gql = mockGQL(ISSUE_FULL_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.issue.get-full"].execute(
+      const result = await tools["gitlab_issue_get_full"].execute(
         { projectPath: "group/project", iid: "42" },
         mockContext,
       );
@@ -142,7 +142,7 @@ describe("gitlab.issue.get-full", () => {
     it("handles minimal issue (no notes, no linked MRs)", async () => {
       const gql = mockGQL(ISSUE_MINIMAL_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.issue.get-full"].execute(
+      const result = await tools["gitlab_issue_get_full"].execute(
         { projectPath: "group/project", iid: "99" },
         mockContext,
       );
@@ -161,7 +161,7 @@ describe("gitlab.issue.get-full", () => {
     it("handles issue not found (null response)", async () => {
       const gql = mockGQL(ISSUE_NOT_FOUND_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.issue.get-full"].execute(
+      const result = await tools["gitlab_issue_get_full"].execute(
         { projectPath: "group/project", iid: "9999" },
         mockContext,
       );
@@ -179,7 +179,7 @@ describe("gitlab.issue.get-full", () => {
         { message: "Could not resolve to a Project with the path 'group/project'." },
       ]);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.issue.get-full"].execute(
+      const result = await tools["gitlab_issue_get_full"].execute(
         { projectPath: "group/project", iid: "42" },
         mockContext,
       );
@@ -193,7 +193,7 @@ describe("gitlab.issue.get-full", () => {
 
 /* ── MR Tests ─────────────────────────────────────────────────── */
 
-describe("gitlab.mr.get-full", () => {
+describe("gitlab_mr_get_full", () => {
   beforeEach(async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
   });
@@ -201,7 +201,7 @@ describe("gitlab.mr.get-full", () => {
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["gitlab.mr.get-full"] as any).execute;
+      const execute = (tools["gitlab_mr_get_full"] as any).execute;
 
       const result = await execute({ iid: "7" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -216,7 +216,7 @@ describe("gitlab.mr.get-full", () => {
     it("returns curated fields for a standard MR", async () => {
       const gql = mockGQL(MR_FULL_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.mr.get-full"].execute(
+      const result = await tools["gitlab_mr_get_full"].execute(
         { projectPath: "group/project", iid: "7" },
         mockContext,
       );
@@ -266,7 +266,7 @@ describe("gitlab.mr.get-full", () => {
     it("handles merged MR", async () => {
       const gql = mockGQL(MR_MERGED_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.mr.get-full"].execute(
+      const result = await tools["gitlab_mr_get_full"].execute(
         { projectPath: "group/project", iid: "8" },
         mockContext,
       );
@@ -279,7 +279,7 @@ describe("gitlab.mr.get-full", () => {
     it("handles MR not found", async () => {
       const gql = mockGQL(MR_NOT_FOUND_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.mr.get-full"].execute(
+      const result = await tools["gitlab_mr_get_full"].execute(
         { projectPath: "group/project", iid: "9999" },
         mockContext,
       );
@@ -296,7 +296,7 @@ describe("gitlab.mr.get-full", () => {
         { message: "Resource not accessible" },
       ]);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.mr.get-full"].execute(
+      const result = await tools["gitlab_mr_get_full"].execute(
         { projectPath: "group/project", iid: "42" },
         mockContext,
       );
@@ -309,7 +309,7 @@ describe("gitlab.mr.get-full", () => {
 
 /* ── Issue Search Tests ────────────────────────────────────────── */
 
-describe("gitlab.issue.search", () => {
+describe("gitlab_issue_search", () => {
   beforeEach(async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
   });
@@ -317,7 +317,7 @@ describe("gitlab.issue.search", () => {
   describe("input validation", () => {
     it("handles missing query gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["gitlab.issue.search"] as any).execute;
+      const execute = (tools["gitlab_issue_search"] as any).execute;
 
       const result = await execute({}, mockContext);
       expect(typeof result.output).toBe("string");
@@ -325,7 +325,7 @@ describe("gitlab.issue.search", () => {
 
     it("handles empty query gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["gitlab.issue.search"] as any).execute;
+      const execute = (tools["gitlab_issue_search"] as any).execute;
 
       const result = await execute({ query: "" }, mockContext);
       expect(typeof result.output).toBe("string");
@@ -335,7 +335,7 @@ describe("gitlab.issue.search", () => {
       const gql = mockGQL(ISSUE_SEARCH_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
 
-      const result = await tools["gitlab.issue.search"].execute(
+      const result = await tools["gitlab_issue_search"].execute(
         { query: "bug", first: 10 },
         mockContext,
       );
@@ -347,7 +347,7 @@ describe("gitlab.issue.search", () => {
     it("returns curated search results with project context", async () => {
       const gql = mockGQL(ISSUE_SEARCH_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.issue.search"].execute(
+      const result = await tools["gitlab_issue_search"].execute(
         { query: "memory" },
         mockContext,
       );
@@ -379,7 +379,7 @@ describe("gitlab.issue.search", () => {
     it("handles empty search results", async () => {
       const gql = mockGQL(ISSUE_SEARCH_EMPTY_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.issue.search"].execute(
+      const result = await tools["gitlab_issue_search"].execute(
         { query: "nonexistent" },
         mockContext,
       );
@@ -394,7 +394,7 @@ describe("gitlab.issue.search", () => {
     it("handles projects with no issues", async () => {
       const gql = mockGQL(ISSUE_SEARCH_NO_ISSUES_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.issue.search"].execute(
+      const result = await tools["gitlab_issue_search"].execute(
         { query: "empty" },
         mockContext,
       );
@@ -413,7 +413,7 @@ describe("gitlab.issue.search", () => {
         { message: "Resource not accessible" },
       ]);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.issue.search"].execute(
+      const result = await tools["gitlab_issue_search"].execute(
         { query: "bug" },
         mockContext,
       );
@@ -426,7 +426,7 @@ describe("gitlab.issue.search", () => {
 
 /* ── Project Full Tests ────────────────────────────────────────── */
 
-describe("gitlab.project.get-full", () => {
+describe("gitlab_project_get_full", () => {
   beforeEach(async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
   });
@@ -434,7 +434,7 @@ describe("gitlab.project.get-full", () => {
   describe("input validation", () => {
     it("handles missing required fields gracefully", async () => {
       const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-      const execute = (tools["gitlab.project.get-full"] as any).execute;
+      const execute = (tools["gitlab_project_get_full"] as any).execute;
 
       const result = await execute({}, mockContext);
       expect(typeof result.output).toBe("string");
@@ -446,7 +446,7 @@ describe("gitlab.project.get-full", () => {
     it("returns curated project fields with README, file tree, and languages", async () => {
       const gql = mockGQL(PROJECT_FULL_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.project.get-full"].execute(
+      const result = await tools["gitlab_project_get_full"].execute(
         { projectPath: "group/my-project" },
         mockContext,
       );
@@ -488,7 +488,7 @@ describe("gitlab.project.get-full", () => {
     it("handles project without README", async () => {
       const gql = mockGQL(PROJECT_NO_README_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.project.get-full"].execute(
+      const result = await tools["gitlab_project_get_full"].execute(
         { projectPath: "group/empty-repo" },
         mockContext,
       );
@@ -502,7 +502,7 @@ describe("gitlab.project.get-full", () => {
     it("handles project not found", async () => {
       const gql = mockGQL(PROJECT_NOT_FOUND_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.project.get-full"].execute(
+      const result = await tools["gitlab_project_get_full"].execute(
         { projectPath: "group/nonexistent" },
         mockContext,
       );
@@ -519,7 +519,7 @@ describe("gitlab.project.get-full", () => {
         { message: "Could not resolve to a Project" },
       ]);
       const tools = createRichTools(() => Promise.resolve(gql));
-      const result = await tools["gitlab.project.get-full"].execute(
+      const result = await tools["gitlab_project_get_full"].execute(
         { projectPath: "group/nonexistent" },
         mockContext,
       );
@@ -535,7 +535,7 @@ describe("abort handling", () => {
   it("respects abort signal for issue.get-full", async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
     const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-    const result = await tools["gitlab.issue.get-full"].execute(
+    const result = await tools["gitlab_issue_get_full"].execute(
       { projectPath: "group/project", iid: "1" },
       { abort: { aborted: true } as any },
     );
@@ -545,7 +545,7 @@ describe("abort handling", () => {
   it("respects abort signal for mr.get-full", async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
     const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-    const result = await tools["gitlab.mr.get-full"].execute(
+    const result = await tools["gitlab_mr_get_full"].execute(
       { projectPath: "group/project", iid: "1" },
       { abort: { aborted: true } as any },
     );
@@ -555,7 +555,7 @@ describe("abort handling", () => {
   it("respects abort signal for issue.search", async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
     const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-    const result = await tools["gitlab.issue.search"].execute(
+    const result = await tools["gitlab_issue_search"].execute(
       { query: "bug" },
       { abort: { aborted: true } as any },
     );
@@ -565,7 +565,7 @@ describe("abort handling", () => {
   it("respects abort signal for project.get-full", async () => {
     createRichTools = (await import("../src/tools/rich.js")).createRichTools;
     const tools = createRichTools(() => Promise.resolve(mockGQL({})));
-    const result = await tools["gitlab.project.get-full"].execute(
+    const result = await tools["gitlab_project_get_full"].execute(
       { projectPath: "group/project" },
       { abort: { aborted: true } as any },
     );

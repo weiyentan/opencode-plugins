@@ -1,5 +1,5 @@
 /**
- * Test fixtures for gitlab.issue.search GraphQL responses.
+ * Test fixtures for gitlab_issue_search GraphQL responses.
  *
  * These fixtures simulate the shape of the GitLab GraphQL API response
  * for the project search + issues query.

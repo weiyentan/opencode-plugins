@@ -1,7 +1,7 @@
 /**
  * Project Tools Tests — GitLab Plugin
  *
- * Tests for gitlab.project.get and gitlab.project.search.
+ * Tests for gitlab_project_get and gitlab_project_search.
  */
 import { describe, it, expect, vi } from "vitest";
 import type { GitLabClient } from "../src/client.js";
@@ -77,10 +77,10 @@ function mockJsonResponse(data: unknown, status = 200): Response {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   gitlab.project.get
+   gitlab_project_get
    ══════════════════════════════════════════════════════════════════ */
 
-describe("gitlab.project.get", () => {
+describe("gitlab_project_get", () => {
   it("returns project details in markdown format", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -88,7 +88,7 @@ describe("gitlab.project.get", () => {
     );
 
     const tools = createProjectTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.project.get"]!;
+    const toolDef = tools["gitlab_project_get"]!;
     const result = await toolDef.execute(
       { project_id: 42 },
       { abort: mockAbort() },
@@ -111,7 +111,7 @@ describe("gitlab.project.get", () => {
     );
 
     const tools = createProjectTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.project.get"]!;
+    const toolDef = tools["gitlab_project_get"]!;
     await toolDef.execute(
       { project_id: "group/my-project" },
       { abort: mockAbort() },
@@ -124,7 +124,7 @@ describe("gitlab.project.get", () => {
 
   it("respects abort signal", async () => {
     const tools = createProjectTools(() => Promise.resolve(createMockClient()));
-    const toolDef = tools["gitlab.project.get"]!;
+    const toolDef = tools["gitlab_project_get"]!;
     const controller = new AbortController();
     controller.abort();
 
@@ -143,7 +143,7 @@ describe("gitlab.project.get", () => {
     );
 
     const tools = createProjectTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.project.get"]!;
+    const toolDef = tools["gitlab_project_get"]!;
     const result = await toolDef.execute(
       { project_id: 999 },
       { abort: mockAbort() },
@@ -155,10 +155,10 @@ describe("gitlab.project.get", () => {
 });
 
 /* ══════════════════════════════════════════════════════════════════
-   gitlab.project.search
+   gitlab_project_search
    ══════════════════════════════════════════════════════════════════ */
 
-describe("gitlab.project.search", () => {
+describe("gitlab_project_search", () => {
   it("returns search results in markdown format", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -166,7 +166,7 @@ describe("gitlab.project.search", () => {
     );
 
     const tools = createProjectTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.project.search"]!;
+    const toolDef = tools["gitlab_project_search"]!;
     const result = await toolDef.execute(
       { query: "my-project" },
       { abort: mockAbort() },
@@ -186,7 +186,7 @@ describe("gitlab.project.search", () => {
     );
 
     const tools = createProjectTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.project.search"]!;
+    const toolDef = tools["gitlab_project_search"]!;
     await toolDef.execute(
       { query: "typescript", visibility: "public" },
       { abort: mockAbort() },
@@ -205,7 +205,7 @@ describe("gitlab.project.search", () => {
     );
 
     const tools = createProjectTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.project.search"]!;
+    const toolDef = tools["gitlab_project_search"]!;
     const result = await toolDef.execute(
       { query: "nonexistent" },
       { abort: mockAbort() },
@@ -216,7 +216,7 @@ describe("gitlab.project.search", () => {
 
   it("respects abort signal", async () => {
     const tools = createProjectTools(() => Promise.resolve(createMockClient()));
-    const toolDef = tools["gitlab.project.search"]!;
+    const toolDef = tools["gitlab_project_search"]!;
     const controller = new AbortController();
     controller.abort();
 
@@ -235,7 +235,7 @@ describe("gitlab.project.search", () => {
     );
 
     const tools = createProjectTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.project.search"]!;
+    const toolDef = tools["gitlab_project_search"]!;
     const result = await toolDef.execute(
       { query: "test" },
       { abort: mockAbort() },

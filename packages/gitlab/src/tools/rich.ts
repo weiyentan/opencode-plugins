@@ -7,13 +7,13 @@
  *
  * ## Tools
  *
- * - **gitlab.issue.get-full** &mdash; Issue with description, labels, notes,
+ * - **gitlab_issue_get_full** &mdash; Issue with description, labels, notes,
  *   linked MRs, and resource events in one query.
- * - **gitlab.mr.get-full** &mdash; MR with commits, discussions, pipelines,
+ * - **gitlab_mr_get_full** &mdash; MR with commits, discussions, pipelines,
  *   merge status, and approvals in one query.
- * - **gitlab.issue.search** &mdash; Cross-project issue search with rich
+ * - **gitlab_issue_search** &mdash; Cross-project issue search with rich
  *   results including project context.
- * - **gitlab.project.get-full** &mdash; Project with description, languages,
+ * - **gitlab_project_get_full** &mdash; Project with description, languages,
  *   README, recent commits, and top contributors in one query.
  *
  * ## Design
@@ -256,9 +256,9 @@ export function createRichTools(
   getGQL: () => Promise<GraphQLClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── gitlab.issue.get-full ────────────────────────────────── */
+    /* ── gitlab_issue_get_full ────────────────────────────────── */
 
-    "gitlab.issue.get-full": tool({
+    "gitlab_issue_get_full": tool({
       description: [
         "Fetch a single GitLab issue with full details: description, labels,",
         "notes (comments, first 15), linked merge requests, and system events.",
@@ -383,9 +383,9 @@ export function createRichTools(
       },
     }),
 
-    /* ── gitlab.mr.get-full ───────────────────────────────────── */
+    /* ── gitlab_mr_get_full ───────────────────────────────────── */
 
-    "gitlab.mr.get-full": tool({
+    "gitlab_mr_get_full": tool({
       description: [
         "Fetch a single GitLab merge request with full details: commits (first 30),",
         "discussions, pipelines, merge status, approvals, and diff stats.",
@@ -541,9 +541,9 @@ export function createRichTools(
       },
     }),
 
-    /* ── gitlab.issue.search ──────────────────────────────────── */
+    /* ── gitlab_issue_search ──────────────────────────────────── */
 
-    "gitlab.issue.search": tool({
+    "gitlab_issue_search": tool({
       description: [
         "Search for GitLab issues across projects.",
         "Returns rich results with project context, labels, and linked info.",
@@ -671,9 +671,9 @@ export function createRichTools(
       },
     }),
 
-    /* ── gitlab.project.get-full ──────────────────────────────── */
+    /* ── gitlab_project_get_full ──────────────────────────────── */
 
-    "gitlab.project.get-full": tool({
+    "gitlab_project_get_full": tool({
       description: [
         "Fetch a GitLab project with full details: description, languages,",
         "README summary, top-level file tree, recent activity, and stats.",

@@ -1,7 +1,7 @@
 /**
  * User Profile Tool Tests — GitLab Plugin
  *
- * Tests for gitlab.user.get.
+ * Tests for gitlab_user_get.
  */
 import { describe, it, expect, vi } from "vitest";
 import type { GitLabClient } from "../src/client.js";
@@ -79,10 +79,10 @@ function mockJsonResponse(data: unknown, status = 200): Response {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   gitlab.user.get
+   gitlab_user_get
    ══════════════════════════════════════════════════════════════════ */
 
-describe("gitlab.user.get", () => {
+describe("gitlab_user_get", () => {
   it("returns user profile in markdown format", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -90,7 +90,7 @@ describe("gitlab.user.get", () => {
     );
 
     const tools = createUserTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.user.get"]!;
+    const toolDef = tools["gitlab_user_get"]!;
     const result = await toolDef.execute({}, { abort: mockAbort() });
 
     expect(result.output).toContain("Alice Johnson");
@@ -111,7 +111,7 @@ describe("gitlab.user.get", () => {
     );
 
     const tools = createUserTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.user.get"]!;
+    const toolDef = tools["gitlab_user_get"]!;
     const result = await toolDef.execute({}, { abort: mockAbort() });
 
     expect(result.output).toContain("Bot User");
@@ -121,7 +121,7 @@ describe("gitlab.user.get", () => {
 
   it("respects abort signal", async () => {
     const tools = createUserTools(() => Promise.resolve(createMockClient()));
-    const toolDef = tools["gitlab.user.get"]!;
+    const toolDef = tools["gitlab_user_get"]!;
     const controller = new AbortController();
     controller.abort();
 
@@ -137,7 +137,7 @@ describe("gitlab.user.get", () => {
     );
 
     const tools = createUserTools(() => Promise.resolve(client));
-    const toolDef = tools["gitlab.user.get"]!;
+    const toolDef = tools["gitlab_user_get"]!;
     const result = await toolDef.execute({}, { abort: mockAbort() });
 
     expect(result.output).toContain("Failed to get user profile");
@@ -148,7 +148,7 @@ describe("gitlab.user.get", () => {
     const tools = createUserTools(() =>
       Promise.reject(new Error("No token configured")),
     );
-    const toolDef = tools["gitlab.user.get"]!;
+    const toolDef = tools["gitlab_user_get"]!;
     const result = await toolDef.execute({}, { abort: mockAbort() });
 
     expect(result.output).toBe("No token configured");

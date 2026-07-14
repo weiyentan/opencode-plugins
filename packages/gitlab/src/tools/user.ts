@@ -6,7 +6,7 @@
  *
  * ## Tool
  *
- * - **gitlab.user.get** — Get the current authenticated user's profile
+ * - **gitlab_user_get** — Get the current authenticated user's profile
  *
  * ## API Reference
  *
@@ -102,9 +102,9 @@ export function createUserTools(
   getGitLabClient: () => Promise<GitLabClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── gitlab.user.get ─────────────────────────────────────── */
+    /* ── gitlab_user_get ─────────────────────────────────────── */
 
-    "gitlab.user.get": tool({
+    "gitlab_user_get": tool({
       description: [
         "Get the current authenticated user's profile information.",
         "Returns username, name, email, avatar, bio, location,",
@@ -130,7 +130,7 @@ export function createUserTools(
 
         try {
           const response = await client.request(
-            "gitlab.user.get",
+            "gitlab_user_get",
             "/api/v4/user",
             undefined,
             context.abort,

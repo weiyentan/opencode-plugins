@@ -6,8 +6,8 @@
  *
  * ## Tools
  *
- * - **gitlab.project.get** — Get project metadata (description, topics, language, stars, forks)
- * - **gitlab.project.search** — Search projects by query
+ * - **gitlab_project_get** — Get project metadata (description, topics, language, stars, forks)
+ * - **gitlab_project_search** — Search projects by query
  *
  * ## API Reference
  *
@@ -164,9 +164,9 @@ export function createProjectTools(
   getGitLabClient: () => Promise<GitLabClient>,
 ): Record<string, ReturnType<typeof tool>> {
   return {
-    /* ── gitlab.project.get ───────────────────────────────────── */
+    /* ── gitlab_project_get ───────────────────────────────────── */
 
-    "gitlab.project.get": tool({
+    "gitlab_project_get": tool({
       description: [
         "Get a single GitLab project's metadata including description,",
         "topics, programming language, star/fork counts, visibility,",
@@ -200,7 +200,7 @@ export function createProjectTools(
 
         try {
           const response = await client.request(
-            "gitlab.project.get",
+            "gitlab_project_get",
             path,
             undefined,
             context.abort,
@@ -235,9 +235,9 @@ export function createProjectTools(
       },
     }),
 
-    /* ── gitlab.project.search ────────────────────────────────── */
+    /* ── gitlab_project_search ────────────────────────────────── */
 
-    "gitlab.project.search": tool({
+    "gitlab_project_search": tool({
       description: [
         "Search GitLab projects by query string.",
         "Returns projects matching the search with metadata.",
@@ -304,7 +304,7 @@ export function createProjectTools(
 
         try {
           const response = await client.request(
-            "gitlab.project.search",
+            "gitlab_project_search",
             path,
             undefined,
             context.abort,
