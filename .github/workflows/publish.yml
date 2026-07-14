@@ -11,6 +11,7 @@ on:
           - awx
           - github
           - gitlab
+          - sqlite
 
 jobs:
   publish:
@@ -48,6 +49,10 @@ jobs:
             gitlab)
               echo "workspace_name=@weiyentan/opencode-plugin-gitlab" >> $GITHUB_OUTPUT
               echo "package_dir=packages/gitlab" >> $GITHUB_OUTPUT
+              ;;
+            sqlite)
+              echo "workspace_name=@weiyentan/opencode-plugin-sqlite" >> $GITHUB_OUTPUT
+              echo "package_dir=packages/sqlite" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "Error: unknown package" >&2

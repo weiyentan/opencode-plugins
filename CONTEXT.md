@@ -47,5 +47,16 @@ Tools are designed for platform portability. Each tool has an abstract shape (li
 - GitLab tools use underscore-notation with platform prefix: `gitlab_issue_list`, `gitlab_mr_create`, `gitlab_code_search`
 - Merge requests use `mr` (not `pr`) in GitLab tool names to match GitLab's native terminology
 
+## SQLite Plugin Domain
+
+| Term | Definition |
+|------|-----------|
+| **sqlite_tables** | Tool that lists all tables in the connected SQLite database by querying `sqlite_master`. Returns markdown table output and metadata with table names. |
+| **sqlite_schema** | Tool that inspects a specific table's schema via `PRAGMA table_info`. Returns column names, types, nullability, default values, and primary key flags. |
+| **sqlite_query** | Tool that executes a read-only SQL query (SELECT, PRAGMA, EXPLAIN, WITH) against the database. Enforces read-only validation — rejects INSERT, UPDATE, DELETE, DROP, ALTER, CREATE. Returns markdown table output with row count and execution time. |
+| **OPENCODE_DB_PATH** | Environment variable pointing to the SQLite database file. Defaults to `~/.local/share/opencode/opencode.db`. |
+| **Read-only enforcement** | Business logic in `query.ts` that validates SQL statements start with allowed prefixes (SELECT, PRAGMA, EXPLAIN, WITH) and rejects multi-statement input. Prevents accidental or malicious writes to the database. |
+| **better-sqlite3** | Synchronous SQLite3 driver used by the plugin. Connection is opened lazily in read-only mode with `query_only = true` pragma for defense-in-depth. |
+
 ### Monorepo Structure
 All plugin packages live in a single monorepo at `github.com/weiyentan/opencode-plugins`. Each package is fully independent — no shared runtime code between packages, only shared architecture patterns. CI uses path-filtered workflows to test only the affected packages on push/PR. Publishing is manual via `workflow_dispatch` with a selected package; version and dist-tag are auto-derived from `package.json`. This structure reduces overhead while keeping things discoverable.
