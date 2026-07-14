@@ -1,6 +1,6 @@
 /**
- * Unit tests for REST-based issue tools (github_issue_list, .get, .create,
- * .update, .comment).
+ * Unit tests for REST-based issue tools (github_issue_list, github_issue_get,
+ * github_issue_create, github_issue_update, github_issue_comment).
  *
  * These tests use fixture data and a mock GitHub HTTP client to verify:
  *   1. Zod input validation rejects malformed/incomplete arguments
