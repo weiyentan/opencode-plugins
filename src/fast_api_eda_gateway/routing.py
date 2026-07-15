@@ -3,9 +3,9 @@
 from typing import Optional
 
 import pydantic
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
 
-from src.config.settings import REVIEW_IN_FLIGHT_TTL_SECONDS
 from src.fast_api_eda_gateway.review_state_tracker import ReviewStateTracker
 
 
@@ -19,11 +19,18 @@ class AfkReviewResponse(pydantic.BaseModel):
 
 
 router = APIRouter()
-review_tracker = ReviewStateTracker(ttl_seconds=REVIEW_IN_FLIGHT_TTL_SECONDS)
+
+
+def get_review_tracker(request: Request) -> ReviewStateTracker:
+    """Dependency that provides the app-level ReviewStateTracker singleton."""
+    return request.app.state.review_tracker
 
 
 @router.post("/afk_review", response_model=AfkReviewResponse)
-def afk_review(request: AfkReviewRequest):
+def afk_review(
+    request: AfkReviewRequest,
+    review_tracker: ReviewStateTracker = Depends(get_review_tracker),
+):
     """Handle /afk_review command with duplicate protection and stale TTL.
 
     Returns:
@@ -34,7 +41,6 @@ def afk_review(request: AfkReviewRequest):
 
     if is_in_flight:
         # Active review is in-flight — reject duplicate
-        from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=409,
             content={"status": "rejected", "reason": reason},

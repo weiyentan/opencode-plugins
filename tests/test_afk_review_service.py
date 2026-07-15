@@ -162,10 +162,14 @@ class TestAfkReviewEndpointStateTracking:
 
     @pytest.fixture
     def client(self):
-        """Create a fresh FastAPI TestClient with a clean tracker instance."""
+        """Create a fresh FastAPI TestClient with a clean tracker instance via DI."""
         _purge_app_modules()
         from src.main import app
         return TestClient(app)
+
+    def _get_tracker(self, client):
+        """Helper to access the app-level review_tracker via DI."""
+        return client.app.state.review_tracker
 
     def test_accept_first_review(self, client):
         """First /afk_review for a PR is accepted."""
@@ -188,7 +192,7 @@ class TestAfkReviewEndpointStateTracking:
     def test_accept_stale_review(self, client):
         """/afk_review is accepted when existing entry is stale."""
         pr_key = "owner/repo/1"
-        from src.main import review_tracker
+        review_tracker = self._get_tracker(client)
         base_time = 1000000.0
         with patch.object(time, "time", return_value=base_time):
             review_tracker.set_in_flight(pr_key)
@@ -218,7 +222,7 @@ class TestAfkReviewEndpointStateTracking:
     def test_stale_entry_response_includes_reason(self, client):
         """Stale acceptance response includes the distinct stale reason."""
         pr_key = "owner/repo/42"
-        from src.main import review_tracker
+        review_tracker = self._get_tracker(client)
         base_time = 1000000.0
         with patch.object(time, "time", return_value=base_time):
             review_tracker.set_in_flight(pr_key)
