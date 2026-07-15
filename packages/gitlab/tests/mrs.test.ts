@@ -126,6 +126,43 @@ describe("gitlab_mr_list", () => {
     expect(result.metadata!._raw).toEqual(SAMPLE_MR_LIST);
   });
 
+  it("encodes namespaced project path in request URL", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_MR_LIST),
+    );
+
+    const tools = createMRTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_mr_list"]!;
+    await toolDef.execute(
+      { project_id: "group/my-project" },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("/api/v4/projects/group%2Fmy-project/merge_requests");
+  });
+
+  it("does not double-encode already-encoded path for mr_list", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_MR_LIST),
+    );
+
+    const tools = createMRTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_mr_list"]!;
+    await toolDef.execute(
+      { project_id: "group%2Fmy-project" },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("/api/v4/projects/group%2Fmy-project/merge_requests");
+    expect(requestUrl).not.toContain("%252F");
+  });
+
   it("respects state filter parameter", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -238,6 +275,24 @@ describe("gitlab_mr_get", () => {
     expect((result.metadata! as any).commits.length).toBe(1);
   });
 
+  it("encodes namespaced project path for mr_get", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(mockJsonResponse(SAMPLE_SINGLE_MR))
+      .mockResolvedValueOnce(mockJsonResponse(SAMPLE_COMMITS));
+
+    const tools = createMRTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_mr_get"]!;
+    await toolDef.execute(
+      { project_id: "group/my-project", iid: 1 },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("/api/v4/projects/group%2Fmy-project/merge_requests/1");
+  });
+
   it("handles commits fetch failure gracefully", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>)
@@ -324,6 +379,29 @@ describe("gitlab_mr_create", () => {
     expect(body.target_branch).toBe("main");
   });
 
+  it("encodes namespaced project path for mr_create", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_MR_LIST[0]),
+    );
+
+    const tools = createMRTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_mr_create"]!;
+    await toolDef.execute(
+      {
+        project_id: "group/my-project",
+        title: "Fix login bug",
+        source_branch: "fix-login",
+        target_branch: "main",
+      },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("/api/v4/projects/group%2Fmy-project/merge_requests");
+  });
+
   it("includes description and draft in request body", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -396,6 +474,24 @@ describe("gitlab_mr_merge", () => {
     const requestInit = (client.request as ReturnType<typeof vi.fn>).mock
       .calls[0][2] as RequestInit;
     expect(requestInit.method).toBe("PUT");
+  });
+
+  it("encodes namespaced project path for mr_merge", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse({ ...SAMPLE_SINGLE_MR, state: "merged" }),
+    );
+
+    const tools = createMRTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_mr_merge"]!;
+    await toolDef.execute(
+      { project_id: "group/my-project", iid: 1 },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("/api/v4/projects/group%2Fmy-project/merge_requests/1/merge");
   });
 
   it("passes squash and remove source branch params", async () => {

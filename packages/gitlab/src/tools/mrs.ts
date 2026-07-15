@@ -26,6 +26,26 @@ import type { GitLabClient } from "../client.js";
 
 const z = tool.schema;
 
+/* ── Project ID encoding ───────────────────────────────────────── */
+
+/**
+ * URL-encode a project ID for use in GitLab REST API paths.
+ *
+ * Numeric IDs are used as-is. String paths (e.g., "namespace/project")
+ * are URL-encoded to turn "/" into "%2F". Already-encoded paths
+ * containing "%2F" are passed through without double-encoding.
+ */
+function encodeProjectId(projectId: string | number): string {
+  if (typeof projectId === "number") {
+    return String(projectId);
+  }
+  // Avoid double-encoding: if the path already contains %2F, pass through
+  if (projectId.includes("%2F")) {
+    return projectId;
+  }
+  return encodeURIComponent(projectId);
+}
+
 /* ── Response type helpers ─────────────────────────────────────── */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -226,7 +246,7 @@ export function createMRTools(
         project_id: z
           .union([z.string(), z.number()])
           .describe(
-            "Project ID (number) or URL-encoded path (e.g., 'group/subgroup/project').",
+            "Project ID (number) or full path (e.g., 'group/subgroup/project').",
           ),
         state: z
           .enum(["opened", "closed", "merged", "all"])
@@ -288,7 +308,8 @@ export function createMRTools(
         if (args.source_branch) params.set("source_branch", args.source_branch);
         if (args.target_branch) params.set("target_branch", args.target_branch);
 
-        const path = `/api/v4/projects/${args.project_id}/merge_requests?${params.toString()}`;
+        const encodedId = encodeProjectId(args.project_id);
+        const path = `/api/v4/projects/${encodedId}/merge_requests?${params.toString()}`;
 
         try {
           const response = await client.request(
@@ -354,7 +375,7 @@ export function createMRTools(
         project_id: z
           .union([z.string(), z.number()])
           .describe(
-            "Project ID (number) or URL-encoded path (e.g., 'group/subgroup/project').",
+            "Project ID (number) or full path (e.g., 'group/subgroup/project').",
           ),
         iid: z
           .number()
@@ -379,7 +400,8 @@ export function createMRTools(
           };
         }
 
-        const basePath = `/api/v4/projects/${args.project_id}/merge_requests/${args.iid}`;
+        const encodedId = encodeProjectId(args.project_id);
+        const basePath = `/api/v4/projects/${encodedId}/merge_requests/${args.iid}`;
 
         try {
           // Fetch the MR with diff stats (include_diff=true) and commits
@@ -461,7 +483,7 @@ export function createMRTools(
         project_id: z
           .union([z.string(), z.number()])
           .describe(
-            "Project ID (number) or URL-encoded path (e.g., 'group/subgroup/project').",
+            "Project ID (number) or full path (e.g., 'group/subgroup/project').",
           ),
         title: z
           .string()
@@ -523,7 +545,8 @@ export function createMRTools(
           body.draft = true;
         }
 
-        const path = `/api/v4/projects/${args.project_id}/merge_requests`;
+        const encodedId = encodeProjectId(args.project_id);
+        const path = `/api/v4/projects/${encodedId}/merge_requests`;
 
         try {
           const response = await client.request(
@@ -583,7 +606,7 @@ export function createMRTools(
         project_id: z
           .union([z.string(), z.number()])
           .describe(
-            "Project ID (number) or URL-encoded path (e.g., 'group/subgroup/project').",
+            "Project ID (number) or full path (e.g., 'group/subgroup/project').",
           ),
         iid: z
           .number()
@@ -648,7 +671,8 @@ export function createMRTools(
         // GitLab API uses merge_when_pipeline_succeeds for auto-merge
         // For immediate merge, we just PUT with the merge params
 
-        const path = `/api/v4/projects/${args.project_id}/merge_requests/${args.iid}/merge`;
+        const encodedId = encodeProjectId(args.project_id);
+        const path = `/api/v4/projects/${encodedId}/merge_requests/${args.iid}/merge`;
 
         try {
           const response = await client.request(

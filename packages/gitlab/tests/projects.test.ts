@@ -104,7 +104,7 @@ describe("gitlab_project_get", () => {
     expect((result.metadata! as any)._raw).toEqual(SAMPLE_PROJECT);
   });
 
-  it("handles string project path", async () => {
+  it("encodes namespaced path for REST API", async () => {
     const client = createMockClient();
     (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
       mockJsonResponse(SAMPLE_PROJECT),
@@ -119,7 +119,45 @@ describe("gitlab_project_get", () => {
 
     const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
       .calls[0][1] as string;
-    expect(requestUrl).toContain("group/my-project");
+    expect(requestUrl).toContain("group%2Fmy-project");
+    expect(requestUrl).not.toContain("group/my-project");
+  });
+
+  it("does not double-encode already-encoded path", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECT),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_get"]!;
+    await toolDef.execute(
+      { project_id: "group%2Fmy-project" },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("group%2Fmy-project");
+    expect(requestUrl).not.toContain("%252F");
+  });
+
+  it("passes numeric ID through unchanged", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECT),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_get"]!;
+    await toolDef.execute(
+      { project_id: 42 },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("/api/v4/projects/42");
   });
 
   it("respects abort signal", async () => {
@@ -243,5 +281,230 @@ describe("gitlab_project_search", () => {
 
     expect(result.output).toContain("Failed to search projects");
     expect(result.output).toContain("401");
+  });
+
+  it("includes membership param when provided", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECTS_SEARCH),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_search"]!;
+    await toolDef.execute(
+      { query: "my-project", membership: true },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("membership=true");
+  });
+
+  it("includes owned param when provided", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECTS_SEARCH),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_search"]!;
+    await toolDef.execute(
+      { query: "my-project", owned: true },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("owned=true");
+  });
+
+  it("includes both membership and owned params together", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECTS_SEARCH),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_search"]!;
+    await toolDef.execute(
+      { query: "my-project", membership: true, owned: true },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("membership=true");
+    expect(requestUrl).toContain("owned=true");
+  });
+
+  it("does not include membership or owned when not provided", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECTS_SEARCH),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_search"]!;
+    await toolDef.execute(
+      { query: "my-project" },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).not.toContain("membership");
+    expect(requestUrl).not.toContain("owned");
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   gitlab_project_list
+   ══════════════════════════════════════════════════════════════════ */
+
+describe("gitlab_project_list", () => {
+  it("returns a list of projects in markdown format", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECTS_SEARCH),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_list"]!;
+    const result = await toolDef.execute(
+      { membership: true },
+      { abort: mockAbort() },
+    );
+
+    expect(result.output).toContain("Your Projects");
+    expect(result.output).toContain("group/my-project");
+    expect(result.output).toContain("other-group/my-other-project");
+    expect(result.metadata).toBeDefined();
+    expect(result.metadata!.count).toBe(2);
+  });
+
+  it("defaults membership to true", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECTS_SEARCH),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_list"]!;
+    await toolDef.execute({}, { abort: mockAbort() });
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("membership=true");
+  });
+
+  it("includes owned param when provided", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECTS_SEARCH),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_list"]!;
+    await toolDef.execute(
+      { owned: true },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("owned=true");
+  });
+
+  it("includes search param when provided", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECTS_SEARCH),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_list"]!;
+    await toolDef.execute(
+      { search: "my-project" },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("search=my-project");
+  });
+
+  it("returns empty message when no results", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse([]),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_list"]!;
+    const result = await toolDef.execute(
+      { membership: true },
+      { abort: mockAbort() },
+    );
+
+    expect(result.output).toContain("No projects found");
+  });
+
+  it("respects abort signal", async () => {
+    const tools = createProjectTools(() => Promise.resolve(createMockClient()));
+    const toolDef = tools["gitlab_project_list"]!;
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await toolDef.execute(
+      { membership: true },
+      { abort: controller.signal },
+    );
+
+    expect(result.output).toBe("Request was aborted.");
+  });
+
+  it("handles API error response", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse({ message: "Unauthorized" }, 401),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_list"]!;
+    const result = await toolDef.execute(
+      { membership: true },
+      { abort: mockAbort() },
+    );
+
+    expect(result.output).toContain("Failed to list projects");
+    expect(result.output).toContain("401");
+  });
+
+  it("includes sort and order options", async () => {
+    const client = createMockClient();
+    (client.request as ReturnType<typeof vi.fn>).mockResolvedValue(
+      mockJsonResponse(SAMPLE_PROJECTS_SEARCH),
+    );
+
+    const tools = createProjectTools(() => Promise.resolve(client));
+    const toolDef = tools["gitlab_project_list"]!;
+    await toolDef.execute(
+      {
+        membership: true,
+        order_by: "name",
+        sort: "asc",
+        per_page: 50,
+        visibility: "private",
+      },
+      { abort: mockAbort() },
+    );
+
+    const requestUrl = (client.request as ReturnType<typeof vi.fn>).mock
+      .calls[0][1] as string;
+    expect(requestUrl).toContain("order_by=name");
+    expect(requestUrl).toContain("sort=asc");
+    expect(requestUrl).toContain("per_page=50");
+    expect(requestUrl).toContain("visibility=private");
   });
 });

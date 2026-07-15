@@ -22,6 +22,26 @@ import type { GitLabClient } from "../client.js";
 
 const z = tool.schema;
 
+/* ── Project ID encoding ───────────────────────────────────────── */
+
+/**
+ * URL-encode a project ID for use in GitLab REST API paths.
+ *
+ * Numeric IDs are used as-is. String paths (e.g., "namespace/project")
+ * are URL-encoded to turn "/" into "%2F". Already-encoded paths
+ * containing "%2F" are passed through without double-encoding.
+ */
+function encodeProjectId(projectId: string | number): string {
+  if (typeof projectId === "number") {
+    return String(projectId);
+  }
+  // Avoid double-encoding: if the path already contains %2F, pass through
+  if (projectId.includes("%2F")) {
+    return projectId;
+  }
+  return encodeURIComponent(projectId);
+}
+
 /* ── Response type helpers ─────────────────────────────────────── */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -176,7 +196,7 @@ export function createProjectTools(
         project_id: z
           .union([z.string(), z.number()])
           .describe(
-            "Project ID (number) or URL-encoded path (e.g., 'group/subgroup/project').",
+            "Project ID (number) or full path (e.g., 'group/subgroup/project').",
           ),
       },
       async execute(
@@ -196,7 +216,8 @@ export function createProjectTools(
           };
         }
 
-        const path = `/api/v4/projects/${args.project_id}`;
+        const encodedId = encodeProjectId(args.project_id);
+        const path = `/api/v4/projects/${encodedId}`;
 
         try {
           const response = await client.request(
@@ -239,14 +260,26 @@ export function createProjectTools(
 
     "gitlab_project_search": tool({
       description: [
-        "Search GitLab projects by query string.",
-        "Returns projects matching the search with metadata.",
+        "Search GitLab projects globally by query string.",
+        "This searches ALL GitLab projects (public, internal, and private)",
+        "that match the query — not just projects you are a member of.",
+        "Use the 'membership' or 'owned' parameters to narrow results",
+        "to projects you can access directly.",
+        "Returns projects matching the search with metadata including visibility.",
       ].join(" "),
       args: {
         query: z
           .string()
           .min(1)
           .describe("Search query for project name or description."),
+        membership: z
+          .boolean()
+          .optional()
+          .describe("Limit to projects the authenticated user is a member of."),
+        owned: z
+          .boolean()
+          .optional()
+          .describe("Limit to projects owned by the authenticated user."),
         per_page: z
           .number()
           .int()
@@ -273,6 +306,8 @@ export function createProjectTools(
       async execute(
         args: {
           query: string;
+          membership?: boolean;
+          owned?: boolean;
           per_page?: number;
           order_by?: string;
           sort?: string;
@@ -299,6 +334,8 @@ export function createProjectTools(
         params.set("order_by", args.order_by ?? "last_activity_at");
         params.set("sort", args.sort ?? "desc");
         if (args.visibility) params.set("visibility", args.visibility);
+        if (args.membership) params.set("membership", "true");
+        if (args.owned) params.set("owned", "true");
 
         const path = `/api/v4/projects?${params.toString()}`;
 
@@ -353,6 +390,144 @@ export function createProjectTools(
           }
           const message = err instanceof Error ? err.message : String(err);
           return { output: `Failed to search projects: ${message}` };
+        }
+      },
+    }),
+
+    /* ── gitlab_project_list ────────────────────────────────────── */
+
+    "gitlab_project_list": tool({
+      description: [
+        "List GitLab projects accessible by the authenticated user.",
+        "By default, returns only projects where you are a member.",
+        "Use the optional 'search' parameter to filter results, or",
+        "'owned' to list only projects you own.",
+        "Each result includes visibility info so you can distinguish",
+        "private accessible projects from public matches.",
+      ].join(" "),
+      args: {
+        membership: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe("Limit to projects the authenticated user is a member of (default: true)."),
+        owned: z
+          .boolean()
+          .optional()
+          .describe("Limit to projects owned by the authenticated user."),
+        search: z
+          .string()
+          .optional()
+          .describe("Optional search query for project name or description."),
+        per_page: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .optional()
+          .default(20)
+          .describe("Number of results per page (max 100, default 20)."),
+        order_by: z
+          .enum(["id", "name", "path", "created_at", "updated_at", "last_activity_at"])
+          .optional()
+          .default("last_activity_at")
+          .describe("Sort order of results."),
+        sort: z
+          .enum(["asc", "desc"])
+          .optional()
+          .default("desc")
+          .describe("Sort direction."),
+        visibility: z
+          .enum(["public", "internal", "private"])
+          .optional()
+          .describe("Filter by visibility level."),
+      },
+      async execute(
+        args: {
+          membership?: boolean;
+          owned?: boolean;
+          search?: string;
+          per_page?: number;
+          order_by?: string;
+          sort?: string;
+          visibility?: string;
+        },
+        context: { abort?: AbortSignal },
+      ) {
+        if (context.abort?.aborted) {
+          return { output: "Request was aborted." };
+        }
+
+        let client: GitLabClient;
+        try {
+          client = await getGitLabClient();
+        } catch (err) {
+          return {
+            output: err instanceof Error ? err.message : String(err),
+          };
+        }
+
+        const params = new URLSearchParams();
+        params.set("per_page", String(args.per_page ?? 20));
+        params.set("order_by", args.order_by ?? "last_activity_at");
+        params.set("sort", args.sort ?? "desc");
+        if (args.membership ?? true) params.set("membership", "true");
+        if (args.owned) params.set("owned", "true");
+        if (args.search) params.set("search", args.search);
+        if (args.visibility) params.set("visibility", args.visibility);
+
+        const path = `/api/v4/projects?${params.toString()}`;
+
+        try {
+          const response = await client.request(
+            "gitlab_project_list",
+            path,
+            undefined,
+            context.abort,
+          );
+
+          if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            const msg = (body as any).message ?? response.statusText;
+            return {
+              output: `Failed to list projects: HTTP ${response.status} — ${msg}`,
+              metadata: { _raw: { status: response.status, body } },
+            };
+          }
+
+          const raw = (await response.json()) as any[];
+          const projects = Array.isArray(raw) ? raw : [];
+
+          if (projects.length === 0) {
+            return {
+              output: `No projects found.`,
+            };
+          }
+
+          const curated = projects.map((p) => extractProject(p));
+          const lines: string[] = [
+            `## Your Projects (${curated.length})`,
+            ``,
+          ];
+
+          for (let i = 0; i < curated.length; i++) {
+            lines.push(projectSummaryLine(curated[i]!, i + 1));
+          }
+
+          return {
+            output: lines.join("\n"),
+            metadata: {
+              count: curated.length,
+              results: curated,
+              _raw: raw,
+            },
+          };
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            return { output: "Request was aborted." };
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return { output: `Failed to list projects: ${message}` };
         }
       },
     }),

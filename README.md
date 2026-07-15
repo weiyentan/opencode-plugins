@@ -69,7 +69,7 @@ An OpenCode plugin that exposes GitHub API capabilities as developer-facing tool
 
 An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Uses GraphQL for rich queries and REST for CRUD operations with GitLab-native terminology (merge requests → `mr` prefix).
 
-**Status:** ✅ Phase 0 (spike) and Phase 1 (core tools + REST tools + GraphQL rich tools) complete — 21 tools covering sanity check, runtime configuration, connectivity verification, GraphQL rich queries, REST issue CRUD + comment, MR list/get/create/merge, project get/search, code search, and user profile.
+**Status:** ✅ Phase 0 (spike) and Phase 1 (core tools + REST tools + GraphQL rich tools) complete — 22 tools covering sanity check, runtime configuration, connectivity verification, GraphQL rich queries, REST issue CRUD + comment, MR list/get/create/merge, project get/search/list, code search, and user profile.
 
 **Tools:**
 | Tool | Description |
@@ -81,7 +81,7 @@ An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Uses Gr
 | `gitlab_mr_get_full` | MR with commits, discussions, pipelines, approvals (GraphQL) |
 | `gitlab_issue_search` | Cross-project issue search with rich results (GraphQL) |
 | `gitlab_project_get_full` | Project with languages, README, file tree, activity (GraphQL) |
-| `gitlab_query` | Arbitrary GraphQL query passthrough |
+| `gitlab_query` | Arbitrary GraphQL query — response data surfaced as formatted JSON in output |
 | `gitlab_issue_list` | List issues — filterable by state, labels, milestone |
 | `gitlab_issue_get` | Get a single issue by IID |
 | `gitlab_issue_create` | Create a new issue |
@@ -91,8 +91,9 @@ An OpenCode plugin that exposes GitLab API capabilities as plugin tools. Uses Gr
 | `gitlab_mr_get` | Get a single MR with diff stats |
 | `gitlab_mr_create` | Create a new merge request |
 | `gitlab_mr_merge` | Merge a merge request |
-| `gitlab_project_get` | Get project metadata |
-| `gitlab_project_search` | Search projects |
+| `gitlab_project_get` | Get project metadata by ID or full path |
+| `gitlab_project_search` | Search ALL GitLab projects globally — optional membership/owned params |
+| `gitlab_project_list` | List user-accessible projects — defaults to membership scope |
 | `gitlab_code_search` | Search code across projects |
 | `gitlab_user_get` | Get current user profile |
 
