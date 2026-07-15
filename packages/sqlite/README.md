@@ -94,6 +94,16 @@ npm run build
 npm run typecheck
 ```
 
+## Windows Compatibility
+
+The SQLite plugin uses **sql.js** — a pure JavaScript/WebAssembly SQLite implementation — instead of the native `better-sqlite3` package. This means:
+
+- **No native compilation** — installs on Windows without Visual Studio Build Tools (MSVC)
+- **No node-gyp** — no Python or C++ compiler required
+- **No npm --build-from-source** — it just works
+
+See [WINDOWS_TESTING.md](./WINDOWS_TESTING.md) for a step-by-step verification guide.
+
 ## License
 
 MIT
