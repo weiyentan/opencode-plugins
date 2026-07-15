@@ -60,3 +60,13 @@ Tools are designed for platform portability. Each tool has an abstract shape (li
 
 ### Monorepo Structure
 All plugin packages live in a single monorepo at `github.com/weiyentan/opencode-plugins`. Each package is fully independent — no shared runtime code between packages, only shared architecture patterns. CI uses path-filtered workflows to test only the affected packages on push/PR. Publishing is manual via `workflow_dispatch` with a selected package; version and dist-tag are auto-derived from `package.json`. This structure reduces overhead while keeping things discoverable.
+
+## AFK Review Service
+
+| Term | Definition |
+|------|-----------|
+| **/afk_review** | Endpoint that accepts a PR key (e.g. `owner/repo/number`) and initiates an automated review. Protected by duplicate-detection via `ReviewStateTracker`. |
+| **ReviewStateTracker** | In-memory state tracker in `src/fast_api_eda_gateway/review_state_tracker.py`. Maintains a dict of `pr_key → started_at` timestamps to prevent concurrent reviews of the same PR. |
+| **In-flight state** | A PR marked as currently being reviewed. While in-flight (and not stale), duplicate `/afk_review` calls are rejected with status 409 and reason `review_already_in_flight`. |
+| **Stale in-flight TTL** | Configurable time-to-live (in seconds) after which an in-flight entry is considered stale. When stale, a new `/afk_review` is accepted and the entry is reset. Stale acceptance logs `reason=review_in_flight_expired`. |
+| **REVIEW_IN_FLIGHT_TTL_SECONDS** | Environment variable controlling the stale TTL. Default: `3600` (1 hour). Set to a lower value (e.g. `600` for 10 minutes) to unblock review re-attempts sooner after a failed review. Configurable in `src/config/settings.py`.
