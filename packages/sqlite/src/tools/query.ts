@@ -1,5 +1,5 @@
 import { tool } from "@opencode-ai/plugin";
-import type { Database } from "better-sqlite3";
+import type { Database as SqlJsDatabase } from "sql.js";
 
 const READ_ONLY_PREFIXES = ["SELECT", "PRAGMA", "EXPLAIN", "WITH"];
 
@@ -39,7 +39,7 @@ function validateReadOnly(sql: string): void {
   }
 }
 
-export function createQueryTool(getDb: () => Database) {
+export function createQueryTool(getDb: () => Promise<SqlJsDatabase>) {
   return {
     sqlite_query: tool({
       description: "Execute a read-only SQL query against the SQLite database",
@@ -58,43 +58,44 @@ export function createQueryTool(getDb: () => Database) {
           };
         }
 
-        const database = getDb();
+        const database = await getDb();
         const startTime = performance.now();
 
         try {
-          const stmt = database.prepare(args.sql);
-          const rows = stmt.all() as Record<string, unknown>[];
+          const result = database.exec(args.sql);
           const endTime = performance.now();
           const executionTimeMs = Math.round((endTime - startTime) * 100) / 100;
 
-          if (rows.length === 0) {
+          // exec returns [{columns: string[], values: any[][]}]
+          const columns: string[] = result[0]?.columns ?? [];
+          const values: any[][] = result[0]?.values ?? [];
+
+          if (values.length === 0) {
             return {
               output: `Query returned no rows (${executionTimeMs}ms)`,
               metadata: { columns: [], rows: [], rowCount: 0, executionTimeMs },
             };
           }
 
-          const columns = Object.keys(rows[0]!);
-
           // Build markdown table
           const header = `| ${columns.join(" | ")} |`;
           const separator = `| ${columns.map(() => "---").join(" | ")} |`;
-          const body = rows.map(row =>
-            `| ${columns.map(col => {
-              const val = row[col];
-              if (val === null) return "NULL";
+          const body = values.map(row =>
+            `| ${columns.map((_col, i) => {
+              const val = row[i];
+              if (val === null || val === undefined) return "NULL";
               return String(val);
             }).join(" | ")} |`
           ).join("\n");
 
-          const output = `${header}\n${separator}\n${body}\n\n*Returned ${rows.length} row(s) in ${executionTimeMs}ms*`;
+          const output = `${header}\n${separator}\n${body}\n\n*Returned ${values.length} row(s) in ${executionTimeMs}ms*`;
 
           return {
             output,
             metadata: {
               columns,
-              rows: rows.map(r => columns.map(c => r[c] ?? null)),
-              rowCount: rows.length,
+              rows: values.map(r => columns.map((_, i) => r[i] ?? null)),
+              rowCount: values.length,
               executionTimeMs,
             },
           };

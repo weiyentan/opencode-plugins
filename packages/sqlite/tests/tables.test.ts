@@ -10,27 +10,24 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { createTablesTool } from "../src/tools/tables.js";
-import type { Database } from "better-sqlite3";
+import type { Database as SqlJsDatabase } from "sql.js";
 
 /* ── Mock helpers ───────────────────────────────────────────────── */
 
-interface MockStatement {
-  all: ReturnType<typeof vi.fn>;
-}
-
 interface MockDatabase {
-  pragma: ReturnType<typeof vi.fn>;
-  prepare: ReturnType<typeof vi.fn<[string], MockStatement>>;
+  exec: ReturnType<typeof vi.fn>;
   close: ReturnType<typeof vi.fn>;
+  run: ReturnType<typeof vi.fn>;
+  prepare: ReturnType<typeof vi.fn>;
 }
 
-function mockDbWithTables(tableNames: string[]): Database {
-  const rows = tableNames.map(name => ({ name }));
+function mockDbWithTables(tableNames: string[]): SqlJsDatabase {
+  const rows = tableNames.map(name => [name]);
   return {
-    prepare: vi.fn().mockReturnValue({
-      all: vi.fn().mockReturnValue(rows),
-    }),
-  } as unknown as Database;
+    exec: vi.fn().mockReturnValue([
+      { columns: ["name"], values: rows },
+    ]),
+  } as unknown as SqlJsDatabase;
 }
 
 /* ── Tests ─────────────────────────────────────────────────────── */
@@ -39,10 +36,10 @@ describe("sqlite_tables", () => {
   describe("with tables", () => {
     it("returns table names from sqlite_master", async () => {
       const db = mockDbWithTables(["users", "projects", "tasks"]);
-      const tools = createTablesTool(() => db);
+      const tools = createTablesTool(async () => db);
       const result = await tools.sqlite_tables.execute({});
 
-      expect(db.prepare).toHaveBeenCalledWith(
+      expect(db.exec).toHaveBeenCalledWith(
         "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
       );
       expect(result.metadata).toBeDefined();
@@ -50,7 +47,7 @@ describe("sqlite_tables", () => {
 
     it("outputs a markdown table with table names", async () => {
       const db = mockDbWithTables(["bar", "foo"]);
-      const tools = createTablesTool(() => db);
+      const tools = createTablesTool(async () => db);
       const result = await tools.sqlite_tables.execute({});
 
       expect(result.output).toContain("| # | Table Name |");
@@ -61,7 +58,7 @@ describe("sqlite_tables", () => {
 
     it("includes structured metadata", async () => {
       const db = mockDbWithTables(["users", "projects"]);
-      const tools = createTablesTool(() => db);
+      const tools = createTablesTool(async () => db);
       const result = await tools.sqlite_tables.execute({});
 
       expect(result.metadata).toEqual({
@@ -76,7 +73,7 @@ describe("sqlite_tables", () => {
   describe("empty database", () => {
     it("returns 'No tables found' message", async () => {
       const db = mockDbWithTables([]);
-      const tools = createTablesTool(() => db);
+      const tools = createTablesTool(async () => db);
       const result = await tools.sqlite_tables.execute({});
 
       expect(result.output).toBe("No tables found in the database.");
@@ -84,7 +81,7 @@ describe("sqlite_tables", () => {
 
     it("returns empty tables array in metadata", async () => {
       const db = mockDbWithTables([]);
-      const tools = createTablesTool(() => db);
+      const tools = createTablesTool(async () => db);
       const result = await tools.sqlite_tables.execute({});
 
       expect(result.metadata).toEqual({ tables: [] });
@@ -94,7 +91,7 @@ describe("sqlite_tables", () => {
   describe("single table", () => {
     it("returns single table correctly", async () => {
       const db = mockDbWithTables(["only_table"]);
-      const tools = createTablesTool(() => db);
+      const tools = createTablesTool(async () => db);
       const result = await tools.sqlite_tables.execute({});
 
       expect(result.output).toContain("| 1 | `only_table` |");

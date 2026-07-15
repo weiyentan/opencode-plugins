@@ -20,33 +20,40 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { createQueryTool } from "../src/tools/query.js";
-import type { Database } from "better-sqlite3";
+import type { Database as SqlJsDatabase } from "sql.js";
 
 /* ── Mock helpers ───────────────────────────────────────────────── */
 
-function mockDbWithRows(rows: Record<string, unknown>[]): Database {
+function mockDbWithRows(rows: Record<string, unknown>[]): SqlJsDatabase {
+  if (rows.length === 0) {
+    return {
+      exec: vi.fn().mockReturnValue([]),
+    } as unknown as SqlJsDatabase;
+  }
+
+  const columns = Object.keys(rows[0]!);
+  const values = rows.map(row => columns.map(col => row[col] ?? null));
+
   return {
-    prepare: vi.fn().mockReturnValue({
-      all: vi.fn().mockReturnValue(rows),
-    }),
-  } as unknown as Database;
+    exec: vi.fn().mockReturnValue([
+      { columns, values },
+    ]),
+  } as unknown as SqlJsDatabase;
 }
 
-function mockDbThatThrows(errorMessage: string): Database {
+function mockDbThatThrows(errorMessage: string): SqlJsDatabase {
   return {
-    prepare: vi.fn().mockImplementation(() => {
+    exec: vi.fn().mockImplementation(() => {
       throw new Error(errorMessage);
     }),
-  } as unknown as Database;
+  } as unknown as SqlJsDatabase;
 }
 
-/** Creates a mock database that never gets its prepare() called (for validation-rejection tests). */
-function mockDbUnused(): Database {
+/** Creates a mock database that never gets its exec() called (for validation-rejection tests). */
+function mockDbUnused(): SqlJsDatabase {
   return {
-    prepare: vi.fn().mockReturnValue({
-      all: vi.fn().mockReturnValue([]),
-    }),
-  } as unknown as Database;
+    exec: vi.fn(),
+  } as unknown as SqlJsDatabase;
 }
 
 /* ── Tests ─────────────────────────────────────────────────────── */
@@ -60,7 +67,7 @@ describe("sqlite_query", () => {
         { id: 1, name: "Alice" },
         { id: 2, name: "Bob" },
       ]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "SELECT id, name FROM users" });
 
       expect(result.output).toContain("| id | name |");
@@ -75,7 +82,7 @@ describe("sqlite_query", () => {
         { id: 1, name: "Alice" },
         { id: 2, name: "Bob" },
       ]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "SELECT id, name FROM users" });
 
       expect(result.metadata).toBeDefined();
@@ -94,7 +101,7 @@ describe("sqlite_query", () => {
         { id: 1, name: null },
         { id: 2, name: "Bob" },
       ]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "SELECT id, name FROM users" });
 
       expect(result.output).toContain("| 1 | NULL |");
@@ -109,7 +116,7 @@ describe("sqlite_query", () => {
   describe("valid PRAGMA", () => {
     it("executes PRAGMA statement successfully", async () => {
       const db = mockDbWithRows([{ table_info: "users" }]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "PRAGMA table_info('users')" });
 
       expect(result.output).toContain("| table_info |");
@@ -123,7 +130,7 @@ describe("sqlite_query", () => {
       const db = mockDbWithRows([
         { addr: 0, opcode: "Init", p1: 0, p2: 1, p3: 0 },
       ]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "EXPLAIN SELECT 1" });
 
       expect(result.output).toContain("| addr |");
@@ -135,7 +142,7 @@ describe("sqlite_query", () => {
       const db = mockDbWithRows([
         { id: 0, parent: 0, notused: 0, detail: "SCAN users" },
       ]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "EXPLAIN QUERY PLAN SELECT * FROM users" });
 
       expect(result.output).toContain("| id |");
@@ -146,7 +153,7 @@ describe("sqlite_query", () => {
   describe("valid WITH (CTE)", () => {
     it("executes WITH ... SELECT statement", async () => {
       const db = mockDbWithRows([{ cnt: 5 }]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "WITH cte AS (SELECT 1 AS n) SELECT count(*) as cnt FROM cte" });
 
       expect(result.output).toContain("| cnt |");
@@ -157,7 +164,7 @@ describe("sqlite_query", () => {
   describe("trailing semicolon handling", () => {
     it("accepts SELECT with trailing semicolon", async () => {
       const db = mockDbWithRows([{ cnt: 1 }]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "SELECT 1 AS cnt;" });
 
       expect(result.output).toContain("| cnt |");
@@ -166,7 +173,7 @@ describe("sqlite_query", () => {
 
     it("accepts SELECT with trailing semicolon and whitespace", async () => {
       const db = mockDbWithRows([{ cnt: 1 }]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "SELECT 1 AS cnt;   " });
 
       expect(result.output).toContain("| cnt |");
@@ -179,7 +186,7 @@ describe("sqlite_query", () => {
   describe("empty results", () => {
     it("returns 'no rows' message", async () => {
       const db = mockDbWithRows([]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "SELECT * FROM empty_table" });
 
       expect(result.output).toContain("Query returned no rows");
@@ -188,7 +195,7 @@ describe("sqlite_query", () => {
 
     it("returns empty metadata for empty results", async () => {
       const db = mockDbWithRows([]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "SELECT * FROM empty_table" });
 
       expect(result.metadata.columns).toEqual([]);
@@ -204,15 +211,15 @@ describe("sqlite_query", () => {
     /** Reusable helper: asserts that a write statement is rejected with a clear error. */
     async function assertRejected(sql: string) {
       const db = mockDbUnused();
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql });
 
       expect(result.output).toContain("Only read-only SQL queries are allowed.");
       expect(result.metadata.columns).toEqual([]);
       expect(result.metadata.rows).toEqual([]);
       expect(result.metadata.rowCount).toBe(0);
-      // prepare() should never have been called for rejected statements
-      expect(db.prepare).not.toHaveBeenCalled();
+      // exec() should never have been called for rejected statements
+      expect(db.exec).not.toHaveBeenCalled();
     }
 
     it("rejects INSERT", async () => {
@@ -245,20 +252,20 @@ describe("sqlite_query", () => {
   describe("multi-statement rejection", () => {
     it("rejects statements with semicolons in the middle", async () => {
       const db = mockDbUnused();
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "SELECT 1; SELECT 2" });
 
       expect(result.output).toContain("Multi-statement input is not allowed.");
-      expect(db.prepare).not.toHaveBeenCalled();
+      expect(db.exec).not.toHaveBeenCalled();
     });
 
     it("rejects SELECT with embedded semicolons", async () => {
       const db = mockDbUnused();
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "SELECT 1; DROP TABLE users;--" });
 
       expect(result.output).toContain("Multi-statement input is not allowed.");
-      expect(db.prepare).not.toHaveBeenCalled();
+      expect(db.exec).not.toHaveBeenCalled();
     });
   });
 
@@ -267,7 +274,7 @@ describe("sqlite_query", () => {
   describe("malformed SQL", () => {
     it("returns clear error message for syntax errors", async () => {
       const db = mockDbThatThrows("near \"FRUM\": syntax error");
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "SELECT * FRUM users" });
 
       expect(result.output).toContain("SQL error:");
@@ -280,7 +287,7 @@ describe("sqlite_query", () => {
 
     it("returns clear error message for missing table", async () => {
       const db = mockDbThatThrows("no such table: missing_table");
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "SELECT * FROM missing_table" });
 
       expect(result.output).toContain("SQL error:");
@@ -293,7 +300,7 @@ describe("sqlite_query", () => {
   describe("case insensitivity", () => {
     it("accepts lowercase select", async () => {
       const db = mockDbWithRows([{ cnt: 1 }]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "select 1 as cnt" });
 
       expect(result.output).toContain("| cnt |");
@@ -301,7 +308,7 @@ describe("sqlite_query", () => {
 
     it("accepts mixed-case SELECT", async () => {
       const db = mockDbWithRows([{ cnt: 1 }]);
-      const tools = createQueryTool(() => db);
+      const tools = createQueryTool(async () => db);
       const result = await tools.sqlite_query.execute({ sql: "Select 1 as cnt" });
 
       expect(result.output).toContain("| cnt |");

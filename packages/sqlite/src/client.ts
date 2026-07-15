@@ -1,9 +1,9 @@
-import Database from "better-sqlite3";
+import initSqlJs, { Database as SqlJsDatabase } from "sql.js";
 import { homedir } from "os";
 import { join, resolve } from "path";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 
-let db: Database.Database | null = null;
+let db: SqlJsDatabase | null = null;
 
 /**
  * Resolve the database path from env var or default.
@@ -17,9 +17,9 @@ function resolveDbPath(): string {
 }
 
 /**
- * Get the read-only database connection. Opens on first call (lazy).
+ * Get the database connection. Opens on first call (lazy, async).
  */
-export function getDb(): Database.Database {
+export async function getDb(): Promise<SqlJsDatabase> {
   if (db) return db;
 
   const dbPath = resolveDbPath();
@@ -32,8 +32,11 @@ export function getDb(): Database.Database {
   }
 
   try {
-    db = new Database(dbPath, { readonly: true });
-    db.pragma("query_only = true");
+    const SQL = await initSqlJs();
+    const buffer = readFileSync(dbPath);
+    db = new SQL.Database(buffer);
+    // Note: sql.js has no built-in read-only mode.
+    // We rely on the tool-level validation to enforce read-only access.
     return db;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

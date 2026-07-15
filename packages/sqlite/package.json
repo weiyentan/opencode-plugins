@@ -28,10 +28,9 @@
   },
   "dependencies": {
     "@opencode-ai/plugin": "^1.17.8",
-    "better-sqlite3": "^11.0.0"
+    "sql.js": "^1.11.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^24.12.2",
     "rimraf": "^6.0.0",
     "typescript": "^5.8.2",

@@ -1,5 +1,5 @@
 import { tool } from "@opencode-ai/plugin";
-import type { Database } from "better-sqlite3";
+import type { Database as SqlJsDatabase } from "sql.js";
 
 interface ColumnInfo {
   name: string;
@@ -9,7 +9,7 @@ interface ColumnInfo {
   primaryKey: boolean;
 }
 
-export function createSchemaTool(getDb: () => Database) {
+export function createSchemaTool(getDb: () => Promise<SqlJsDatabase>) {
   return {
     sqlite_schema: tool({
       description:
@@ -18,12 +18,14 @@ export function createSchemaTool(getDb: () => Database) {
         table: tool.schema.string().describe("Name of the table to inspect"),
       },
       async execute(args: { table: string }) {
-        const database = getDb();
+        const database = await getDb();
 
-        // Validate that the table exists
-        const tableExists = database.prepare(
-          "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
-        ).get(args.table) as { name: string } | undefined;
+        // Validate that the table exists — escape single quotes for SQL injection prevention
+        const escapedTable = args.table.replace(/'/g, "''");
+        const tableCheck = database.exec(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name='${escapedTable}'`,
+        );
+        const tableExists = (tableCheck[0]?.values?.length ?? 0) > 0;
 
         if (!tableExists) {
           return {
@@ -34,16 +36,26 @@ export function createSchemaTool(getDb: () => Database) {
 
         // Escape double quotes in table name to prevent PRAGMA injection
         const safeTable = args.table.replace(/"/g, '""');
-        const columns = database.pragma(
-          `table_info("${safeTable}")`,
-        ) as Array<{
+        const pragmaResult = database.exec(
+          `PRAGMA table_info("${safeTable}")`,
+        );
+        const pragmaColumns = pragmaResult[0]?.values ?? [];
+
+        const columns: Array<{
           cid: number;
           name: string;
           type: string;
           notnull: number;
           dflt_value: string | null;
           pk: number;
-        }>;
+        }> = pragmaColumns.map((v) => ({
+          cid: v[0] as number,
+          name: v[1] as string,
+          type: v[2] as string,
+          notnull: v[3] as number,
+          dflt_value: (v[4] as string | null) ?? null,
+          pk: v[5] as number,
+        }));
 
         const columnInfo: ColumnInfo[] = columns.map((col) => ({
           name: col.name,

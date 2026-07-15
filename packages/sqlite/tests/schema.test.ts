@@ -11,13 +11,9 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { createSchemaTool } from "../src/tools/schema.js";
-import type { Database } from "better-sqlite3";
+import type { Database as SqlJsDatabase } from "sql.js";
 
 /* ── Mock helpers ───────────────────────────────────────────────── */
-
-interface MockStatement {
-  get: ReturnType<typeof vi.fn>;
-}
 
 interface PragmaRow {
   cid: number;
@@ -28,13 +24,32 @@ interface PragmaRow {
   pk: number;
 }
 
-function mockDbWithTable(exists: boolean, columns?: PragmaRow[]): Database {
+function mockDbWithTable(exists: boolean, columns?: PragmaRow[]): SqlJsDatabase {
+  const pragmaValues = (columns ?? []).map(c => [
+    c.cid, c.name, c.type, c.notnull, c.dflt_value, c.pk,
+  ]);
+
+  // Simulate sql.js exec output: { columns: string[], values: any[][] }[]
   return {
-    prepare: vi.fn().mockReturnValue({
-      get: vi.fn().mockReturnValue(exists ? { name: "test_table" } : undefined),
+    exec: vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes("sqlite_master")) {
+        // Table existence check
+        return exists
+          ? [{ columns: ["name"], values: [["test_table"]] }]
+          : [];
+      }
+      if (sql.includes("PRAGMA")) {
+        // PRAGMA table_info
+        return [
+          {
+            columns: ["cid", "name", "type", "notnull", "dflt_value", "pk"],
+            values: pragmaValues,
+          },
+        ];
+      }
+      return [];
     }),
-    pragma: vi.fn().mockReturnValue(columns ?? []),
-  } as unknown as Database;
+  } as unknown as SqlJsDatabase;
 }
 
 /* ── Tests ─────────────────────────────────────────────────────── */
@@ -48,13 +63,13 @@ describe("sqlite_schema", () => {
         { cid: 2, name: "created_at", type: "DATETIME", notnull: 0, dflt_value: "CURRENT_TIMESTAMP", pk: 0 },
       ];
       const db = mockDbWithTable(true, columns);
-      const tools = createSchemaTool(() => db);
+      const tools = createSchemaTool(async () => db);
       const result = await tools.sqlite_schema.execute({ table: "test_table" });
 
-      expect(db.prepare).toHaveBeenCalledWith(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
+      expect(db.exec).toHaveBeenCalledWith(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='test_table'"
       );
-      expect(db.pragma).toHaveBeenCalledWith('table_info("test_table")');
+      expect(db.exec).toHaveBeenCalledWith('PRAGMA table_info("test_table")');
       expect(result.metadata).toBeDefined();
     });
 
@@ -65,7 +80,7 @@ describe("sqlite_schema", () => {
         { cid: 2, name: "score", type: "REAL", notnull: 0, dflt_value: "0.0", pk: 0 },
       ];
       const db = mockDbWithTable(true, columns);
-      const tools = createSchemaTool(() => db);
+      const tools = createSchemaTool(async () => db);
       const result = await tools.sqlite_schema.execute({ table: "test_table" });
 
       expect(result.metadata).toEqual({
@@ -83,7 +98,7 @@ describe("sqlite_schema", () => {
         { cid: 1, name: "label", type: "TEXT", notnull: 0, dflt_value: null, pk: 0 },
       ];
       const db = mockDbWithTable(true, columns);
-      const tools = createSchemaTool(() => db);
+      const tools = createSchemaTool(async () => db);
       const result = await tools.sqlite_schema.execute({ table: "test_table" });
 
       expect(result.output).toContain("| # | Column | Type | Nullable | Default | PK |");
@@ -98,7 +113,7 @@ describe("sqlite_schema", () => {
         { cid: 1, name: "nullable_col", type: "TEXT", notnull: 0, dflt_value: null, pk: 0 },
       ];
       const db = mockDbWithTable(true, columns);
-      const tools = createSchemaTool(() => db);
+      const tools = createSchemaTool(async () => db);
       const result = await tools.sqlite_schema.execute({ table: "test_table" });
 
       expect(result.output).toContain("❌ No"); // notNull column
@@ -108,7 +123,7 @@ describe("sqlite_schema", () => {
 
     it("handles table with no columns gracefully", async () => {
       const db = mockDbWithTable(true, []);
-      const tools = createSchemaTool(() => db);
+      const tools = createSchemaTool(async () => db);
       const result = await tools.sqlite_schema.execute({ table: "empty_table" });
 
       expect(result.output).toContain("*0 column(s) in table `empty_table`*");
@@ -119,7 +134,7 @@ describe("sqlite_schema", () => {
   describe("non-existent table", () => {
     it("returns a clear error message", async () => {
       const db = mockDbWithTable(false);
-      const tools = createSchemaTool(() => db);
+      const tools = createSchemaTool(async () => db);
       const result = await tools.sqlite_schema.execute({ table: "ghost" });
 
       expect(result.output).toBe('Table "ghost" not found in the database.');
@@ -127,7 +142,7 @@ describe("sqlite_schema", () => {
 
     it("returns empty columns array in metadata", async () => {
       const db = mockDbWithTable(false);
-      const tools = createSchemaTool(() => db);
+      const tools = createSchemaTool(async () => db);
       const result = await tools.sqlite_schema.execute({ table: "ghost" });
 
       expect(result.metadata).toEqual({ columns: [] });
@@ -136,7 +151,7 @@ describe("sqlite_schema", () => {
 
   describe("edge cases", () => {
     it("propagates errors from getDb", async () => {
-      const tools = createSchemaTool(() => {
+      const tools = createSchemaTool(async () => {
         throw new Error("connection failed");
       });
 
