@@ -1,4 +1,5 @@
-import initSqlJs, { Database as SqlJsDatabase } from "sql.js";
+import initSqlJs from "sql.js";
+import type { Database as SqlJsDatabase } from "sql.js";
 import { homedir } from "os";
 import { join, resolve } from "path";
 import { existsSync, readFileSync } from "fs";
