@@ -440,7 +440,7 @@ describe("github_repo_get_full", () => {
   });
 
   describe("output shape", () => {
-    it("returns curated repo fields with README, commits, and contributors", async () => {
+    it("returns curated repo fields with README, commits, contributors, and file tree", async () => {
       const gql = mockGQL(REPO_FULL_RESPONSE);
       const tools = createRichTools(() => Promise.resolve(gql));
       const result = await tools["github_repo_get_full"].execute(
@@ -467,7 +467,7 @@ describe("github_repo_get_full", () => {
       expect((meta.stats as any).openIssues).toBe(5);
       expect((meta.stats as any).openPRs).toBe(2);
 
-      // README (first 5000 chars)
+      // README (first 5000 chars stored in metadata)
       expect(meta.readme).toBeDefined();
       expect(meta.readme).toContain("# My Project");
 
@@ -478,6 +478,20 @@ describe("github_repo_get_full", () => {
       // Top contributors
       expect(meta.topContributors).toBeDefined();
       expect((meta.topContributors as any[]).length).toBe(3);
+
+      // File tree in metadata
+      expect(meta.rootTree).toBeDefined();
+      expect((meta.rootTree as any[]).length).toBe(5);
+
+      // Output includes expanded README (>100 chars)
+      expect(result.output).toContain("# My Project");
+      expect(result.output).toContain("Getting Started");
+
+      // Output includes file tree listing
+      expect(result.output).toContain("README.md");
+      expect(result.output).toContain("src/");
+      expect(result.output).toContain("tests/");
+      expect(result.output).toContain("package.json");
 
       // _raw
       expect(meta._raw).toBeDefined();

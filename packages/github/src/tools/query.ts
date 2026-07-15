@@ -87,8 +87,16 @@ export function createQueryTool(
         };
       }
 
+      // Format response data as truncated JSON for agent-visible output
+      const dataJson = JSON.stringify(result.data, null, 2);
+      const MAX_OUTPUT_LEN = 2000;
+      const truncated =
+        dataJson.length > MAX_OUTPUT_LEN
+          ? dataJson.slice(0, MAX_OUTPUT_LEN) + "\n... (truncated)"
+          : dataJson;
+
       return {
-        output: "Query executed successfully.",
+        output: `Query executed successfully.\n\nData:\n${truncated}`,
         metadata: {
           _raw: result.data,
           rateLimit: result.rateLimit,

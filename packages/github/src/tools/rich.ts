@@ -214,6 +214,14 @@ const REPO_FULL_QUERY = `
       readme: object(expression: "HEAD:README.md") {
         ... on Blob { text }
       }
+      rootTree: object(expression: "HEAD:") {
+        ... on Tree {
+          entries {
+            name
+            type
+          }
+        }
+      }
       defaultBranchRef {
         target {
           ... on Commit {
@@ -730,6 +738,12 @@ export function createRichTools(
         // Extract README text (first 5000 chars)
         const readmeText = repo.readme?.text ?? null;
 
+        // Extract root file tree entries
+        const rootTree = (repo.rootTree?.entries ?? []).map((e: any) => ({
+          name: e.name,
+          type: e.type,
+        }));
+
         // Extract recent commits
         const commitHistory = repo.defaultBranchRef?.target?.history;
         const recentCommits = nodesOf(commitHistory).map((c: any) => ({
@@ -769,12 +783,19 @@ export function createRichTools(
             openPRs: repo.openPRCount?.totalCount ?? 0,
           },
           readme: truncate(readmeText, 5000),
+          rootTree,
           recentCommits,
           topContributors,
         };
 
         const commitCount = curated.recentCommits.length;
         const contributorCount = curated.topContributors.length;
+        const fileTreeStr =
+          rootTree.length > 0
+            ? rootTree
+                .map((e: any) => (e.type === "tree" ? `${e.name}/` : e.name))
+                .join(", ")
+            : "(empty)";
 
         return {
           output: [
@@ -786,7 +807,8 @@ export function createRichTools(
             `  Open Issues: ${curated.stats.openIssues}  Open PRs: ${curated.stats.openPRs}`,
             `  Recent Commits: ${commitCount}`,
             `  Top Contributors: ${contributorCount}`,
-            `  README: ${readmeText ? truncate(readmeText, 100) : "(none)"}`,
+            `  File Tree: ${fileTreeStr}`,
+            `  README: ${readmeText ? truncate(readmeText, 1000) : "(none)"}`,
             `  Pushed: ${curated.pushedAt}`,
             `  URL: ${curated.url}`,
           ].join("\n"),

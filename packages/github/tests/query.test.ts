@@ -69,7 +69,7 @@ describe("github_query", () => {
   });
 
   describe("output shape", () => {
-    it("returns _raw in metadata on success", async () => {
+    it("returns _raw in metadata on success and includes data in output", async () => {
       const gql = mockGQL(VIEWER_QUERY_RESPONSE);
       const tool = createQueryTool(() => Promise.resolve(gql));
       const result = await (tool as any).execute(
@@ -77,7 +77,11 @@ describe("github_query", () => {
         mockContext,
       );
 
-      expect(result.output).toBe("Query executed successfully.");
+      expect(result.output).toContain("Query executed successfully.");
+      expect(result.output).toContain('"login"');
+      expect(result.output).toContain('"testuser"');
+      expect(result.output).toContain('"name"');
+      expect(result.output).toContain('"Test User"');
       expect(result.metadata).toBeDefined();
       expect((result.metadata as Record<string, unknown>)._raw).toEqual(VIEWER_QUERY_RESPONSE);
     });
@@ -93,6 +97,27 @@ describe("github_query", () => {
       const meta = result.metadata as Record<string, unknown>;
       expect(meta.rateLimit).toBeDefined();
       expect((meta.rateLimit as any).remaining).toBe(4995);
+    });
+
+    it("truncates oversized data in output but keeps full data in _raw", async () => {
+      // Create a large response (>2000 chars of serialized JSON)
+      const largeData = {
+        viewer: { login: "testuser" },
+        largeField: "x".repeat(3000),
+      };
+      const gql = mockGQL(largeData);
+      const tool = createQueryTool(() => Promise.resolve(gql));
+      const result = await (tool as any).execute(
+        { query: "query { viewer { login } }" },
+        mockContext,
+      );
+
+      // Output should be truncated with indicator
+      expect(result.output).toContain("truncated");
+      // But metadata._raw should still have the full data
+      const meta = result.metadata as Record<string, unknown>;
+      const raw = meta._raw as any;
+      expect(raw.largeField.length).toBe(3000);
     });
   });
 
