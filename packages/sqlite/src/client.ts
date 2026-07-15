@@ -4,6 +4,7 @@ import { join, resolve } from "path";
 import { existsSync, readFileSync } from "fs";
 
 let db: SqlJsDatabase | null = null;
+let initPromise: Promise<void> | null = null;
 
 /**
  * Resolve the database path from env var or default.
@@ -21,6 +22,10 @@ function resolveDbPath(): string {
  */
 export async function getDb(): Promise<SqlJsDatabase> {
   if (db) return db;
+  if (initPromise) {
+    await initPromise;
+    if (db) return db;
+  }
 
   const dbPath = resolveDbPath();
 
@@ -31,14 +36,20 @@ export async function getDb(): Promise<SqlJsDatabase> {
     );
   }
 
-  try {
+  // Set the init promise BEFORE any async work so concurrent callers
+  // hitting the initPromise check above will await this same promise
+  initPromise = (async () => {
     const SQL = await initSqlJs();
     const buffer = readFileSync(dbPath);
     db = new SQL.Database(buffer);
-    // Note: sql.js has no built-in read-only mode.
-    // We rely on the tool-level validation to enforce read-only access.
-    return db;
+  })();
+
+  try {
+    await initPromise;
+    initPromise = null;
+    return db!;
   } catch (err) {
+    initPromise = null;
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("file is not a database") || message.includes("file is encrypted")) {
       throw new Error(

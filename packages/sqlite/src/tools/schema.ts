@@ -9,6 +9,34 @@ interface ColumnInfo {
   primaryKey: boolean;
 }
 
+/**
+ * Escape a value for use as a SQL string literal.
+ *
+ * SQLite uses single-quotes for string literals. The SQL standard way to
+ * include a single-quote inside a string literal is to double it ('').
+ *
+ * WARNING: This is ONLY safe for SQL string literal contexts.
+ * Do NOT use this for identifiers, column names, or table names.
+ * Use escapeSqlIdentifier() for identifiers instead.
+ */
+function escapeSqlString(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+/**
+ * Escape a value for use as a SQL quoted identifier.
+ *
+ * SQLite uses double-quotes for quoted identifiers (when QUOTED_IDENTIFIER
+ * mode is on — which is the default). The SQL standard way to include a
+ * double-quote inside a quoted identifier is to double it ("").
+ *
+ * Use this for table names, column names, and other identifiers that
+ * might contain special characters or be reserved words.
+ */
+function escapeSqlIdentifier(value: string): string {
+  return value.replace(/"/g, '""');
+}
+
 export function createSchemaTool(getDb: () => Promise<SqlJsDatabase>) {
   return {
     sqlite_schema: tool({
@@ -21,7 +49,7 @@ export function createSchemaTool(getDb: () => Promise<SqlJsDatabase>) {
         const database = await getDb();
 
         // Validate that the table exists — escape single quotes for SQL injection prevention
-        const escapedTable = args.table.replace(/'/g, "''");
+        const escapedTable = escapeSqlString(args.table);
         const tableCheck = database.exec(
           `SELECT name FROM sqlite_master WHERE type='table' AND name='${escapedTable}'`,
         );
@@ -35,7 +63,7 @@ export function createSchemaTool(getDb: () => Promise<SqlJsDatabase>) {
         }
 
         // Escape double quotes in table name to prevent PRAGMA injection
-        const safeTable = args.table.replace(/"/g, '""');
+        const safeTable = escapeSqlIdentifier(args.table);
         const pragmaResult = database.exec(
           `PRAGMA table_info("${safeTable}")`,
         );
