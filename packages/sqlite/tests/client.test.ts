@@ -281,13 +281,9 @@ describe("client", () => {
       }));
 
       // The import itself must not throw (no SyntaxError at instantiation time)
-      let mod: typeof import("../src/client.js");
-      expect(async () => {
-        mod = await import("../src/client.js");
-      }).not.toThrow();
+      const mod: typeof import("../src/client.js") = await import("../src/client.js");
 
       // Verify the module exports have the expected shape
-      mod = await import("../src/client.js");
       expect(typeof mod.getDb).toBe("function");
       expect(typeof mod.close).toBe("function");
     });
