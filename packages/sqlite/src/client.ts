@@ -23,8 +23,12 @@ function resolveDbPath(): string {
 export async function getDb(): Promise<SqlJsDatabase> {
   if (db) return db;
   if (initPromise) {
-    await initPromise;
-    if (db) return db;
+    try {
+      await initPromise;
+      if (db) return db;
+    } catch {
+      // init failed — fall through to retry below
+    }
   }
 
   const dbPath = resolveDbPath();

@@ -99,6 +99,33 @@ describe("client", () => {
       expect(mockDbConstructor).toHaveBeenCalledTimes(1);
       expect(db2).toBe(mockDb);
     });
+
+    it("concurrent callers handle init failure gracefully", async () => {
+      const mockDb = createMockDb();
+
+      // Make initSqlJs reject on first call, succeed on subsequent calls
+      vi.doMock("sql.js", () => ({
+        default: vi
+          .fn()
+          .mockRejectedValueOnce(new Error("WASM load failed"))
+          .mockResolvedValue({ Database: vi.fn().mockReturnValue(mockDb) }),
+      }));
+
+      vi.doMock("fs", () => ({
+        existsSync: vi.fn().mockReturnValue(true),
+        readFileSync: vi.fn().mockReturnValue(Buffer.from("")),
+      }));
+
+      const { getDb } = await loadClient();
+
+      // Launch concurrent calls — both should settle without unhandled rejections
+      const results = await Promise.allSettled([getDb(), getDb()]);
+      expect(results).toHaveLength(2);
+
+      // A subsequent call should recover and open the database
+      const db = await getDb();
+      expect(db).toBe(mockDb);
+    });
   });
 
   describe("missing file", () => {
