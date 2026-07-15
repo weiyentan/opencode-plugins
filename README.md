@@ -124,7 +124,7 @@ Both the GitHub and GitLab plugins share a common architecture (GraphQL-powered 
 
 ```
 .opencode-workflow.yaml     # CI / workflow configuration
-CONTEXT.md                  # Domain glossary (core concepts, AWX domain, infrastructure)
+CONTEXT.md                  # Domain glossary (core concepts, AWX domain, AFK Review Service, infrastructure)
 docs/
 ├── adr/                    # Architecture Decision Records (0001–0006)
 ├── prd/                    # Product Requirements Documents
@@ -136,6 +136,8 @@ packages/
 ├── github/                 # GitHub plugin package (issues, PRs, repos, code search, GraphQL rich tools)
 ├── gitlab/                 # GitLab plugin package (issues, MRs, projects, code search, GraphQL queries)
 └── sqlite/                 # SQLite plugin package (read-only database queries, table listing, schema inspection)
+src/                        # FastAPI EDA Gateway — AFK Review Service (config, routing, state tracking)
+tests/                      # Test suite (pytest)
 ```
 
 ## Development
