@@ -1,9 +1,10 @@
-import Database from "better-sqlite3";
+import initSqlJs, { Database as SqlJsDatabase } from "sql.js";
 import { homedir } from "os";
 import { join, resolve } from "path";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 
-let db: Database.Database | null = null;
+let db: SqlJsDatabase | null = null;
+let initPromise: Promise<void> | null = null;
 
 /**
  * Resolve the database path from env var or default.
@@ -17,10 +18,18 @@ function resolveDbPath(): string {
 }
 
 /**
- * Get the read-only database connection. Opens on first call (lazy).
+ * Get the database connection. Opens on first call (lazy, async).
  */
-export function getDb(): Database.Database {
+export async function getDb(): Promise<SqlJsDatabase> {
   if (db) return db;
+  if (initPromise) {
+    try {
+      await initPromise;
+      if (db) return db;
+    } catch {
+      // init failed — fall through to retry below
+    }
+  }
 
   const dbPath = resolveDbPath();
 
@@ -31,11 +40,20 @@ export function getDb(): Database.Database {
     );
   }
 
+  // Set the init promise BEFORE any async work so concurrent callers
+  // hitting the initPromise check above will await this same promise
+  initPromise = (async () => {
+    const SQL = await initSqlJs();
+    const buffer = readFileSync(dbPath);
+    db = new SQL.Database(buffer);
+  })();
+
   try {
-    db = new Database(dbPath, { readonly: true });
-    db.pragma("query_only = true");
-    return db;
+    await initPromise;
+    initPromise = null;
+    return db!;
   } catch (err) {
+    initPromise = null;
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("file is not a database") || message.includes("file is encrypted")) {
       throw new Error(

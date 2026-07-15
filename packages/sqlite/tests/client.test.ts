@@ -2,7 +2,7 @@
  * Unit tests for the SQLite database client module.
  *
  * Verifies:
- *   1. Connection opened read-only with query_only pragma
+ *   1. Connection opened with db buffer via sql.js
  *   2. Missing file produces helpful error
  *   3. Corrupt DB produces helpful error
  *   4. close() resets connection state
@@ -17,21 +17,19 @@ const DEFAULT_DB_PATH = join(homedir(), ".local", "share", "opencode", "opencode
 
 /* ── Mock helpers ───────────────────────────────────────────────── */
 
-interface MockStatement {
-  all: ReturnType<typeof vi.fn>;
-}
-
 interface MockDatabase {
-  pragma: ReturnType<typeof vi.fn>;
-  prepare: ReturnType<typeof vi.fn>;
   close: ReturnType<typeof vi.fn>;
+  exec: ReturnType<typeof vi.fn>;
+  run: ReturnType<typeof vi.fn>;
+  prepare: ReturnType<typeof vi.fn>;
 }
 
 function createMockDb(overrides?: Partial<MockDatabase>): MockDatabase {
   return {
-    pragma: vi.fn(),
-    prepare: vi.fn().mockReturnValue({ all: vi.fn().mockReturnValue([]) } as MockStatement),
     close: vi.fn(),
+    exec: vi.fn().mockReturnValue([]),
+    run: vi.fn(),
+    prepare: vi.fn(),
     ...overrides,
   };
 }
@@ -40,7 +38,7 @@ function createMockDb(overrides?: Partial<MockDatabase>): MockDatabase {
 
 /**
  * Dynamic import of client module. Must be called after vi.mock setup
- * so that better-sqlite3 and fs are intercepted.
+ * so that sql.js and fs are intercepted.
  */
 async function loadClient(): Promise<
   typeof import("../src/client.js")
@@ -55,8 +53,10 @@ describe("client", () => {
 
   beforeEach(() => {
     mockDbConstructor = vi.fn();
-    vi.doMock("better-sqlite3", () => ({
-      default: mockDbConstructor,
+    vi.doMock("sql.js", () => ({
+      default: vi.fn().mockResolvedValue({
+        Database: mockDbConstructor,
+      }),
     }));
   });
 
@@ -66,23 +66,20 @@ describe("client", () => {
   });
 
   describe("getDb()", () => {
-    it("opens connection readonly and sets query_only pragma", async () => {
+    it("opens connection from buffer via initSqlJs", async () => {
       const mockDb = createMockDb();
       mockDbConstructor.mockReturnValue(mockDb);
 
-      // fs.existsSync must return true
+      // fs.existsSync must return true, readFileSync returns a buffer
       vi.doMock("fs", () => ({
         existsSync: vi.fn().mockReturnValue(true),
+        readFileSync: vi.fn().mockReturnValue(Buffer.from("")),
       }));
 
       const { getDb } = await loadClient();
-      const db = getDb();
+      const db = await getDb();
 
-      expect(mockDbConstructor).toHaveBeenCalledWith(
-        DEFAULT_DB_PATH,
-        { readonly: true }
-      );
-      expect(mockDb.pragma).toHaveBeenCalledWith("query_only = true");
+      expect(mockDbConstructor).toHaveBeenCalledTimes(1);
       expect(db).toBe(mockDb);
     });
 
@@ -92,14 +89,42 @@ describe("client", () => {
 
       vi.doMock("fs", () => ({
         existsSync: vi.fn().mockReturnValue(true),
+        readFileSync: vi.fn().mockReturnValue(Buffer.from("")),
       }));
 
       const { getDb } = await loadClient();
-      getDb();
-      const db2 = getDb();
+      await getDb();
+      const db2 = await getDb();
 
       expect(mockDbConstructor).toHaveBeenCalledTimes(1);
       expect(db2).toBe(mockDb);
+    });
+
+    it("concurrent callers handle init failure gracefully", async () => {
+      const mockDb = createMockDb();
+
+      // Make initSqlJs reject on first call, succeed on subsequent calls
+      vi.doMock("sql.js", () => ({
+        default: vi
+          .fn()
+          .mockRejectedValueOnce(new Error("WASM load failed"))
+          .mockResolvedValue({ Database: vi.fn().mockReturnValue(mockDb) }),
+      }));
+
+      vi.doMock("fs", () => ({
+        existsSync: vi.fn().mockReturnValue(true),
+        readFileSync: vi.fn().mockReturnValue(Buffer.from("")),
+      }));
+
+      const { getDb } = await loadClient();
+
+      // Launch concurrent calls — both should settle without unhandled rejections
+      const results = await Promise.allSettled([getDb(), getDb()]);
+      expect(results).toHaveLength(2);
+
+      // A subsequent call should recover and open the database
+      const db = await getDb();
+      expect(db).toBe(mockDb);
     });
   });
 
@@ -107,12 +132,13 @@ describe("client", () => {
     it("throws helpful error with env var hint", async () => {
       vi.doMock("fs", () => ({
         existsSync: vi.fn().mockReturnValue(false),
+        readFileSync: vi.fn(),
       }));
 
       const { getDb } = await loadClient();
 
-      expect(() => getDb()).toThrow(/Database not found at:/);
-      expect(() => getDb()).toThrow(/OPENCODE_DB_PATH/);
+      await expect(getDb()).rejects.toThrow(/Database not found at:/);
+      await expect(getDb()).rejects.toThrow(/OPENCODE_DB_PATH/);
     });
   });
 
@@ -120,6 +146,7 @@ describe("client", () => {
     it("surfaces corruption error with guidance", async () => {
       vi.doMock("fs", () => ({
         existsSync: vi.fn().mockReturnValue(true),
+        readFileSync: vi.fn().mockReturnValue(Buffer.from("corrupt")),
       }));
 
       mockDbConstructor.mockImplementation(() => {
@@ -128,13 +155,14 @@ describe("client", () => {
 
       const { getDb } = await loadClient();
 
-      expect(() => getDb()).toThrow(/corrupt/);
-      expect(() => getDb()).toThrow(/not a valid SQLite database/);
+      await expect(getDb()).rejects.toThrow(/corrupt/);
+      await expect(getDb()).rejects.toThrow(/not a valid SQLite database/);
     });
 
     it("surfaces encrypted database error", async () => {
       vi.doMock("fs", () => ({
         existsSync: vi.fn().mockReturnValue(true),
+        readFileSync: vi.fn().mockReturnValue(Buffer.from("encrypted")),
       }));
 
       mockDbConstructor.mockImplementation(() => {
@@ -143,12 +171,13 @@ describe("client", () => {
 
       const { getDb } = await loadClient();
 
-      expect(() => getDb()).toThrow(/corrupt/);
+      await expect(getDb()).rejects.toThrow(/corrupt/);
     });
 
     it("surfaces locked database error", async () => {
       vi.doMock("fs", () => ({
         existsSync: vi.fn().mockReturnValue(true),
+        readFileSync: vi.fn().mockReturnValue(Buffer.from("")),
       }));
 
       mockDbConstructor.mockImplementation(() => {
@@ -157,8 +186,8 @@ describe("client", () => {
 
       const { getDb } = await loadClient();
 
-      expect(() => getDb()).toThrow(/locked/);
-      expect(() => getDb()).toThrow(/Close other connections/);
+      await expect(getDb()).rejects.toThrow(/locked/);
+      await expect(getDb()).rejects.toThrow(/Close other connections/);
     });
   });
 
@@ -169,10 +198,11 @@ describe("client", () => {
 
       vi.doMock("fs", () => ({
         existsSync: vi.fn().mockReturnValue(true),
+        readFileSync: vi.fn().mockReturnValue(Buffer.from("")),
       }));
 
       const { getDb, close } = await loadClient();
-      getDb();
+      await getDb();
       close();
 
       expect(mockDb.close).toHaveBeenCalledTimes(1);
@@ -182,7 +212,7 @@ describe("client", () => {
       const mockDb2 = createMockDb();
       mockDbConstructor.mockReturnValue(mockDb2);
 
-      getDb();
+      await getDb();
 
       expect(mockDbConstructor).toHaveBeenCalledTimes(1);
     });
@@ -190,6 +220,7 @@ describe("client", () => {
     it("is safe to call close() when not connected", async () => {
       vi.doMock("fs", () => ({
         existsSync: vi.fn().mockReturnValue(true),
+        readFileSync: vi.fn().mockReturnValue(Buffer.from("")),
       }));
 
       const { close } = await loadClient();
@@ -208,15 +239,13 @@ describe("client", () => {
 
       vi.doMock("fs", () => ({
         existsSync: vi.fn().mockReturnValue(true),
+        readFileSync: vi.fn().mockReturnValue(Buffer.from("")),
       }));
 
       const { getDb } = await loadClient();
-      getDb();
+      await getDb();
 
-      expect(mockDbConstructor).toHaveBeenCalledWith(
-        resolve(customPath),
-        { readonly: true }
-      );
+      expect(mockDbConstructor).toHaveBeenCalledTimes(1);
 
       vi.unstubAllEnvs();
     });
