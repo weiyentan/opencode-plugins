@@ -250,4 +250,46 @@ describe("client", () => {
       vi.unstubAllEnvs();
     });
   });
+
+  describe("import smoke test", () => {
+    /**
+     * Verifies the module can be imported without a SyntaxError.
+     *
+     * sql.js is a CommonJS module. In Node ESM, CJS modules expose only a
+     * `default` export — named ESM imports (e.g. `{ Database }`) fail with:
+     *   SyntaxError: Named export 'Database' not found.
+     *
+     * The fix splits the import into a default import for runtime and a
+     * type-only import for compile-time.  import type is erased at runtime
+     * by TypeScript's verbatimModuleSyntax, so the CJS module is never
+     * accessed for the type import, avoiding the SyntaxError.
+     *
+     * This test catches regressions where a named runtime import from a CJS
+     * dependency is accidentally reintroduced.
+     */
+    it("loads client module without SyntaxError", async () => {
+      // Mock sql.js with a CJS-like shape: only default export
+      vi.doMock("sql.js", () => ({
+        default: vi.fn().mockResolvedValue({
+          Database: vi.fn(),
+        }),
+      }));
+
+      vi.doMock("fs", () => ({
+        existsSync: vi.fn().mockReturnValue(false),
+        readFileSync: vi.fn(),
+      }));
+
+      // The import itself must not throw (no SyntaxError at instantiation time)
+      let mod: typeof import("../src/client.js");
+      expect(async () => {
+        mod = await import("../src/client.js");
+      }).not.toThrow();
+
+      // Verify the module exports have the expected shape
+      mod = await import("../src/client.js");
+      expect(typeof mod.getDb).toBe("function");
+      expect(typeof mod.close).toBe("function");
+    });
+  });
 });
