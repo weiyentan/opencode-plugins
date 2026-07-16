@@ -31,6 +31,7 @@
 import { tool } from "@opencode-ai/plugin";
 import type { GitLabClient } from "../client.js";
 import { parsePaginationHeaders, hasNextPage } from "../pagination.js";
+import { projectPathSegment } from "../project-path.js";
 
 const z = tool.schema;
 
@@ -210,10 +211,7 @@ export function createIssueTools(
           };
         }
 
-        const projectParam =
-          typeof args.projectId === "number"
-            ? String(args.projectId)
-            : encodeURIComponent(args.projectId);
+        const projectParam = projectPathSegment(args.projectId);
 
         // Build query string
         const searchParams = new URLSearchParams({
@@ -333,10 +331,7 @@ export function createIssueTools(
           };
         }
 
-        const projectParam =
-          typeof args.projectId === "number"
-            ? String(args.projectId)
-            : encodeURIComponent(args.projectId);
+        const projectParam = projectPathSegment(args.projectId);
 
         const path = `/api/v4/projects/${projectParam}/issues/${args.issueIid}`;
 
@@ -492,10 +487,7 @@ export function createIssueTools(
           };
         }
 
-        const projectParam =
-          typeof args.projectId === "number"
-            ? String(args.projectId)
-            : encodeURIComponent(args.projectId);
+        const projectParam = projectPathSegment(args.projectId);
 
         const path = `/api/v4/projects/${projectParam}/issues`;
 
@@ -654,10 +646,7 @@ export function createIssueTools(
           };
         }
 
-        const projectParam =
-          typeof args.projectId === "number"
-            ? String(args.projectId)
-            : encodeURIComponent(args.projectId);
+        const projectParam = projectPathSegment(args.projectId);
 
         const path = `/api/v4/projects/${projectParam}/issues/${args.issueIid}`;
 
@@ -789,10 +778,7 @@ export function createIssueTools(
           };
         }
 
-        const projectParam =
-          typeof args.projectId === "number"
-            ? String(args.projectId)
-            : encodeURIComponent(args.projectId);
+        const projectParam = projectPathSegment(args.projectId);
 
         const path = `/api/v4/projects/${projectParam}/issues/${args.issueIid}/notes`;
 
