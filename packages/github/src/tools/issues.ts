@@ -417,7 +417,7 @@ export function createIssueTools(
             ? issue.assignees.map((a) => a.login).join(", ")
             : "(none)";
 
-        const bodyStr = issue.body ?? "(no body)";
+        const bodyStr = issue.body ?? "(none)";
 
         return {
           output: [

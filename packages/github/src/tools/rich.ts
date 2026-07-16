@@ -408,7 +408,7 @@ export function createRichTools(
         const commentCount = curated.comments.nodes?.length ?? 0;
         const prCount = linkedPRs.length;
 
-        const bodyStr = curated.issue.body ?? "(no body)";
+        const bodyStr = curated.issue.body ?? "(none)";
 
         return {
           output: [
