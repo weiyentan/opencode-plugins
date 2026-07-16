@@ -42,7 +42,7 @@ All tools are registered with `github_*` namespace.
 | `github_issue_get_full` | Fetch a single issue with body, labels, comments, linked PRs, and timeline events (GraphQL) |
 | `github_pr_get_full` | Fetch a single PR with commits, reviews, review threads, merge status, and CI checks (GraphQL) |
 | `github_issue_search` | Cross-repo issue search with rich results including repo context (GraphQL) |
-| `github_repo_get_full` | Fetch repository with README, recent commits, top contributors, languages, and stats (GraphQL) |
+| `github_repo_get_full` | Fetch repository with README, file tree, recent commits, top contributors, languages, and stats (GraphQL) |
 | `github_query` | Execute an arbitrary GraphQL query against the GitHub API |
 
 ### REST Issue Tools

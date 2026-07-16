@@ -30,6 +30,15 @@ export const REPO_FULL_RESPONSE: any = {
     readme: {
       text: "# My Project\n\nThis is a sample project.\n\n## Getting Started\n\n```bash\nnpm install\n```\n",
     },
+    rootTree: {
+      entries: [
+        { name: "README.md", type: "blob" },
+        { name: "src", type: "tree" },
+        { name: "tests", type: "tree" },
+        { name: "package.json", type: "blob" },
+        { name: "tsconfig.json", type: "blob" },
+      ],
+    },
     defaultBranchRef: {
       target: {
         history: {
@@ -94,6 +103,7 @@ export const REPO_NO_README_RESPONSE: any = {
     openIssueCount: { totalCount: 0 },
     openPRCount: { totalCount: 0 },
     readme: null,
+    rootTree: { entries: [] },
     defaultBranchRef: null,
     mentionableUsers: { nodes: [] },
   },
