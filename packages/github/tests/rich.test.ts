@@ -113,6 +113,8 @@ describe("github_issue_get_full", () => {
 
       // Verify string output
       expect(typeof result.output).toBe("string");
+      expect(result.output).toContain("Body:");
+      expect(result.output).toContain("The login button on the homepage has incorrect padding.");
 
       // Verify metadata shape
       expect(result.metadata).toBeDefined();

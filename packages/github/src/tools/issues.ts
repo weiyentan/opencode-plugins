@@ -417,6 +417,8 @@ export function createIssueTools(
             ? issue.assignees.map((a) => a.login).join(", ")
             : "(none)";
 
+        const bodyStr = issue.body ?? "(none)";
+
         return {
           output: [
             `Issue #${issue.number}: ${issue.title}`,
@@ -424,6 +426,7 @@ export function createIssueTools(
             `  Author:    ${issue.user?.login ?? "unknown"}`,
             `  Labels:    ${labelStr}`,
             `  Assignees: ${assigneeStr}`,
+            `  Body:      ${bodyStr}`,
             `  Comments:  ${issue.comments}`,
             `  Created:   ${issue.created_at}`,
             `  Updated:   ${issue.updated_at}`,
