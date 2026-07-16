@@ -408,12 +408,15 @@ export function createRichTools(
         const commentCount = curated.comments.nodes?.length ?? 0;
         const prCount = linkedPRs.length;
 
+        const bodyStr = curated.issue.body ?? "(no body)";
+
         return {
           output: [
             `Issue #${curated.issue.number}: ${curated.issue.title}`,
             `  State:     ${curated.issue.state}`,
             `  Author:    ${curated.issue.author}`,
             `  Labels:    ${labelStr}`,
+            `  Body:      ${bodyStr}`,
             `  Comments:  ${commentCount}`,
             `  Linked PRs: ${prCount}`,
             `  Created:   ${curated.issue.createdAt}`,

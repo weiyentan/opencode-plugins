@@ -281,6 +281,8 @@ describe("github_issue_get", () => {
       expect(result.output).toContain("#42");
       expect(result.output).toContain("Fix the login button styling");
       expect(result.output).toContain("open");
+      expect(result.output).toContain("Body:");
+      expect(result.output).toContain("The login button on the homepage has incorrect padding.");
 
       const meta = result.metadata as Record<string, unknown>;
       expect(meta.issue).toBeDefined();
