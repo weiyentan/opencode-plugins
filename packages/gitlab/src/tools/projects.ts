@@ -19,28 +19,9 @@
 
 import { tool } from "@opencode-ai/plugin";
 import type { GitLabClient } from "../client.js";
+import { projectPathSegment } from "../project-path.js";
 
 const z = tool.schema;
-
-/* ── Project ID encoding ───────────────────────────────────────── */
-
-/**
- * URL-encode a project ID for use in GitLab REST API paths.
- *
- * Numeric IDs are used as-is. String paths (e.g., "namespace/project")
- * are URL-encoded to turn "/" into "%2F". Already-encoded paths
- * containing "%2F" are passed through without double-encoding.
- */
-function encodeProjectId(projectId: string | number): string {
-  if (typeof projectId === "number") {
-    return String(projectId);
-  }
-  // Avoid double-encoding: if the path already contains %2F, pass through
-  if (projectId.includes("%2F")) {
-    return projectId;
-  }
-  return encodeURIComponent(projectId);
-}
 
 /* ── Response type helpers ─────────────────────────────────────── */
 
@@ -216,7 +197,7 @@ export function createProjectTools(
           };
         }
 
-        const encodedId = encodeProjectId(args.project_id);
+        const encodedId = projectPathSegment(args.project_id);
         const path = `/api/v4/projects/${encodedId}`;
 
         try {
